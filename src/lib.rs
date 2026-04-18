@@ -4,6 +4,7 @@ use std::rc::Rc;
 use bumpalo::Bump;
 use virtual_exec_parser::error::ParseError;
 use virtual_exec_parser::parser;
+use virtual_exec_type::alloc::Allocator;
 use virtual_exec_type::ast::core::ASTNode;
 use virtual_exec_type::builtin::Mapping;
 use virtual_exec_type::exec_ctx::{ExecutionContext, RsValue};
@@ -46,10 +47,11 @@ pub fn exec(code: &str, ttl: i64) -> Result<HashMap<String, RsValue>, ExecError>
     // 1. Parse the code into an AST.
     let module = parser::parse(code)?;
 
-    let arena = Rc::new(RefCell::new(Bump::new()));
+    let arena = Bump::new();
+    let alloc = Allocator::new(&arena);
     let global_scope = Rc::new(RefCell::new(Mapping { mapping: HashMap::new() }));
     let mapping = vec![global_scope];
-    let ctx = Rc::new(RefCell::new(ExecutionContext::new(arena, ttl, mapping)));
+    let ctx = Rc::new(RefCell::new(ExecutionContext::new(alloc, ttl, mapping)));
 
     module.eval(ctx.clone())?;
 

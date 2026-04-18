@@ -1,7 +1,10 @@
-use crate::builtin::{VirPyFloat, VirPyInt, VirPyObject};
+use std::cell::RefCell;
+use std::collections::HashMap;
+use crate::builtin::{Mapping, VirPyFloat, VirPyInt, VirPyObject};
 use crate::error::SandboxExecutionError;
 use bumpalo::Bump;
 use std::fmt::Debug;
+use std::rc::Rc;
 
 pub type Value<'ctx> = &'ctx ValueContainer<'ctx>;
 
@@ -13,7 +16,7 @@ pub enum ValueKind<'ctx> {
     ErrorWrapped(SandboxExecutionError),
     Bool(bool),
     String(String),
-    Collection(Vec<ValueKind<'ctx>>),
+    Collection(Vec<Value<'ctx>>),
     None,
 }
 
@@ -37,13 +40,13 @@ impl<'ctx> Upcast<'ctx> for bool {
     }
 }
 
-impl<'ctx> Downcast<'ctx> for Vec<ValueKind<'ctx>> {
+impl<'ctx> Downcast<'ctx> for Vec<Value<'ctx>> {
     fn from_value(value: Value<'ctx>) -> Option<&'ctx Self> {
         value.as_collection()
     }
 }
 
-impl<'ctx> Upcast<'ctx> for Vec<ValueKind<'ctx>> {
+impl<'ctx> Upcast<'ctx> for Vec<Value<'ctx>> {
     fn from_value(&'ctx self) -> ValueKind<'ctx> {
         ValueKind::Collection(self.clone())
     }
@@ -81,6 +84,48 @@ pub struct ValueContainer<'ctx> {
 impl<'ctx> ValueContainer<'ctx> {
     pub fn new(kind: ValueKind<'ctx>, arena: &'ctx Bump) -> Value<'ctx> {
         arena.alloc(ValueContainer { kind })
+    }
+
+    pub fn new_static(kind: ValueKind<'static>, arena: &'static Bump) -> Value<'static> {
+        arena.alloc(ValueContainer { kind })
+    }
+
+    pub fn export(&self) -> ValueContainer<'static> {
+        Self {
+            kind: match &self.kind {
+                ValueKind::Int(i) => ValueKind::Int(i.clone()),
+                ValueKind::Float(f) => ValueKind::Float(f.clone()),
+                ValueKind::Object(o) => {
+                    let mapping = o.mapping.borrow().clone();
+                    let inner = mapping.mapping.clone();
+                    let map: HashMap<String, Rc<RefCell<Value<'static>>>> = inner.iter().map(
+                        |(k, v)|
+                            (
+                                k.clone(),
+                                {
+                                    let container= v.borrow();
+                                    let container = container.export().kind;
+                                    {
+                                        use std::borrow::Borrow;
+                                        Rc::new(RefCell::new(ValueContainer::<'static>::new_static(container, &static_bumpalo.borrow().lock().unwrap())))
+                                    }
+                                }
+                            )
+                    ).collect();
+                    ValueKind::Object(VirPyObject {mapping: Rc::new(RefCell::new(Mapping { mapping: map}))})
+                },
+                ValueKind::ErrorWrapped(e) => ValueKind::ErrorWrapped(e.clone()),
+                ValueKind::Bool(b) => ValueKind::Bool(*b),
+                ValueKind::String(s) => ValueKind::String(s.clone()),
+                ValueKind::None => ValueKind::None,
+                ValueKind::Collection(c) => {
+                    {
+                        use std::borrow::Borrow;
+                        ValueKind::Collection(c.iter().map(|v| ValueContainer::<'static>::new_static(v.export().kind, &static_bumpalo.lock().unwrap())).collect())
+                    }
+                }
+            }
+        }
     }
 
     pub fn clone_in_arena(&self, arena: &'ctx Bump) -> Value<'ctx> {
@@ -146,7 +191,7 @@ impl<'ctx> ValueContainer<'ctx> {
         }
     }
 
-    pub fn as_collection(&self) -> Option<&Vec<ValueKind<'ctx>>> {
+    pub fn as_collection(&self) -> Option<&Vec<Value<'ctx>>> {
         match &self.kind {
             ValueKind::Collection(e) => Some(e),
             _ => None,

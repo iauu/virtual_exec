@@ -1,7 +1,7 @@
 use crate::base::{ValueContainer, ValueKind};
 use crate::builtin::{VirPyFloat, VirPyInt};
 use crate::error::SandboxExecutionError;
-use crate::exec_ctx::{ExecutionContext, Result};
+use crate::exec_ctx::{CtxBump, ExecutionContext, Result};
 use crate::op::*;
 use std::cell::{Ref, RefCell};
 use std::panic::catch_unwind;
@@ -26,11 +26,11 @@ where
     F: FnOnce(&'ctx bumpalo::Bump) -> R,
 {
     let arena_rc = { ctx.borrow().arena.clone() };
-    let arena_borrow: Ref<bumpalo::Bump> = arena_rc.borrow();
-    let arena_ref: &bumpalo::Bump = &arena_borrow;
-    let arena_ref_ctx: &'ctx bumpalo::Bump = unsafe { std::mem::transmute(arena_ref) };
+    let arena_borrow: Ref<CtxBump<'ctx>> = arena_rc.borrow();
+    let arena_ref: &'ctx bumpalo::Bump = *arena_borrow;
+    // let arena_ref_ctx: &'ctx bumpalo::Bump = unsafe { std::mem::transmute(arena_ref) };
 
-    f(arena_ref_ctx)
+    f(arena_ref)
 }
 
 #[derive(Debug, Clone)]

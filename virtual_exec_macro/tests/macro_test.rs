@@ -6,23 +6,25 @@ use virtual_exec_macro::parse;
 use virtual_exec_type::ast::core::ASTNode;
 use virtual_exec_type::base::{Value, ValueContainer, ValueKind};
 use virtual_exec_type::builtin::Mapping;
-use virtual_exec_type::exec_ctx::ExecutionContext;
+use virtual_exec_type::exec_ctx::{CtxBump, ExecutionContext};
 
 #[test]
-fn test_simple_assignment_and_expr() {
+fn test_simple_assignment_and_expr<'ctx>() {
     let module = parse!(
         a = 10;
         a = a + 5;
         a;
     );
-    let arena_rc = Rc::new(RefCell::new(Bump::new()));
+    let arena = Bump::new();
+    let ptr: &'ctx Bump = &arena;
+    let arena_rc = Rc::new(RefCell::new(ptr));
     let mut global_scope = Mapping { mapping: HashMap::new() };
 
     let initial_value: Value<'static> = {
-        let arena_borrow: Ref<Bump> = arena_rc.borrow();
+        let arena_borrow: Ref<CtxBump> = arena_rc.borrow();
         let arena_ref: &Bump = &arena_borrow;
-        let long_lived_arena: &'static Bump = unsafe { std::mem::transmute(arena_ref) };
-        ValueContainer::new(ValueKind::None, long_lived_arena)
+        // let long_lived_arena: &'static Bump = unsafe { std::mem::transmute(arena_ref) };
+        ValueContainer::new(ValueKind::None, arena_ref)
     };
 
     global_scope.mapping.insert("a".to_string(), Rc::new(RefCell::new(initial_value)));

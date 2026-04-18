@@ -40,16 +40,18 @@ fn value_kind_to_rs_value(kind: &ValueKind) -> RsValue {
         ValueKind::Collection(v) => {
             let mut vec = Vec::new();
             for value in v {
-                vec.push(value_kind_to_rs_value(value));
+                vec.push(value_kind_to_rs_value(&value.kind));
             }
             RsValue::Vector(vec)
         }
     }
 }
 
+pub type CtxBump<'ctx> = &'ctx bumpalo::Bump;
+
 #[derive(Debug, Clone)]
 pub struct ExecutionContext<'ctx> {
-    pub arena: Rc<RefCell<Bump>>,
+    pub arena: Rc<RefCell<CtxBump<'ctx>>>,
     pub ttl: i64,
     pub mapping: Vec<Rc<RefCell<Mapping<'ctx>>>>, // Top layer ([0]): most local scope
 }
@@ -64,7 +66,7 @@ impl<'ctx> std::panic::RefUnwindSafe for ExecutionContext<'ctx> {}
 
 impl<'ctx> ExecutionContext<'ctx> {
     pub fn new(
-        arena: Rc<RefCell<Bump>>,
+        arena: Rc<RefCell<CtxBump<'ctx>>>,
         ttl: i64,
         mapping: Vec<Rc<RefCell<Mapping<'ctx>>>>,
     ) -> Self {

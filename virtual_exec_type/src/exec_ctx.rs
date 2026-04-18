@@ -40,7 +40,7 @@ fn value_kind_to_rs_value(kind: &ValueKind) -> RsValue {
         ValueKind::Collection(v) => {
             let mut vec = Vec::new();
             for value in v {
-                vec.push(value_kind_to_rs_value(value));
+                vec.push(value_kind_to_rs_value(&value.kind));
             }
             RsValue::Vector(vec)
         }

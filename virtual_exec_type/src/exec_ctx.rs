@@ -5,6 +5,7 @@ use bumpalo::Bump;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use crate::alloc::Allocator;
 use crate::exec_ctx::RsValue::Vector;
 
 pub type Result<T> = core::result::Result<T, SandboxExecutionError>;
@@ -49,7 +50,7 @@ fn value_kind_to_rs_value(kind: &ValueKind) -> RsValue {
 
 #[derive(Debug, Clone)]
 pub struct ExecutionContext<'ctx> {
-    pub arena: Rc<RefCell<Bump>>,
+    pub arena: Allocator<'ctx>,
     pub ttl: i64,
     pub mapping: Vec<Rc<RefCell<Mapping<'ctx>>>>, // Top layer ([0]): most local scope
 }
@@ -64,7 +65,7 @@ impl<'ctx> std::panic::RefUnwindSafe for ExecutionContext<'ctx> {}
 
 impl<'ctx> ExecutionContext<'ctx> {
     pub fn new(
-        arena: Rc<RefCell<Bump>>,
+        arena: Allocator<'ctx>,
         ttl: i64,
         mapping: Vec<Rc<RefCell<Mapping<'ctx>>>>,
     ) -> Self {

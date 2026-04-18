@@ -1,10 +1,11 @@
 use crate::base::Value;
 use bumpalo::Bump;
+use crate::alloc::Allocator;
 
 type BinaryOpFn =
-    for<'ctx> fn(lhs: Value<'ctx>, rhs: Value<'ctx>, arena: &'ctx Bump) -> Option<Value<'ctx>>;
+    for<'ctx> fn(lhs: Value<'ctx>, rhs: Value<'ctx>, arena: &Allocator<'ctx>) -> Option<Value<'ctx>>;
 
-type UnaryOpFn = for<'ctx> fn(rhs: Value<'ctx>, arena: &'ctx Bump) -> Option<Value<'ctx>>;
+type UnaryOpFn = for<'ctx> fn(rhs: Value<'ctx>, arena: &Allocator<'ctx>) -> Option<Value<'ctx>>;
 
 #[macro_export]
 macro_rules! __binary_op_register {
@@ -19,18 +20,16 @@ macro_rules! __binary_op_register {
             fn _op_impl<'ctx>(
                 lhs: $crate::base::Value<'ctx>,
                 rhs: $crate::base::Value<'ctx>,
-                arena: &'ctx ::bumpalo::Bump,
+                arena: &$crate::alloc::Allocator<'ctx>,
             ) -> Option<$crate::base::Value<'ctx>> {
                 let lhs_val = <$lhs_type as $crate::base::Downcast>::from_value(lhs)?;
                 let rhs_val = <$rhs_type as $crate::base::Downcast>::from_value(rhs)?;
                 match $func(lhs_val.clone(), rhs_val.clone()) {
-                    Ok(result) => Some($crate::base::ValueContainer::new(
-                        $output_wrapper(result),
-                        arena,
+                    Ok(result) => Some(arena.allocate(
+                        $output_wrapper(result)
                     )),
-                    Err(err) => Some($crate::base::ValueContainer::new(
-                        $crate::base::ValueKind::ErrorWrapped(err),
-                        arena,
+                    Err(err) => Some(arena.allocate(
+                        $crate::base::ValueKind::ErrorWrapped(err)
                     )),
                 }
             }
@@ -50,7 +49,7 @@ macro_rules! __binary_op_create {
         ::paste::paste!{
             pub struct [< Op $alt_name Impl>] {pub function: $crate::op::BinaryOpFn }
             ::inventory::collect!([< Op $alt_name Impl>]);
-            pub fn [< op_ $name>]<'ctx>(lhs: $crate::base::Value<'ctx>, rhs: $crate::base::Value<'ctx>, arena: &'ctx ::bumpalo::Bump) -> ::core::option::Option<$crate::base::Value<'ctx>> {
+            pub fn [< op_ $name>]<'ctx>(lhs: $crate::base::Value<'ctx>, rhs: $crate::base::Value<'ctx>, arena: &$crate::alloc::Allocator<'ctx>) -> ::core::option::Option<$crate::base::Value<'ctx>> {
                 for implementation in ::inventory::iter::<[<Op $alt_name Impl>]> {
                     if let ::core::option::Option::Some(result) = (implementation.function)(lhs, rhs, arena) {
                         return Some(result);
@@ -59,7 +58,7 @@ macro_rules! __binary_op_create {
                 None
             }
 
-            pub fn [<err_op_ $name>]<'ctx>(lhs: $crate::base::Value<'ctx>, rhs: $crate::base::Value<'ctx>, arena: &'ctx ::bumpalo::Bump) -> ::core::result::Result<$crate::base::Value<'ctx>, $crate::error::SandboxExecutionError> {
+            pub fn [<err_op_ $name>]<'ctx>(lhs: $crate::base::Value<'ctx>, rhs: $crate::base::Value<'ctx>, arena: &$crate::alloc::Allocator<'ctx>) -> ::core::result::Result<$crate::base::Value<'ctx>, $crate::error::SandboxExecutionError> {
                 for implementation in ::inventory::iter::<[<Op $alt_name Impl>]> {
                     if let ::core::option::Option::Some(result) = (implementation.function)(lhs, rhs, arena) {
                        match &result.kind {
@@ -99,17 +98,15 @@ macro_rules! __unary_op_register {
         const _: () = {
             fn _op_impl<'ctx>(
                 rhs: $crate::base::Value<'ctx>,
-                arena: &'ctx ::bumpalo::Bump,
+                arena: &$crate::alloc::Allocator<'ctx>,
             ) -> Option<$crate::base::Value<'ctx>> {
                 let rhs_val = <$rhs_type as $crate::base::Downcast>::from_value(rhs)?;
                 match $func(rhs_val.clone()) {
-                    Ok(result) => Some($crate::base::ValueContainer::new(
+                    Ok(result) => Some(arena.allocate(
                         $output_wrapper(result),
-                        arena,
                     )),
-                    Err(err) => Some($crate::base::ValueContainer::new(
+                    Err(err) => Some(arena.allocate(
                         $crate::base::ValueKind::ErrorWrapped(err),
-                        arena,
                     )),
                 }
             }
@@ -129,7 +126,7 @@ macro_rules! __unary_op_create {
         ::paste::paste!{
             pub struct [< Op $alt_name Impl>] {pub function: $crate::op::UnaryOpFn }
             ::inventory::collect!([< Op $alt_name Impl>]);
-            pub fn [< op_ $name>]<'ctx>(rhs: $crate::base::Value<'ctx>, arena: &'ctx ::bumpalo::Bump) -> ::core::option::Option<$crate::base::Value<'ctx>> {
+            pub fn [< op_ $name>]<'ctx>(rhs: $crate::base::Value<'ctx>, arena: &$crate::alloc::Allocator<'ctx>) -> ::core::option::Option<$crate::base::Value<'ctx>> {
                 for implementation in ::inventory::iter::<[<Op $alt_name Impl>]> {
                     if let ::core::option::Option::Some(result) = (implementation.function)(rhs, arena) {
                         return Some(result);
@@ -137,7 +134,7 @@ macro_rules! __unary_op_create {
                 }
                 None
             }
-            pub fn [<err_op_ $name>]<'ctx>(rhs: $crate::base::Value<'ctx>, arena: &'ctx ::bumpalo::Bump) -> ::core::result::Result<$crate::base::Value<'ctx>, $crate::error::SandboxExecutionError> {
+            pub fn [<err_op_ $name>]<'ctx>(rhs: $crate::base::Value<'ctx>, arena: &$crate::alloc::Allocator<'ctx>) -> ::core::result::Result<$crate::base::Value<'ctx>, $crate::error::SandboxExecutionError> {
                 for implementation in ::inventory::iter::<[<Op $alt_name Impl>]> {
                     if let ::core::option::Option::Some(result) = (implementation.function)(rhs, arena) {
                        match &result.kind {

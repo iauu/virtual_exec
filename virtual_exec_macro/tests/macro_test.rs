@@ -1,10 +1,11 @@
-use std::cell::{RefCell, Ref};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use bumpalo::Bump;
 use virtual_exec_macro::parse;
+use virtual_exec_type::alloc::Allocator;
 use virtual_exec_type::ast::core::ASTNode;
-use virtual_exec_type::base::{Value, ValueContainer, ValueKind};
+use virtual_exec_type::base::ValueKind;
 use virtual_exec_type::builtin::Mapping;
 use virtual_exec_type::exec_ctx::ExecutionContext;
 
@@ -15,20 +16,16 @@ fn test_simple_assignment_and_expr() {
         a = a + 5;
         a;
     );
-    let arena_rc = Rc::new(RefCell::new(Bump::new()));
+    let arena = Bump::new();
+    let alloc = Allocator::new(&arena);
     let mut global_scope = Mapping { mapping: HashMap::new() };
 
-    let initial_value: Value<'static> = {
-        let arena_borrow: Ref<Bump> = arena_rc.borrow();
-        let arena_ref: &Bump = &arena_borrow;
-        let long_lived_arena: &'static Bump = unsafe { std::mem::transmute(arena_ref) };
-        ValueContainer::new(ValueKind::None, long_lived_arena)
-    };
+    let initial_value = alloc.allocate(ValueKind::None);
 
     global_scope.mapping.insert("a".to_string(), Rc::new(RefCell::new(initial_value)));
 
     let mapping = vec![Rc::new(RefCell::new(global_scope))];
-    let ctx = Rc::new(RefCell::new(ExecutionContext::new(arena_rc.clone(), 1000, mapping.clone())));
+    let ctx = Rc::new(RefCell::new(ExecutionContext::new(alloc, 1000, mapping.clone())));
 
     let result = module.eval(ctx);
 
@@ -52,20 +49,16 @@ fn test_more() {
         }
         a;
     );
-    let arena_rc = Rc::new(RefCell::new(Bump::new()));
+    let arena = Bump::new();
+    let alloc = Allocator::new(&arena);
     let mut global_scope = Mapping { mapping: HashMap::new() };
 
-    let initial_value: Value<'static> = {
-        let arena_borrow: Ref<Bump> = arena_rc.borrow();
-        let arena_ref: &Bump = &arena_borrow;
-        let long_lived_arena: &'static Bump = unsafe { std::mem::transmute(arena_ref) };
-        ValueContainer::new(ValueKind::None, long_lived_arena)
-    };
+    let initial_value = alloc.allocate(ValueKind::None);
 
     global_scope.mapping.insert("a".to_string(), Rc::new(RefCell::new(initial_value)));
 
     let mapping = vec![Rc::new(RefCell::new(global_scope))];
-    let ctx = Rc::new(RefCell::new(ExecutionContext::new(arena_rc.clone(), 1000, mapping.clone())));
+    let ctx = Rc::new(RefCell::new(ExecutionContext::new(alloc, 1000, mapping.clone())));
 
     let result = module.eval(ctx);
 
@@ -89,20 +82,16 @@ fn test_timeout() {
         }
         a;
     );
-    let arena_rc = Rc::new(RefCell::new(Bump::new()));
+    let arena = Bump::new();
+    let alloc = Allocator::new(&arena);
     let mut global_scope = Mapping { mapping: HashMap::new() };
 
-    let initial_value: Value<'static> = {
-        let arena_borrow: Ref<Bump> = arena_rc.borrow();
-        let arena_ref: &Bump = &arena_borrow;
-        let long_lived_arena: &'static Bump = unsafe { std::mem::transmute(arena_ref) };
-        ValueContainer::new(ValueKind::None, long_lived_arena)
-    };
+    let initial_value = alloc.allocate(ValueKind::None);
 
     global_scope.mapping.insert("a".to_string(), Rc::new(RefCell::new(initial_value)));
 
     let mapping = vec![Rc::new(RefCell::new(global_scope))];
-    let ctx = Rc::new(RefCell::new(ExecutionContext::new(arena_rc.clone(), 15, mapping.clone())));
+    let ctx = Rc::new(RefCell::new(ExecutionContext::new(alloc, 15, mapping.clone())));
 
     let result = module.eval(ctx);
 
@@ -123,20 +112,16 @@ fn test_if_fail_path() {
         }
         a;
     );
-    let arena_rc = Rc::new(RefCell::new(Bump::new()));
+    let arena = Bump::new();
+    let alloc = Allocator::new(&arena);
     let mut global_scope = Mapping { mapping: HashMap::new() };
 
-    let initial_value: Value<'static> = {
-        let arena_borrow: Ref<Bump> = arena_rc.borrow();
-        let arena_ref: &Bump = &arena_borrow;
-        let long_lived_arena: &'static Bump = unsafe { std::mem::transmute(arena_ref) };
-        ValueContainer::new(ValueKind::None, long_lived_arena)
-    };
+    let initial_value = alloc.allocate(ValueKind::None);
 
     global_scope.mapping.insert("a".to_string(), Rc::new(RefCell::new(initial_value)));
 
     let mapping = vec![Rc::new(RefCell::new(global_scope))];
-    let ctx = Rc::new(RefCell::new(ExecutionContext::new(arena_rc.clone(), 1000, mapping.clone())));
+    let ctx = Rc::new(RefCell::new(ExecutionContext::new(alloc, 1000, mapping.clone())));
 
     let result = module.eval(ctx);
 

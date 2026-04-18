@@ -21,17 +21,17 @@ pub trait ASTNode {
     fn get_callsite(&self) -> Option<Span>;
 }
 
-fn with_arena<'ctx, F, R>(ctx: &Rc<RefCell<ExecutionContext<'ctx>>>, f: F) -> R
-where
-    F: FnOnce(&'ctx bumpalo::Bump) -> R,
-{
-    let arena_rc = { ctx.borrow().arena.clone() };
-    let arena_borrow: Ref<bumpalo::Bump> = arena_rc.borrow();
-    let arena_ref: &bumpalo::Bump = &arena_borrow;
-    let arena_ref_ctx: &'ctx bumpalo::Bump = unsafe { std::mem::transmute(arena_ref) };
-
-    f(arena_ref_ctx)
-}
+// fn with_arena<'ctx, F, R>(ctx: &Rc<RefCell<ExecutionContext<'ctx>>>, f: F) -> R
+// where
+//     F: FnOnce(&'ctx bumpalo::Bump) -> R,
+// {
+//     let arena_rc = { ctx.borrow().arena.clone() };
+//     let arena_borrow: Ref<bumpalo::Bump> = arena_rc.borrow();
+//     let arena_ref: &bumpalo::Bump = &arena_borrow;
+//     let arena_ref_ctx: &'ctx bumpalo::Bump = unsafe { std::mem::transmute(arena_ref) };
+// 
+//     f(arena_ref_ctx)
+// }
 
 #[derive(Debug, Clone)]
 pub struct Node<T>
@@ -113,14 +113,13 @@ impl ASTNode for Expr {
             Expr::Variable(v) => Ok(ctx.borrow().get(v)?.borrow().kind.clone()),
             Expr::UnaryOp { op, operand } => {
                 let rhs_kind = operand.kind.eval(ctx.clone())?;
-                with_arena(&ctx, |arena| {
-                    let rhs = ValueContainer::new(rhs_kind, arena);
-                    match op {
-                        UnaryOperator::Negative => Ok(err_op_neg(rhs, arena)?.kind.clone()),
-                        UnaryOperator::Positive => Ok(err_op_pos(rhs, arena)?.kind.clone()),
-                        UnaryOperator::Not => Ok(err_op_not(rhs, arena)?.kind.clone()),
-                    }
-                })
+                let arena = ctx.borrow().arena.clone();
+                let rhs = ctx.borrow().arena.allocate(rhs_kind);
+                match op {
+                    UnaryOperator::Negative => Ok(err_op_neg(rhs, &arena)?.kind.clone()),
+                    UnaryOperator::Positive => Ok(err_op_pos(rhs, &arena)?.kind.clone()),
+                    UnaryOperator::Not => Ok(err_op_not(rhs, &arena)?.kind.clone()),
+                }
             }
             Expr::BinaryOp { left, op, right } => {
                 let lhs_kind = left.kind.eval(ctx.clone())?;
@@ -139,32 +138,31 @@ impl ASTNode for Expr {
                     _ => {}
                 }
                 let rhs_kind = right.kind.eval(ctx.clone())?;
-                with_arena(&ctx, |arena| {
-                    let lhs = ValueContainer::new(lhs_kind, arena);
-                    let rhs = ValueContainer::new(rhs_kind, arena);
-                    match op {
-                        BinaryOperator::Add => Ok(err_op_add(lhs, rhs, arena)?.kind.clone()),
-                        BinaryOperator::Subtract => Ok(err_op_sub(lhs, rhs, arena)?.kind.clone()),
-                        BinaryOperator::Multiply => Ok(err_op_mul(lhs, rhs, arena)?.kind.clone()),
-                        BinaryOperator::Divide => Ok(err_op_div(lhs, rhs, arena)?.kind.clone()),
-                        BinaryOperator::And => Ok(err_op_and(lhs, rhs, arena)?.kind.clone()),
-                        BinaryOperator::Or => Ok(err_op_or(lhs, rhs, arena)?.kind.clone()),
-                        BinaryOperator::Xor => Ok(err_op_bxor(lhs, rhs, arena)?.kind.clone()),
-                        BinaryOperator::Modulo => Ok(err_op_moduls(lhs, rhs, arena)?.kind.clone()),
-                        BinaryOperator::BitwiseAnd => {
-                            Ok(err_op_band(lhs, rhs, arena)?.kind.clone())
-                        }
-                        BinaryOperator::BitwiseOr => Ok(err_op_bor(lhs, rhs, arena)?.kind.clone()),
-                        BinaryOperator::Eq => Ok(err_op_eq(lhs, rhs, arena)?.kind.clone()),
-                        BinaryOperator::NotEq => Ok(err_op_ne(lhs, rhs, arena)?.kind.clone()),
-                        BinaryOperator::Lt => Ok(err_op_lt(lhs, rhs, arena)?.kind.clone()),
-                        BinaryOperator::Lte => Ok(err_op_le(lhs, rhs, arena)?.kind.clone()),
-                        BinaryOperator::Gt => Ok(err_op_gt(lhs, rhs, arena)?.kind.clone()),
-                        BinaryOperator::Gte => Ok(err_op_ge(lhs, rhs, arena)?.kind.clone()),
-                        BinaryOperator::LeftShift => Ok(err_op_bsl(lhs, rhs, arena)?.kind.clone()),
-                        BinaryOperator::RightShift => Ok(err_op_bsr(lhs, rhs, arena)?.kind.clone()),
+                let arena = ctx.borrow().arena.clone();
+                let lhs = arena.allocate(lhs_kind);
+                let rhs = arena.allocate(rhs_kind);
+                match op {
+                    BinaryOperator::Add => Ok(err_op_add(lhs, rhs, &arena)?.kind.clone()),
+                    BinaryOperator::Subtract => Ok(err_op_sub(lhs, rhs, &arena)?.kind.clone()),
+                    BinaryOperator::Multiply => Ok(err_op_mul(lhs, rhs, &arena)?.kind.clone()),
+                    BinaryOperator::Divide => Ok(err_op_div(lhs, rhs, &arena)?.kind.clone()),
+                    BinaryOperator::And => Ok(err_op_and(lhs, rhs, &arena)?.kind.clone()),
+                    BinaryOperator::Or => Ok(err_op_or(lhs, rhs, &arena)?.kind.clone()),
+                    BinaryOperator::Xor => Ok(err_op_bxor(lhs, rhs, &arena)?.kind.clone()),
+                    BinaryOperator::Modulo => Ok(err_op_moduls(lhs, rhs, &arena)?.kind.clone()),
+                    BinaryOperator::BitwiseAnd => {
+                        Ok(err_op_band(lhs, rhs, &arena)?.kind.clone())
                     }
-                })
+                    BinaryOperator::BitwiseOr => Ok(err_op_bor(lhs, rhs, &arena)?.kind.clone()),
+                    BinaryOperator::Eq => Ok(err_op_eq(lhs, rhs, &arena)?.kind.clone()),
+                    BinaryOperator::NotEq => Ok(err_op_ne(lhs, rhs, &arena)?.kind.clone()),
+                    BinaryOperator::Lt => Ok(err_op_lt(lhs, rhs, &arena)?.kind.clone()),
+                    BinaryOperator::Lte => Ok(err_op_le(lhs, rhs, &arena)?.kind.clone()),
+                    BinaryOperator::Gt => Ok(err_op_gt(lhs, rhs, &arena)?.kind.clone()),
+                    BinaryOperator::Gte => Ok(err_op_ge(lhs, rhs, &arena)?.kind.clone()),
+                    BinaryOperator::LeftShift => Ok(err_op_bsl(lhs, rhs, &arena)?.kind.clone()),
+                    BinaryOperator::RightShift => Ok(err_op_bsr(lhs, rhs, &arena)?.kind.clone()),
+                }
             }
             Expr::Wrapped(expr) => expr.kind.eval(ctx.clone()),
         }
@@ -284,17 +282,15 @@ impl ASTNode for Stmt {
                 let value_kind = value.kind.eval(ctx.clone())?;
                 match &target.kind {
                     Expr::Variable(name) => {
-                        with_arena(&ctx, |arena| {
-                            let value_container = ValueContainer::new(value_kind, arena);
-                            ctx.borrow_mut()
-                                .get_ignore_missing(&name, value_container)?;
-                            Ok::<(), SandboxExecutionError>(())
-                        })?;
+                        let value_container = ctx.borrow().arena.allocate(value_kind);
+                        ctx.borrow_mut()
+                            .get_ignore_missing(&name, value_container)?;
+                        Ok::<(), SandboxExecutionError>(())
                     }
                     _ => {
                         Err(SandboxExecutionError::InvalidSyntaxError)?
                     }
-                }
+                }?
             }
             Stmt::If {
                 test,

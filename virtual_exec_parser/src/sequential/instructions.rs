@@ -54,16 +54,6 @@ pub enum Instruction {
 
     // Assignment Operations
     Assign,
-    AddAssign(String),
-    SubAssign(String),
-    MulAssign(String),
-    DivAssign(String),
-    ModAssign(String),
-    AndAssign(String),
-    OrAssign(String),
-    XorAssign(String),
-    ShlAssign(String),
-    ShrAssign(String),
 
 
     // Control Flow
@@ -129,16 +119,6 @@ pub enum InstructionBuilder {
 
     // Assignment Operations
     Assign,
-    AddAssign(String),
-    SubAssign(String),
-    MulAssign(String),
-    DivAssign(String),
-    ModAssign(String),
-    AndAssign(String),
-    OrAssign(String),
-    XorAssign(String),
-    ShlAssign(String),
-    ShrAssign(String),
 
 
     // Control Flow
@@ -201,16 +181,6 @@ impl ConvertInstruction for InstructionBuilder {
             InstructionBuilder::Gt => Instruction::Gt,
             InstructionBuilder::Gte => Instruction::Gte,
             InstructionBuilder::Assign => Instruction::Assign,
-            InstructionBuilder::AddAssign(name) => Instruction::AddAssign(name),
-            InstructionBuilder::SubAssign(name) => Instruction::SubAssign(name),
-            InstructionBuilder::MulAssign(name) => Instruction::MulAssign(name),
-            InstructionBuilder::DivAssign(name) => Instruction::DivAssign(name),
-            InstructionBuilder::ModAssign(name) => Instruction::ModAssign(name),
-            InstructionBuilder::AndAssign(name) => Instruction::AndAssign(name),
-            InstructionBuilder::OrAssign(name) => Instruction::OrAssign(name),
-            InstructionBuilder::XorAssign(name) => Instruction::XorAssign(name),
-            InstructionBuilder::ShlAssign(name) => Instruction::ShlAssign(name),
-            InstructionBuilder::ShrAssign(name) => Instruction::ShrAssign(name),
             InstructionBuilder::JmpNz(offset) => Instruction::JmpNz(offset),
             InstructionBuilder::JmpZ(offset) => Instruction::JmpZ(offset),
             InstructionBuilder::Jmp(offset) => Instruction::Jmp(offset),
@@ -260,16 +230,6 @@ impl Into<InstructionBuilder> for Instruction {
             Instruction::Gt => InstructionBuilder::Gt,
             Instruction::Gte => InstructionBuilder::Gte,
             Instruction::Assign => InstructionBuilder::Assign,
-            Instruction::AddAssign(name) => InstructionBuilder::AddAssign(name),
-            Instruction::SubAssign(name) => InstructionBuilder::SubAssign(name),
-            Instruction::MulAssign(name) => InstructionBuilder::MulAssign(name),
-            Instruction::DivAssign(name) => InstructionBuilder::DivAssign(name),
-            Instruction::ModAssign(name) => InstructionBuilder::ModAssign(name),
-            Instruction::AndAssign(name) => InstructionBuilder::AndAssign(name),
-            Instruction::OrAssign(name) => InstructionBuilder::OrAssign(name),
-            Instruction::XorAssign(name) => InstructionBuilder::XorAssign(name),
-            Instruction::ShlAssign(name) => InstructionBuilder::ShlAssign(name),
-            Instruction::ShrAssign(name) => InstructionBuilder::ShrAssign(name),
             Instruction::JmpNz(offset) => InstructionBuilder::JmpNz(offset),
             Instruction::JmpZ(offset) => InstructionBuilder::JmpZ(offset),
             Instruction::Jmp(offset) => InstructionBuilder::Jmp(offset),

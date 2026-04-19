@@ -3,21 +3,40 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Instruction {
     // Binary Operations
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Mod,
-    Pow,
-    BitwiseAnd,
-    BitwiseOr,
-    BitwiseXor,
-    Shl,
-    Shr,
 
-    // Special Binary (Shortcut)
-    LogicalAnd,
-    LogicalOr,
+    /// Take item from at the top of stack as `b`, then take item from top of stack as `a`
+    /// Perform `a + b`
+    Add,
+    /// Take item from at the top of stack as `b`, then take item from top of stack as `a`
+    /// Perform `a - b`
+    Sub,
+    /// Take item from at the top of stack as `b`, then take item from top of stack as `a`
+    /// Perform `a * b`
+    Mul,
+    /// Take item from at the top of stack as `b`, then take item from top of stack as `a`
+    /// Perform `a / b`
+    Div,
+    /// Take item from at the top of stack as `b`, then take item from top of stack as `a`
+    /// Perform `a % b`
+    Mod,
+    /// Take item from at the top of stack as `b`, then take item from top of stack as `a`
+    /// Perform `a ** b`
+    Pow,
+    /// Take item from at the top of stack as `b`, then take item from top of stack as `a`
+    /// Perform `a & b`
+    BitwiseAnd,
+    /// Take item from at the top of stack as `b`, then take item from top of stack as `a`
+    /// Perform `a | b`
+    BitwiseOr,
+    /// Take item from at the top of stack as `b`, then take item from top of stack as `a`
+    /// Perform `a ^ b`
+    BitwiseXor,
+    /// Take item from at the top of stack as `b`, then take item from top of stack as `a`
+    /// Perform `a << b`
+    Shl,
+    /// Take item from at the top of stack as `b`, then take item from top of stack as `a`
+    /// Perform `a >> b`
+    Shr,
 
     // Unary Operations
     UnaryPlus,
@@ -34,7 +53,7 @@ pub enum Instruction {
     Gte,
 
     // Assignment Operations
-    Assign(String),
+    Assign,
     AddAssign(String),
     SubAssign(String),
     MulAssign(String),
@@ -48,8 +67,16 @@ pub enum Instruction {
 
 
     // Control Flow
+    /// Take item from at the top of stack as `a`
+    /// If `a` is not false and not 0, it jumps to the specify location and run as the next instruction
+    /// Otherwise it continue to the next instruction
     JmpNz(u64), // Jump when not zero
+    /// Take item from at the top of stack as `a`
+    /// If `a` is false or 0, it jumps to the specify location and run as the next instruction
+    /// Otherwise it continue to the next instruction
     JmpZ(u64), // Jump when zero
+    /// Jump unconditionally to the specific location and run as the next instruction
+    Jmp(u64),
     Call,
     Ret,
 
@@ -85,9 +112,6 @@ pub enum InstructionBuilder {
     Shl,
     Shr,
 
-    // Special Binary (Shortcut)
-    LogicalAnd,
-    LogicalOr,
 
     // Unary Operations
     UnaryPlus,
@@ -104,7 +128,7 @@ pub enum InstructionBuilder {
     Gte,
 
     // Assignment Operations
-    Assign(String),
+    Assign,
     AddAssign(String),
     SubAssign(String),
     MulAssign(String),
@@ -120,8 +144,10 @@ pub enum InstructionBuilder {
     // Control Flow
     JmpNz(u64), // Jump when not zero
     JmpZ(u64), // Jump when zero
+    Jmp(u64),
     JmpNzR(u64), // Releative jmp
     JmpZR(u64),
+    JmpR(u64),
     Call,
     Ret,
 
@@ -164,8 +190,6 @@ impl ConvertInstruction for InstructionBuilder {
             InstructionBuilder::BitwiseXor => Instruction::BitwiseXor,
             InstructionBuilder::Shl => Instruction::Shl,
             InstructionBuilder::Shr => Instruction::Shr,
-            InstructionBuilder::LogicalAnd => Instruction::LogicalAnd,
-            InstructionBuilder::LogicalOr => Instruction::LogicalOr,
             InstructionBuilder::UnaryPlus => Instruction::UnaryPlus,
             InstructionBuilder::UnaryMinus => Instruction::UnaryMinus,
             InstructionBuilder::Not => Instruction::Not,
@@ -176,7 +200,7 @@ impl ConvertInstruction for InstructionBuilder {
             InstructionBuilder::Lte => Instruction::Lte,
             InstructionBuilder::Gt => Instruction::Gt,
             InstructionBuilder::Gte => Instruction::Gte,
-            InstructionBuilder::Assign(name) => Instruction::Assign(name),
+            InstructionBuilder::Assign => Instruction::Assign,
             InstructionBuilder::AddAssign(name) => Instruction::AddAssign(name),
             InstructionBuilder::SubAssign(name) => Instruction::SubAssign(name),
             InstructionBuilder::MulAssign(name) => Instruction::MulAssign(name),
@@ -189,8 +213,10 @@ impl ConvertInstruction for InstructionBuilder {
             InstructionBuilder::ShrAssign(name) => Instruction::ShrAssign(name),
             InstructionBuilder::JmpNz(offset) => Instruction::JmpNz(offset),
             InstructionBuilder::JmpZ(offset) => Instruction::JmpZ(offset),
+            InstructionBuilder::Jmp(offset) => Instruction::Jmp(offset),
             InstructionBuilder::JmpNzR(offset) => Instruction::JmpNz(relative + offset),
             InstructionBuilder::JmpZR(offset) => Instruction::JmpZ(relative + offset),
+            InstructionBuilder::JmpR(offset) => Instruction::Jmp(relative + offset),
             InstructionBuilder::Call => Instruction::Call,
             InstructionBuilder::Ret => Instruction::Ret,
             InstructionBuilder::LoadNone => Instruction::LoadNone,
@@ -205,6 +231,62 @@ impl ConvertInstruction for InstructionBuilder {
             InstructionBuilder::LoadObjectIndex(index) => Instruction::LoadObjectIndex(index),
             InstructionBuilder::Terminate => Instruction::Terminate,
             InstructionBuilder::Interrupt => Instruction::Interrupt,
+        }
+    }
+}
+
+impl Into<InstructionBuilder> for Instruction {
+    fn into(self) -> InstructionBuilder {
+        match self {
+            Instruction::Add => InstructionBuilder::Add,
+            Instruction::Sub => InstructionBuilder::Sub,
+            Instruction::Mul => InstructionBuilder::Mul,
+            Instruction::Div => InstructionBuilder::Div,
+            Instruction::Mod => InstructionBuilder::Mod,
+            Instruction::Pow => InstructionBuilder::Pow,
+            Instruction::BitwiseAnd => InstructionBuilder::BitwiseAnd,
+            Instruction::BitwiseOr => InstructionBuilder::BitwiseOr,
+            Instruction::BitwiseXor => InstructionBuilder::BitwiseXor,
+            Instruction::Shl => InstructionBuilder::Shl,
+            Instruction::Shr => InstructionBuilder::Shr,
+            Instruction::UnaryPlus => InstructionBuilder::UnaryPlus,
+            Instruction::UnaryMinus => InstructionBuilder::UnaryMinus,
+            Instruction::Not => InstructionBuilder::Not,
+            Instruction::BitwiseNot => InstructionBuilder::BitwiseNot,
+            Instruction::Eq => InstructionBuilder::Eq,
+            Instruction::NotEq => InstructionBuilder::NotEq,
+            Instruction::Lt => InstructionBuilder::Lt,
+            Instruction::Lte => InstructionBuilder::Lte,
+            Instruction::Gt => InstructionBuilder::Gt,
+            Instruction::Gte => InstructionBuilder::Gte,
+            Instruction::Assign => InstructionBuilder::Assign,
+            Instruction::AddAssign(name) => InstructionBuilder::AddAssign(name),
+            Instruction::SubAssign(name) => InstructionBuilder::SubAssign(name),
+            Instruction::MulAssign(name) => InstructionBuilder::MulAssign(name),
+            Instruction::DivAssign(name) => InstructionBuilder::DivAssign(name),
+            Instruction::ModAssign(name) => InstructionBuilder::ModAssign(name),
+            Instruction::AndAssign(name) => InstructionBuilder::AndAssign(name),
+            Instruction::OrAssign(name) => InstructionBuilder::OrAssign(name),
+            Instruction::XorAssign(name) => InstructionBuilder::XorAssign(name),
+            Instruction::ShlAssign(name) => InstructionBuilder::ShlAssign(name),
+            Instruction::ShrAssign(name) => InstructionBuilder::ShrAssign(name),
+            Instruction::JmpNz(offset) => InstructionBuilder::JmpNz(offset),
+            Instruction::JmpZ(offset) => InstructionBuilder::JmpZ(offset),
+            Instruction::Jmp(offset) => InstructionBuilder::Jmp(offset),
+            Instruction::Call => InstructionBuilder::Call,
+            Instruction::Ret => InstructionBuilder::Ret,
+            Instruction::LoadNone => InstructionBuilder::LoadNone,
+            Instruction::LoadLitFloat(value) => InstructionBuilder::LoadLitFloat(value),
+            Instruction::LoadLitInt(value) => InstructionBuilder::LoadLitInt(value),
+            Instruction::LoadLitString(value) => InstructionBuilder::LoadLitString(value),
+            Instruction::LoadLitBool(value) => InstructionBuilder::LoadLitBool(value),
+            Instruction::ConstructArr(length) => InstructionBuilder::ConstructArr(length),
+            Instruction::ConstructObj(length) => InstructionBuilder::ConstructObj(length),
+            Instruction::LoadName(name) => InstructionBuilder::LoadName(name),
+            Instruction::LoadObjectAttr(name) => InstructionBuilder::LoadObjectAttr(name),
+            Instruction::LoadObjectIndex(index) => InstructionBuilder::LoadObjectIndex(index),
+            Instruction::Terminate => InstructionBuilder::Terminate,
+            Instruction::Interrupt => InstructionBuilder::Interrupt,
         }
     }
 }

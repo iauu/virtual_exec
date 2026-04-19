@@ -12,8 +12,15 @@ impl<'ctx> Allocator<'ctx> {
     pub fn new(arena: &'ctx Bump) -> Self {
         Self { arena: Rc::new(RefCell::new(arena)) }
     }
-    
+
     pub fn allocate(&self, kind: ValueKind<'ctx>) -> Value<'ctx> {
         ValueContainer::new(kind, *self.arena.borrow())
+    }
+}
+
+pub fn create_arena(size: Option<usize>) -> Bump {
+    match size {
+        Some(size) => Bump::with_capacity(size),
+        None => Bump::new(),
     }
 }

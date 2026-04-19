@@ -20,9 +20,6 @@ pub enum Instruction {
     /// Perform `a % b`
     Mod,
     /// Take item from at the top of stack as `b`, then take item from top of stack as `a`
-    /// Perform `a ** b`
-    Pow,
-    /// Take item from at the top of stack as `b`, then take item from top of stack as `a`
     /// Perform `a & b`
     BitwiseAnd,
     /// Take item from at the top of stack as `b`, then take item from top of stack as `a`
@@ -98,7 +95,6 @@ pub enum InstructionBuilder {
     Mul,
     Div,
     Mod,
-    Pow,
     BitwiseAnd,
     BitwiseOr,
     BitwiseXor,
@@ -170,7 +166,6 @@ impl ConvertInstruction for InstructionBuilder {
             InstructionBuilder::Mul => Instruction::Mul,
             InstructionBuilder::Div => Instruction::Div,
             InstructionBuilder::Mod => Instruction::Mod,
-            InstructionBuilder::Pow => Instruction::Pow,
             InstructionBuilder::BitwiseAnd => Instruction::BitwiseAnd,
             InstructionBuilder::BitwiseOr => Instruction::BitwiseOr,
             InstructionBuilder::BitwiseXor => Instruction::BitwiseXor,
@@ -220,7 +215,6 @@ impl Into<InstructionBuilder> for Instruction {
             Instruction::Mul => InstructionBuilder::Mul,
             Instruction::Div => InstructionBuilder::Div,
             Instruction::Mod => InstructionBuilder::Mod,
-            Instruction::Pow => InstructionBuilder::Pow,
             Instruction::BitwiseAnd => InstructionBuilder::BitwiseAnd,
             Instruction::BitwiseOr => InstructionBuilder::BitwiseOr,
             Instruction::BitwiseXor => InstructionBuilder::BitwiseXor,

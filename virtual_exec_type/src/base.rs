@@ -1,7 +1,9 @@
+use std::cell::RefCell;
 use crate::builtin::{VirPyFloat, VirPyInt, VirPyObject};
 use crate::error::SandboxExecutionError;
 use bumpalo::Bump;
 use std::fmt::Debug;
+use std::rc::Rc;
 
 pub type Value<'ctx> = &'ctx ValueContainer<'ctx>;
 
@@ -13,7 +15,7 @@ pub enum ValueKind<'ctx> {
     ErrorWrapped(SandboxExecutionError),
     Bool(bool),
     String(String),
-    Collection(Vec<Value<'ctx>>),
+    Collection(Rc<RefCell<Vec<Value<'ctx>>>>),
     None,
 }
 
@@ -37,13 +39,13 @@ impl<'ctx> Upcast<'ctx> for bool {
     }
 }
 
-impl<'ctx> Downcast<'ctx> for Vec<Value<'ctx>> {
+impl<'ctx> Downcast<'ctx> for Rc<RefCell<Vec<Value<'ctx>>>> {
     fn from_value(value: Value<'ctx>) -> Option<&'ctx Self> {
         value.as_collection()
     }
 }
 
-impl<'ctx> Upcast<'ctx> for Vec<Value<'ctx>> {
+impl<'ctx> Upcast<'ctx> for Rc<RefCell<Vec<Value<'ctx>>>> {
     fn from_value(&'ctx self) -> ValueKind<'ctx> {
         ValueKind::Collection(self.clone())
     }
@@ -73,7 +75,7 @@ impl<'ctx> Upcast<'ctx> for () {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ValueContainer<'ctx> {
     pub kind: ValueKind<'ctx>,
 }
@@ -95,6 +97,19 @@ impl<'ctx> ValueContainer<'ctx> {
             ValueKind::Collection(c) => ValueKind::Collection(c.clone()),
         };
         ValueContainer::new(new_kind, arena)
+    }
+
+    pub fn is_truthy(&self) -> bool {
+        match &self.kind {
+            ValueKind::Int(i) => i.value != 0,
+            ValueKind::Float(f) => f.value != 0.0,
+            ValueKind::Bool(b) => *b,
+            ValueKind::None => false,
+            ValueKind::String(s) => !s.is_empty(),
+            ValueKind::Collection(c) => !c.borrow().is_empty(),
+            ValueKind::Object(_) => true,
+            ValueKind::ErrorWrapped(_) => true,
+        }
     }
 
     pub fn as_int(&self) -> Option<&VirPyInt> {
@@ -146,7 +161,7 @@ impl<'ctx> ValueContainer<'ctx> {
         }
     }
 
-    pub fn as_collection(&self) -> Option<&Vec<Value<'ctx>>> {
+    pub fn as_collection(&self) -> Option<&Rc<RefCell<Vec<Value<'ctx>>>>> {
         match &self.kind {
             ValueKind::Collection(e) => Some(e),
             _ => None,

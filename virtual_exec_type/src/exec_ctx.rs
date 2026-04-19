@@ -40,7 +40,7 @@ fn value_kind_to_rs_value(kind: &ValueKind) -> RsValue {
         ValueKind::ErrorWrapped(_) => RsValue::None,
         ValueKind::Collection(v) => {
             let mut vec = Vec::new();
-            for value in v {
+            for value in v.borrow().clone() {
                 vec.push(value_kind_to_rs_value(&value.kind));
             }
             RsValue::Vector(vec)

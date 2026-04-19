@@ -1,2 +1,2 @@
-mod instructions;
-mod compile;
+pub mod instructions;
+pub mod compile;

@@ -2,6 +2,10 @@ use virtual_exec_type::ast::core::{Module, Expr, ASTNode, Literal, Stmt, AssignE
 use crate::sequential::instructions::{Instruction, InstructionBuilder};
 use crate::sequential::instructions::Instruction::{Jmp, JmpNz, JmpZ, LoadLitBool};
 
+pub fn compile(module: &Module) -> Vec<Instruction> {
+    module.inst(0)
+}
+
 pub trait GetInstruction {
     fn inst(&self, offset: u64) -> Vec<Instruction>;
 }

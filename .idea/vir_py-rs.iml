@@ -10,6 +10,7 @@
       <sourceFolder url="file://$MODULE_DIR$/virtual_exec_parser/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/virtual_exec_type/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/virtual_exec_type/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/virtual_exec_parser/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

@@ -52,7 +52,11 @@ impl GetInstruction for &Vec<Node<Stmt>> {
 impl GetInstruction for Stmt {
     fn inst(&self, offset: u64) -> Vec<Instruction> {
         match self {
-            Stmt::Expression(expr) => expr.kind.inst(offset),
+            Stmt::Expression(expr) => { 
+                let mut base = expr.kind.inst(offset);
+                base.push(Instruction::Pop); // The expr have to be discarded
+                base
+            },
             Stmt::Assign { target, value } => {
                 let target_inst = target.kind.inst(offset);
                 let value_inst = value.kind.inst(offset + target_inst.len() as u64);

@@ -31,6 +31,7 @@ fn test_value_creation_and_downcast() {
         Instruction::LoadName("d".to_string()),
         Instruction::Add,
         Instruction::Assign,
-        Instruction::LoadName("d".to_string())
+        Instruction::LoadName("d".to_string()),
+        Instruction::Pop
     ]);
 }

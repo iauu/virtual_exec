@@ -84,7 +84,10 @@ pub enum Instruction {
 
     // External
     Terminate,
-    Interrupt
+    Interrupt,
+
+    // Stack
+    Pop
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -145,7 +148,10 @@ pub enum InstructionBuilder {
 
     // External
     Terminate,
-    Interrupt
+    Interrupt,
+
+    // Stack
+    Pop
 }
 
 pub trait ConvertInstruction {
@@ -201,6 +207,7 @@ impl ConvertInstruction for InstructionBuilder {
             InstructionBuilder::LoadObjectIndex(index) => Instruction::LoadObjectIndex(index),
             InstructionBuilder::Terminate => Instruction::Terminate,
             InstructionBuilder::Interrupt => Instruction::Interrupt,
+            InstructionBuilder::Pop => Instruction::Pop,
         }
     }
 }
@@ -247,6 +254,7 @@ impl Into<InstructionBuilder> for Instruction {
             Instruction::LoadObjectIndex(index) => InstructionBuilder::LoadObjectIndex(index),
             Instruction::Terminate => InstructionBuilder::Terminate,
             Instruction::Interrupt => InstructionBuilder::Interrupt,
+            Instruction::Pop => InstructionBuilder::Pop,
         }
     }
 }

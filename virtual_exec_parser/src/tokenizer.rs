@@ -24,10 +24,46 @@ pub struct Block {
 }
 
 #[derive(Clone)]
+pub enum AssignExpr {
+    Variable(String),
+    Paren(Box<AssignExpr>),
+}
+
+impl TryFrom<Expr> for AssignExpr {
+    type Error = ();
+    fn try_from(expr: Expr) -> std::result::Result<Self, Self::Error> {
+        match expr {
+            Expr::Atom(Atom::Variable(v)) => Ok(AssignExpr::Variable(v)),
+            Expr::Atom(Atom::Paren(inner)) => {
+                let inner_assign = AssignExpr::try_from(*inner)?;
+                Ok(AssignExpr::Paren(Box::new(inner_assign)))
+            }
+            _ => Err(()),
+        }
+    }
+}
+
+impl Parse for AssignExpr {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let expr = input.parse::<Expr>()?;
+        AssignExpr::try_from(expr).map_err(|_| input.error("expected an assignable expression"))
+    }
+}
+
+impl Into<Expr> for AssignExpr {
+    fn into(self) -> Expr {
+        match self {
+            AssignExpr::Variable(v) => Expr::Atom(Atom::Variable(v)),
+            AssignExpr::Paren(inner) => Expr::Atom(Atom::Paren(Box::new((*inner).into()))),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub enum Stmt {
     Expr(Expr),
     Assign {
-        target: Expr,
+        target: AssignExpr,
         value: Expr,
     },
     If {
@@ -82,14 +118,14 @@ impl Parse for Stmt {
             || fork.peek(token::BitOrAssign) || fork.peek(token::BitXorAssign)
             || fork.peek(token::LeftShiftAssign) || fork.peek(token::RightShiftAssign)
         {
-            let target = input.parse::<Expr>()?;
+            let target = input.parse::<AssignExpr>()?;
             let op: AssignOp = input.parse()?;
             let value = input.parse::<Expr>()?;
             input.parse::<Token![;]>()?;
 
             let final_value = match map_assign_op_to_binary_op(op) {
                 None => value,
-                Some(binary_op) => Expr::Binary(Box::new(target.clone()), binary_op, Box::new(value))
+                Some(binary_op) => Expr::Binary(Box::new(target.clone().into()), binary_op, Box::new(value))
             };
             
             Ok(Stmt::Assign { target, value: final_value })

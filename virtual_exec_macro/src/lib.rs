@@ -2,7 +2,7 @@ use proc_macro2::{Span, TokenStream as TokenStream2};
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
 use syn::parse_macro_input;
-use virtual_exec_parser::tokenizer::{Block, Stmt, Expr, Atom, TopLevelBlock};
+use virtual_exec_parser::tokenizer::{Block, Stmt, Expr, Atom, TopLevelBlock, AssignExpr};
 use virtual_exec_type::ast::core::{BinaryOperator, UnaryOperator, Literal};
 
 fn literal_to_token(lit: Literal) -> impl ToTokens {
@@ -100,6 +100,28 @@ fn expr_to_token(expr: Expr) -> impl ToTokens {
     }
 }
 
+fn assign_expr_to_token(expr: AssignExpr) -> impl ToTokens {
+    let kind = match expr {
+        AssignExpr::Variable(v) => {
+            quote! { ::virtual_exec_type::ast::core::AssignExpr::Variable(#v.to_string()) }
+        }
+        AssignExpr::Paren(inner) => {
+            let inner_token = assign_expr_to_token(*inner);
+            quote! {
+                ::virtual_exec_type::ast::core::AssignExpr::Wrapped(
+                    Box::new(#inner_token)
+                )
+            }
+        }
+    };
+    quote! {
+        ::virtual_exec_type::ast::core::Node {
+            kind: #kind,
+            span: None,
+        }
+    }
+}
+
 fn stmts_to_token(stmts: Vec<Stmt>) -> impl ToTokens {
     let mut e = Vec::new();
     for stmt in stmts {
@@ -125,7 +147,7 @@ fn stmt_to_token(stmt: Stmt) -> impl ToTokens {
             }
         }
         Stmt::Assign { target, value } => {
-            let target_token = expr_to_token(target);
+            let target_token = assign_expr_to_token(target);
             let value_token = expr_to_token(value);
             quote! {
                 ::virtual_exec_type::ast::core::Node {

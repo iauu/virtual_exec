@@ -7,7 +7,7 @@ fn convert_stmt(stmt: tokenizer::Stmt) -> Result<final_ast::Node<final_ast::Stmt
         tokenizer::Stmt::Expr(expr) => final_ast::Stmt::Expression(convert_expr(expr)),
         tokenizer::Stmt::Assign { target, value } => {
             final_ast::Stmt::Assign {
-                target: convert_expr(target),
+                target: convert_assign_expr(target),
                 value: convert_expr(value),
             }
         }
@@ -38,7 +38,7 @@ fn convert_expr(expr: tokenizer::Expr) -> final_ast::Node<final_ast::Expr> {
         tokenizer::Expr::Atom(atom) => match atom {
             tokenizer::Atom::Literal(l) => final_ast::Expr::Literal(l),
             tokenizer::Atom::Variable(v) => final_ast::Expr::Variable(v),
-            tokenizer::Atom::Paren(expr_in_paren) => return convert_expr(*expr_in_paren),
+            tokenizer::Atom::Paren(expr_in_paren) => final_ast::Expr::Wrapped(Box::new(convert_expr(*expr_in_paren)))
         },
         tokenizer::Expr::Binary(left, op, right) => final_ast::Expr::BinaryOp {
             left: Box::new(convert_expr(*left)),
@@ -49,6 +49,19 @@ fn convert_expr(expr: tokenizer::Expr) -> final_ast::Node<final_ast::Expr> {
             op,
             operand: Box::new(convert_expr(*operand)),
         },
+    };
+    final_ast::Node { kind, span: None }
+}
+
+fn convert_assign_expr(expr: tokenizer::AssignExpr) -> final_ast::Node<final_ast::AssignExpr> {
+    let kind = match expr {
+        tokenizer::AssignExpr::Variable(v) => final_ast::AssignExpr::Variable(v),
+        tokenizer::AssignExpr::Paren(expr_in_paren) => {
+            return final_ast::Node {
+                kind: final_ast::AssignExpr::Wrapped(Box::new(convert_assign_expr(*expr_in_paren))),
+                span: None,
+            };
+        }
     };
     final_ast::Node { kind, span: None }
 }

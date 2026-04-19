@@ -29,7 +29,7 @@ pub trait ASTNode {
 //     let arena_borrow: Ref<bumpalo::Bump> = arena_rc.borrow();
 //     let arena_ref: &bumpalo::Bump = &arena_borrow;
 //     let arena_ref_ctx: &'ctx bumpalo::Bump = unsafe { std::mem::transmute(arena_ref) };
-// 
+//
 //     f(arena_ref_ctx)
 // }
 
@@ -173,6 +173,41 @@ impl ASTNode for Expr {
     }
 }
 
+
+#[derive(Debug, Clone)]
+pub enum AssignExpr {
+    Variable(String),
+    Wrapped(Box<Node<AssignExpr>>),
+    // Attribute {
+    //     value: Box<Node<Expr>>,
+    //     attr: String,
+    // },
+    // Subscript {
+    //     value: Box<Node<Expr>>,
+    //     slice: Box<Node<Expr>>,
+    // },
+    // Range {
+    //     lower: Option<i64>,
+    //     upper: Option<i64>,
+    //     step: Option<i64>,
+    // },
+}
+impl ASTNode for AssignExpr {
+    type Output<'ctx> = ValueKind<'ctx>;
+
+    fn eval<'ctx>(&self, ctx: Rc<RefCell<ExecutionContext<'ctx>>>) -> Result<Self::Output<'ctx>> {
+        ctx.borrow_mut().consume_one()?;
+        match self {
+            AssignExpr::Variable(v) => Ok(ctx.borrow().get(v)?.borrow().kind.clone()),
+            AssignExpr::Wrapped(expr) => expr.kind.eval(ctx.clone()),
+        }
+    }
+
+    fn get_callsite(&self) -> Option<Span> {
+        todo!()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Literal {
     Int(i64),
@@ -234,7 +269,7 @@ pub enum UnaryOperator {
 pub enum Stmt {
     Expression(Node<Expr>),
     Assign {
-        target: Node<Expr>, // temp since no a[b] or a.b right now
+        target: Node<AssignExpr>, // temp since no a[b] or a.b right now
         value: Node<Expr>,
     },
     If {
@@ -281,7 +316,7 @@ impl ASTNode for Stmt {
             Stmt::Assign { target, value } => {
                 let value_kind = value.kind.eval(ctx.clone())?;
                 match &target.kind {
-                    Expr::Variable(name) => {
+                    AssignExpr::Variable(name) => {
                         let value_container = ctx.borrow().arena.allocate(value_kind);
                         ctx.borrow_mut()
                             .get_ignore_missing(&name, value_container)?;

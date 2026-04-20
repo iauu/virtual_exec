@@ -34,6 +34,7 @@ WIP Feature list:
 - [x] `if` statement
 - [ ] Custom object definition
 - [ ] Use `await` in rust to allow context switching to other part of program to make it not blocking
+- [x] Linear instruction system (this allows `await` system later)
 
 ### Sub-crate List:
 - [virtual_exec_type](https://crates.io/crates/virtual_exec_type)

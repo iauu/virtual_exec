@@ -1,3 +1,3 @@
 pub mod instructions;
 pub mod compile;
-mod exec;
+pub mod exec;

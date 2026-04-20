@@ -125,21 +125,23 @@ pub enum State {
 
 macro_rules! __binary_autogen {
     ($f:ident, $ss:ident) => {
-        let _ = {
+        {
             let b = $ss.pop_get()?;
             let a = $ss.pop_get()?;
-            $ss.fn_stack_frame.last_mut().unwrap().push_value($f(a, b, &$ss.alloc).ok_or(SandboxExecutionError::UndefinedOperendError)?);
-        };
+            let result = $f(a, b, &$ss.alloc).ok_or(SandboxExecutionError::UndefinedOperendError)?;
+            $ss.fn_stack_frame.last_mut().unwrap().push_value(result);
+        }
     };
 }
 
 
 macro_rules! __unary_autogen {
     ($f:ident, $ss:ident) => {
-        let _ = {
+        {
             let a = $ss.pop_get()?;
-            $ss.fn_stack_frame.last_mut().unwrap().push_value($f(a, &$ss.alloc).ok_or(SandboxExecutionError::UndefinedOperendError)?);
-        };
+            let result = $f(a, &$ss.alloc).ok_or(SandboxExecutionError::UndefinedOperendError)?;
+            $ss.fn_stack_frame.last_mut().unwrap().push_value(result);
+        }
     };
 }
 
@@ -217,7 +219,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                     return self.state.clone()
                 }
             };
-            instruction = &self.instructions[stack.ptr as usize];
+            instruction = self.instructions[stack.ptr as usize].clone();
             stack.ptr += 1;
         }
         match instruction {
@@ -282,19 +284,19 @@ impl<'ctx> InstStateMachine<'ctx> {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
                 let a = stack.pop_value()?;
                 if a.is_truthy() {
-                    stack.ptr = *loc;
+                    stack.ptr = loc;
                 }
             }
             Instruction::JmpZ(loc) => {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
                 let a = stack.pop_value()?;
                 if !a.is_truthy() {
-                    stack.ptr = *loc;
+                    stack.ptr = loc;
                 }
             }
             Instruction::Jmp(loc) => {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
-                stack.ptr = *loc;
+                stack.ptr = loc;
             }
             Instruction::Call => {
                 todo!("Function not exist yet")
@@ -308,11 +310,11 @@ impl<'ctx> InstStateMachine<'ctx> {
             }
             Instruction::LoadLitFloat(v) => {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
-                stack.push_value(self.alloc.allocate(ValueKind::Float(VirPyFloat { value: *v })));
+                stack.push_value(self.alloc.allocate(ValueKind::Float(VirPyFloat { value: v })));
             }
             Instruction::LoadLitInt(v) => {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
-                stack.push_value(self.alloc.allocate(ValueKind::Int(VirPyInt { value: *v })));
+                stack.push_value(self.alloc.allocate(ValueKind::Int(VirPyInt { value: v })));
             }
             Instruction::LoadLitString(v) => {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
@@ -320,12 +322,12 @@ impl<'ctx> InstStateMachine<'ctx> {
             }
             Instruction::LoadLitBool(v) => {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
-                stack.push_value(self.alloc.allocate(ValueKind::Bool(*v)));
+                stack.push_value(self.alloc.allocate(ValueKind::Bool(v)));
             }
             Instruction::ConstructArr(len) => {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
-                let mut arr = Vec::with_capacity(*len as usize);
-                for _ in 0..*len {
+                let mut arr = Vec::with_capacity(len as usize);
+                for _ in 0..len {
                     arr.push(stack.pop_value()?);
                 }
                 stack.push_value(self.alloc.allocate(ValueKind::Collection(Rc::new(RefCell::new(arr)))));
@@ -333,7 +335,7 @@ impl<'ctx> InstStateMachine<'ctx> {
             Instruction::ConstructObj(len2) => {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
                 let mut obj = VirPyObject::new();
-                for idx in 0..*len2 {
+                for idx in 0..len2 {
                     let name = stack.pop_value()?;
                     let value = stack.pop_value()?;
                     if name.as_string().is_none() {
@@ -368,7 +370,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
                 let value = stack.pop_value()?;
                 if let Some(_) = value.as_collection() {
-                    stack.push_idx_ref((value, *idx));
+                    stack.push_idx_ref((value, idx));
                 }
                 else {
                     self.state = Err(SandboxExecutionError::UnexpectedIdxError);

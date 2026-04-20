@@ -2,8 +2,10 @@ use proc_macro2::{Span, TokenStream as TokenStream2};
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
 use syn::parse_macro_input;
+use virtual_exec_parser::parser::convert_stmt;
+use virtual_exec_parser::sequential::instructions::Instruction;
 use virtual_exec_parser::tokenizer::{Block, Stmt, Expr, Atom, TopLevelBlock, AssignExpr};
-use virtual_exec_type::ast::core::{BinaryOperator, UnaryOperator, Literal};
+use virtual_exec_type::ast::core::{BinaryOperator, UnaryOperator, Literal, Module, Node};
 
 fn literal_to_token(lit: Literal) -> impl ToTokens {
     match lit {
@@ -207,5 +209,72 @@ fn block_to_token(v: TopLevelBlock) -> impl ToTokens {
 pub fn parse(input: TokenStream) -> TokenStream {
     let output = parse_macro_input!(input as TopLevelBlock);
     let token_content = block_to_token(output);
+    quote! { #token_content }.into()
+}
+
+fn inst_to_token(inst: Instruction) -> impl ToTokens {
+    match inst {
+        Instruction::Add => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Add },
+        Instruction::Sub => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Sub },
+        Instruction::Mul => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Mul },
+        Instruction::Div => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Div },
+        Instruction::Mod => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Mod },
+        Instruction::BitwiseAnd => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::BitwiseAnd },
+        Instruction::BitwiseOr => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::BitwiseOr },
+        Instruction::BitwiseXor => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::BitwiseXor },
+        Instruction::Shl => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Shl },
+        Instruction::Shr => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Shr },
+        Instruction::UnaryPlus => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::UnaryPlus },
+        Instruction::UnaryMinus => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::UnaryMinus },
+        Instruction::Not => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Not },
+        Instruction::BitwiseNot => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::BitwiseNot },
+        Instruction::Eq => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Eq },
+        Instruction::NotEq => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::NotEq },
+        Instruction::Lt => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Lt },
+        Instruction::Lte => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Lte },
+        Instruction::Gt => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Gt },
+        Instruction::Gte => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Gte },
+        Instruction::Assign => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Assign },
+        Instruction::JmpNz(loc) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::JmpNz(#loc) },
+        Instruction::JmpZ(loc) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::JmpZ(#loc) },
+        Instruction::Jmp(loc) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Jmp(#loc) },
+        Instruction::Call => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Call },
+        Instruction::Ret => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Ret },
+        Instruction::LoadNone => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadNone },
+        Instruction::LoadLitFloat(val) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadLitFloat(#val) },
+        Instruction::LoadLitInt(val) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadLitInt(#val) },
+        Instruction::LoadLitString(val) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadLitString((#val).to_string()) },
+        Instruction::LoadLitBool(val) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadLitBool(#val) },
+        Instruction::ConstructArr(len) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::ConstructArr(#len) },
+        Instruction::ConstructObj(len2) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::ConstructObj(#len2) },
+        Instruction::LoadName(name) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadName((#name).to_string()) },
+        Instruction::LoadObjectAttr(attr) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadObjectAttr((#attr).to_string()) },
+        Instruction::LoadObjectIndex(idx) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadObjectIndex(#idx) },
+        Instruction::Terminate => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Terminate },
+        Instruction::Interrupt => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Interrupt },
+        Instruction::Pop => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Pop }
+    }
+}
+
+fn insts_to_token(stmts: Vec<Instruction>) -> impl ToTokens {
+    let mut e = Vec::new();
+    for inst in stmts {
+        let tokens = inst_to_token(inst);
+        e.push(tokens);
+    }
+    quote! {
+        vec![
+            #(#e),*
+        ]
+    }
+}
+
+#[proc_macro]
+pub fn compile(input: TokenStream) -> TokenStream {
+    let output = parse_macro_input!(input as TopLevelBlock);
+    let body = output.stmts.into_iter().map(convert_stmt).collect::<Result<_, _>>().unwrap();
+    let module = Module { body, span: None };
+    let compiled = virtual_exec_parser::sequential::compile::compile(&module);
+    let token_content = insts_to_token(compiled);
     quote! { #token_content }.into()
 }

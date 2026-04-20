@@ -2,7 +2,7 @@ use crate::tokenizer;
 use virtual_exec_type::ast::core as final_ast;
 use crate::error::ParseError;
 
-fn convert_stmt(stmt: tokenizer::Stmt) -> Result<final_ast::Node<final_ast::Stmt>, ParseError> {
+pub fn convert_stmt(stmt: tokenizer::Stmt) -> Result<final_ast::Node<final_ast::Stmt>, ParseError> {
     let kind = match stmt {
         tokenizer::Stmt::Expr(expr) => final_ast::Stmt::Expression(convert_expr(expr)),
         tokenizer::Stmt::Assign { target, value } => {

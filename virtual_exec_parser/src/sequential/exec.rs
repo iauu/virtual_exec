@@ -222,6 +222,11 @@ impl<'ctx> InstStateMachine<'ctx> {
             instruction = self.instructions[stack.ptr as usize].clone();
             stack.ptr += 1;
         }
+        self.lim -= 1;
+        if self.lim == 0 {
+            self.state = Err(SandboxExecutionError::TimeoutError);
+            return self.state.clone()
+        }
         match instruction {
             Instruction::Add => { __binary_autogen!(op_add, self); },
             Instruction::Sub => { __binary_autogen!(op_sub, self); },

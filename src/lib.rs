@@ -8,30 +8,30 @@ use virtual_exec_type::alloc::Allocator;
 use virtual_exec_type::ast::core::ASTNode;
 use virtual_exec_type::builtin::Mapping;
 use virtual_exec_type::exec_ctx::{ExecutionContext, RsValue};
-use virtual_exec_type::error::SandboxExecutionError;
+use virtual_exec_type::error::SandboxExecutionError as InterpretedSandboxExecutionError;
 
-/// The unified error type for the `vir_py-rs` library.
+/// The interpreted unified error type for the `virtual_exec` library.
 #[derive(Debug)]
-pub enum ExecError {
+pub enum InterpretedExecError {
     /// An error that occurred during the parsing phase.
     Parse(ParseError),
     /// An error that occurred during the execution phase.
-    Execution(SandboxExecutionError),
+    Execution(InterpretedSandboxExecutionError),
 }
 
-impl From<ParseError> for ExecError {
+impl From<ParseError> for InterpretedExecError {
     fn from(e: ParseError) -> Self {
-        ExecError::Parse(e)
+        InterpretedExecError::Parse(e)
     }
 }
 
-impl From<SandboxExecutionError> for ExecError {
-    fn from(e: SandboxExecutionError) -> Self {
-        ExecError::Execution(e)
+impl From<InterpretedSandboxExecutionError> for InterpretedExecError {
+    fn from(e: InterpretedSandboxExecutionError) -> Self {
+        InterpretedExecError::Execution(e)
     }
 }
 
-/// Executes a string of Python-like code in a sandboxed environment.
+/// Executes a string of code in a sandboxed environment.
 ///
 /// # Arguments
 ///
@@ -41,9 +41,9 @@ impl From<SandboxExecutionError> for ExecError {
 /// # Returns
 ///
 /// A `Result` which is either:
-/// * `Ok(HashMap<String, PyValue>)` - A dictionary of the final state of all variables.
-/// * `Err(Error)` - An error that occurred during parsing or execution.
-pub fn exec(code: &str, ttl: i64) -> Result<HashMap<String, RsValue>, ExecError> {
+/// * `Ok(HashMap<String, RsValue>)` - A dictionary of the final state of all variables.
+/// * `Err(InterpretedExecError)` - An error that occurred during parsing or execution.
+pub fn interpreted_exec(code: &str, ttl: i64) -> Result<HashMap<String, RsValue>, InterpretedExecError> {
     // 1. Parse the code into an AST.
     let module = parser::parse(code)?;
 

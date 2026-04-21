@@ -146,7 +146,7 @@ fn test_timeout() {
 
     assert!(state_machine.state.is_err(), "Evaluation successful when TimeoutError is expected: {:?}", state_machine.state);
     assert!(match &state_machine.state {
-        Err(SandboxExecutionError::TimeoutError) => true,
+        Ok(State::Timeout) => true,
         _ => false
     }, "Expected TimeoutError, but got {:?}", state_machine.state);
 }

@@ -43,7 +43,6 @@ pub struct FnStackFrame<'ctx> {
 
 #[derive(Clone, Debug)]
 pub enum SandboxExecutionError {
-    TimeoutError,
     ReferenceNotExistError(String),
     DivideByZeroError,
     FnStackUnderflowError,
@@ -73,6 +72,7 @@ pub enum State {
     Ok,
     Terminated,
     Interrupt,
+    Timeout
 }
 
 macro_rules! __binary_autogen {
@@ -98,7 +98,7 @@ macro_rules! __unary_autogen {
 }
 
 impl<'ctx> InstStateMachine<'ctx> {
-    pub fn pop_value(&mut self) -> Result<Value<'ctx>, SandboxExecutionError> {
+    fn pop_value(&mut self) -> Result<Value<'ctx>, SandboxExecutionError> {
         let result = self.stack.pop().ok_or(SandboxExecutionError::VStackUnderflowError)?;
         match result {
             StackItem::Value(value) => Ok(value),
@@ -108,11 +108,11 @@ impl<'ctx> InstStateMachine<'ctx> {
         }
     }
 
-    pub fn push_value(&mut self, value: Value<'ctx>) {
+    fn push_value(&mut self, value: Value<'ctx>) {
         self.stack.push(value.into());
     }
 
-    pub fn pop_ref(&mut self) -> Result<AttrReference<'ctx>, SandboxExecutionError> {
+    fn pop_ref(&mut self) -> Result<AttrReference<'ctx>, SandboxExecutionError> {
         let result = self.stack.pop().ok_or(SandboxExecutionError::VStackUnderflowError)?;
         match result {
             StackItem::Value(_) | StackItem::IdxReference(_) => {
@@ -123,11 +123,11 @@ impl<'ctx> InstStateMachine<'ctx> {
         }
     }
 
-    pub fn push_ref(&mut self, reference: AttrReference<'ctx>) {
+    fn push_ref(&mut self, reference: AttrReference<'ctx>) {
         self.stack.push(reference.into());
     }
 
-    pub fn pop_idx_ref(&mut self) -> Result<IdxReference<'ctx>, SandboxExecutionError> {
+    fn pop_idx_ref(&mut self) -> Result<IdxReference<'ctx>, SandboxExecutionError> {
         let result = self.stack.pop().ok_or(SandboxExecutionError::VStackUnderflowError)?;
         match result {
             StackItem::Value(_) | StackItem::AttrReference(_) => {
@@ -137,11 +137,11 @@ impl<'ctx> InstStateMachine<'ctx> {
         }
     }
 
-    pub fn push_idx_ref(&mut self, reference: IdxReference<'ctx>) {
+    fn push_idx_ref(&mut self, reference: IdxReference<'ctx>) {
         self.stack.push(reference.into());
     }
 
-    pub fn pop(&mut self) -> Result<StackItem<'ctx>, SandboxExecutionError> {
+    fn pop(&mut self) -> Result<StackItem<'ctx>, SandboxExecutionError> {
         self.stack.pop().ok_or(SandboxExecutionError::VStackUnderflowError)
     }
 
@@ -209,11 +209,11 @@ impl<'ctx> InstStateMachine<'ctx> {
             },
             Ok(State::Interrupt) => {
                 return Ok(State::Interrupt)
-            }
+            },
             Err(err) => {
                 return Err(err)
             },
-            _ => {}
+            Ok(State::Ok) | Ok(State::Timeout) => {}
         };
         let instruction;
         {
@@ -223,11 +223,13 @@ impl<'ctx> InstStateMachine<'ctx> {
             let stack =  self.get_mut_stack_ref()?;
             stack.ptr += 1;
         }
-        self.lim -= 1;
         if self.lim == 0 {
-            self.state = Err(SandboxExecutionError::TimeoutError);
+            self.state = Ok(State::Timeout);
             return self.state.clone()
+        } else {
+            self.state = Ok(State::Ok)
         }
+        self.lim -= 1;
         match instruction {
             Instruction::Add => { __binary_autogen!(op_add, self); },
             Instruction::Sub => { __binary_autogen!(op_sub, self); },

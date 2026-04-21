@@ -28,12 +28,12 @@ fn test_simple_assignment_and_expr() {
         lim: 1000,
         fn_stack_frame: vec![FnStackFrame {
             ptr: 0,
-            stack: vec![],
             mapping: global_mapping.clone()
         }],
         alloc,
         instructions: insts,
-        state: Ok(State::Ok)
+        state: Ok(State::Ok),
+        stack: vec![]
     };
 
     while let Ok(State::Ok) = state_machine.state {
@@ -77,12 +77,12 @@ fn test_more() {
         lim: 1000,
         fn_stack_frame: vec![FnStackFrame {
             ptr: 0,
-            stack: vec![],
             mapping: global_mapping.clone()
         }],
         alloc,
         instructions: insts,
-        state: Ok(State::Ok)
+        state: Ok(State::Ok),
+        stack: vec![]
     };
 
     while let Ok(State::Ok) = state_machine.state {
@@ -125,12 +125,12 @@ fn test_timeout() {
         lim: 15,
         fn_stack_frame: vec![FnStackFrame {
             ptr: 0,
-            stack: vec![],
             mapping: global_mapping.clone()
         }],
         alloc,
         instructions: insts,
-        state: Ok(State::Ok)
+        state: Ok(State::Ok),
+        stack: vec![]
     };
 
     while let Ok(State::Ok) = state_machine.state {
@@ -170,12 +170,12 @@ fn test_if_fail_path() {
         lim: 1000,
         fn_stack_frame: vec![FnStackFrame {
             ptr: 0,
-            stack: vec![],
             mapping: global_mapping.clone()
         }],
         alloc,
         instructions: insts,
-        state: Ok(State::Ok)
+        state: Ok(State::Ok),
+        stack: vec![],
     };
 
     while let Ok(State::Ok) = state_machine.state {

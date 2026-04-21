@@ -25,12 +25,12 @@ fn test_execution_compiled_code() {
         lim: 1000,
         fn_stack_frame: vec![FnStackFrame {
             ptr: 0,
-            stack: vec![],
             mapping: global_mapping.clone()
         }],
         alloc,
         instructions: compiled,
-        state: Ok(State::Ok)
+        state: Ok(State::Ok),
+        stack: vec![],
     };
 
     while let Ok(State::Ok) = state_machine.state {
@@ -67,12 +67,12 @@ fn test_execution_compiled_code_if_false() {
         lim: 1000,
         fn_stack_frame: vec![FnStackFrame {
             ptr: 0,
-            stack: vec![],
             mapping: global_mapping.clone()
         }],
         alloc,
         instructions: compiled,
-        state: Ok(State::Ok)
+        state: Ok(State::Ok),
+        stack: vec![],
     };
 
     while let Ok(State::Ok) = state_machine.state {
@@ -109,12 +109,12 @@ fn test_execution_compiled_code_math_operations() {
         lim: 1000,
         fn_stack_frame: vec![FnStackFrame {
             ptr: 0,
-            stack: vec![],
             mapping: global_mapping.clone()
         }],
         alloc,
         instructions: compiled,
-        state: Ok(State::Ok)
+        state: Ok(State::Ok),
+        stack: vec![],
     };
 
     while let Ok(State::Ok) = state_machine.state {
@@ -168,12 +168,12 @@ fn test_execution_compiled_code_bitwise_operations() {
         lim: 1000,
         fn_stack_frame: vec![FnStackFrame {
             ptr: 0,
-            stack: vec![],
             mapping: global_mapping.clone()
         }],
         alloc,
         instructions: compiled,
-        state: Ok(State::Ok)
+        state: Ok(State::Ok),
+        stack: vec![],
     };
 
     while let Ok(State::Ok) = state_machine.state {

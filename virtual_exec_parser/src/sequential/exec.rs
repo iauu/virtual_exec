@@ -36,11 +36,68 @@ impl<'ctx> From<Value<'ctx>> for StackItem<'ctx> {
 
 pub struct FnStackFrame<'ctx> {
     pub ptr: u64,
-    pub stack: Vec<StackItem<'ctx>>,
     pub mapping: Rc<RefCell<Mapping<'ctx>>>,
 }
 
-impl<'ctx> FnStackFrame<'ctx> {
+
+
+#[derive(Clone, Debug)]
+pub enum SandboxExecutionError {
+    TimeoutError,
+    ReferenceNotExistError(String),
+    DivideByZeroError,
+    FnStackUnderflowError,
+    VStackUnderflowError,
+    UndefinedOperendError,
+    AttrNotStringError,
+    RefNameMissingError,
+    UndefinedVarError,
+    AttrMisuseError,
+    UnexpectedAttrError,
+    UnexpectedIdxError,
+    IndexOutOfRangeError
+}
+
+
+pub struct InstStateMachine<'ctx> {
+    pub lim: u64,
+    pub fn_stack_frame: Vec<FnStackFrame<'ctx>>,
+    pub alloc: Allocator<'ctx>,
+    pub instructions: Vec<Instruction>,
+    pub state: Result<State, SandboxExecutionError>,
+    pub stack: Vec<StackItem<'ctx>>,
+}
+
+#[derive(Debug, Clone)]
+pub enum State {
+    Ok,
+    Terminated,
+    Interrupt,
+}
+
+macro_rules! __binary_autogen {
+    ($f:ident, $ss:ident) => {
+        {
+            let b = $ss.pop_get()?;
+            let a = $ss.pop_get()?;
+            let result = $f(a, b, &$ss.alloc).ok_or(SandboxExecutionError::UndefinedOperendError)?;
+            $ss.push_value(result);
+        }
+    };
+}
+
+
+macro_rules! __unary_autogen {
+    ($f:ident, $ss:ident) => {
+        {
+            let a = $ss.pop_get()?;
+            let result = $f(a, &$ss.alloc).ok_or(SandboxExecutionError::UndefinedOperendError)?;
+            $ss.push_value(result);
+        }
+    };
+}
+
+impl<'ctx> InstStateMachine<'ctx> {
     pub fn pop_value(&mut self) -> Result<Value<'ctx>, SandboxExecutionError> {
         let result = self.stack.pop().ok_or(SandboxExecutionError::VStackUnderflowError)?;
         match result {
@@ -87,65 +144,7 @@ impl<'ctx> FnStackFrame<'ctx> {
     pub fn pop(&mut self) -> Result<StackItem<'ctx>, SandboxExecutionError> {
         self.stack.pop().ok_or(SandboxExecutionError::VStackUnderflowError)
     }
-}
 
-
-#[derive(Clone, Debug)]
-pub enum SandboxExecutionError {
-    TimeoutError,
-    ReferenceNotExistError(String),
-    DivideByZeroError,
-    FnStackUnderflowError,
-    VStackUnderflowError,
-    UndefinedOperendError,
-    AttrNotStringError,
-    RefNameMissingError,
-    UndefinedVarError,
-    AttrMisuseError,
-    UnexpectedAttrError,
-    UnexpectedIdxError,
-    IndexOutOfRangeError
-}
-
-
-pub struct InstStateMachine<'ctx> {
-    pub lim: u64,
-    pub fn_stack_frame: Vec<FnStackFrame<'ctx>>,
-    pub alloc: Allocator<'ctx>,
-    pub instructions: Vec<Instruction>,
-    pub state: Result<State, SandboxExecutionError>
-}
-
-#[derive(Debug, Clone)]
-pub enum State {
-    Ok,
-    Terminated,
-    Interrupt,
-}
-
-macro_rules! __binary_autogen {
-    ($f:ident, $ss:ident) => {
-        {
-            let b = $ss.pop_get()?;
-            let a = $ss.pop_get()?;
-            let result = $f(a, b, &$ss.alloc).ok_or(SandboxExecutionError::UndefinedOperendError)?;
-            $ss.fn_stack_frame.last_mut().unwrap().push_value(result);
-        }
-    };
-}
-
-
-macro_rules! __unary_autogen {
-    ($f:ident, $ss:ident) => {
-        {
-            let a = $ss.pop_get()?;
-            let result = $f(a, &$ss.alloc).ok_or(SandboxExecutionError::UndefinedOperendError)?;
-            $ss.fn_stack_frame.last_mut().unwrap().push_value(result);
-        }
-    };
-}
-
-impl<'ctx> InstStateMachine<'ctx> {
     fn resolve(&self, name: &str) -> Result<Rc<RefCell<Value<'ctx>>>, SandboxExecutionError> {
         for frame in self.fn_stack_frame.iter().rev() {
             if let Some(val) = frame.mapping.borrow().mapping.get(name) {
@@ -158,8 +157,7 @@ impl<'ctx> InstStateMachine<'ctx> {
 
     fn pop_get(&mut self) -> Result<Value<'ctx>, SandboxExecutionError> {
         let result = {
-            let frame = self.fn_stack_frame.last_mut().ok_or(SandboxExecutionError::FnStackUnderflowError)?;
-            frame.pop()?
+            self.pop()?
         };
 
         match result {
@@ -196,6 +194,14 @@ impl<'ctx> InstStateMachine<'ctx> {
         }
     }
 
+    fn get_mut_stack_ref<'a>(&'a mut self) -> Result<&'a mut FnStackFrame<'ctx>, SandboxExecutionError> {
+        self.fn_stack_frame.last_mut().ok_or(SandboxExecutionError::FnStackUnderflowError)
+    }
+
+    fn get_stack_ref<'a>(&'a self) -> Result<&'a FnStackFrame<'ctx>, SandboxExecutionError> {
+        self.fn_stack_frame.last().ok_or(SandboxExecutionError::FnStackUnderflowError)
+    }
+
     pub fn run_once(&mut self) -> Result<State, SandboxExecutionError> {
         match self.state.clone() {
             Ok(State::Terminated) => {
@@ -211,15 +217,10 @@ impl<'ctx> InstStateMachine<'ctx> {
         };
         let instruction;
         {
-            let stack =  self.fn_stack_frame.last_mut();
-            let mut stack = match stack {
-                Some(stack) => stack,
-                None => {
-                    self.state = Err(SandboxExecutionError::FnStackUnderflowError);
-                    return self.state.clone()
-                }
-            };
-            instruction = self.instructions[stack.ptr as usize].clone();
+            let stack =  self.get_stack_ref()?;
+            let ptr = stack.ptr as usize;
+            instruction = self.instructions[ptr].clone();
+            let stack =  self.get_mut_stack_ref()?;
             stack.ptr += 1;
         }
         self.lim -= 1;
@@ -249,15 +250,15 @@ impl<'ctx> InstStateMachine<'ctx> {
             Instruction::Gt => { __binary_autogen!(op_gt, self); },
             Instruction::Gte => { __binary_autogen!(op_ge, self); },
             Instruction::Assign => {
-                let stack =  self.fn_stack_frame.last_mut().unwrap();
-                let value = stack.pop_value()?;
-                let target = stack.pop()?;
+                let value = self.pop_value()?;
+                let target = self.pop()?;
                 match target {
                     StackItem::Value(value) => {
                         self.state = Err(SandboxExecutionError::UndefinedVarError);
                         return self.state.clone()
                     },
                     StackItem::AttrReference((None, target)) => {
+                        let stack =  self.get_mut_stack_ref()?;
                         stack.mapping.borrow_mut().mapping.insert(target, Rc::new(RefCell::new(value)));
                     },
                     StackItem::AttrReference((Some(value), target)) => {
@@ -286,21 +287,21 @@ impl<'ctx> InstStateMachine<'ctx> {
                 }
             }
             Instruction::JmpNz(loc) => {
-                let stack =  self.fn_stack_frame.last_mut().unwrap();
-                let a = stack.pop_value()?;
+                let a = self.pop_value()?;
                 if a.is_truthy() {
+                    let stack =  self.get_mut_stack_ref()?;
                     stack.ptr = loc;
                 }
             }
             Instruction::JmpZ(loc) => {
-                let stack =  self.fn_stack_frame.last_mut().unwrap();
-                let a = stack.pop_value()?;
+                let a = self.pop_value()?;
                 if !a.is_truthy() {
+                    let stack =  self.get_mut_stack_ref()?;
                     stack.ptr = loc;
                 }
             }
             Instruction::Jmp(loc) => {
-                let stack =  self.fn_stack_frame.last_mut().unwrap();
+                let stack =  self.get_mut_stack_ref()?;
                 stack.ptr = loc;
             }
             Instruction::Call => {
@@ -310,60 +311,51 @@ impl<'ctx> InstStateMachine<'ctx> {
                 todo!("Function not exist yet")
             }
             Instruction::LoadNone => {
-                let stack =  self.fn_stack_frame.last_mut().unwrap();
-                stack.push_value(self.alloc.allocate(ValueKind::None));
+                self.push_value(self.alloc.allocate(ValueKind::None));
             }
             Instruction::LoadLitFloat(v) => {
-                let stack =  self.fn_stack_frame.last_mut().unwrap();
-                stack.push_value(self.alloc.allocate(ValueKind::Float(VirFloat { value: v })));
+                self.push_value(self.alloc.allocate(ValueKind::Float(VirFloat { value: v })));
             }
             Instruction::LoadLitInt(v) => {
-                let stack =  self.fn_stack_frame.last_mut().unwrap();
-                stack.push_value(self.alloc.allocate(ValueKind::Int(VirInt { value: v })));
+                self.push_value(self.alloc.allocate(ValueKind::Int(VirInt { value: v })));
             }
             Instruction::LoadLitString(v) => {
-                let stack =  self.fn_stack_frame.last_mut().unwrap();
-                stack.push_value(self.alloc.allocate(ValueKind::String(v.to_string())));
+                self.push_value(self.alloc.allocate(ValueKind::String(v.to_string())));
             }
             Instruction::LoadLitBool(v) => {
-                let stack =  self.fn_stack_frame.last_mut().unwrap();
-                stack.push_value(self.alloc.allocate(ValueKind::Bool(v)));
+                self.push_value(self.alloc.allocate(ValueKind::Bool(v)));
             }
             Instruction::ConstructArr(len) => {
-                let stack =  self.fn_stack_frame.last_mut().unwrap();
                 let mut arr = Vec::with_capacity(len as usize);
                 for _ in 0..len {
-                    arr.push(stack.pop_value()?);
+                    arr.push(self.pop_value()?);
                 }
-                stack.push_value(self.alloc.allocate(ValueKind::Collection(Rc::new(RefCell::new(arr)))));
+                self.push_value(self.alloc.allocate(ValueKind::Collection(Rc::new(RefCell::new(arr)))));
             }
             Instruction::ConstructObj(len2) => {
-                let stack =  self.fn_stack_frame.last_mut().unwrap();
                 let mut obj = VirObject::new();
                 for idx in 0..len2 {
-                    let name = stack.pop_value()?;
-                    let value = stack.pop_value()?;
+                    let name = self.pop_value()?;
+                    let value = self.pop_value()?;
                     if name.as_string().is_none() {
                         let remaining_stackdrop = (len2 - idx) * 2;
                         for _ in 0..remaining_stackdrop {
-                            let _ = stack.pop_value(); // Drop error since AttrNotStringError is the primary issue, although otherwise this would cause error as well for stack underflow
+                            let _ = self.pop_value(); // Drop error since AttrNotStringError is the primary issue, although otherwise this would cause error as well for stack underflow
                         }
                         self.state = Err(SandboxExecutionError::AttrNotStringError);
                         return self.state.clone()
                     }
                     obj.set(name.as_string().unwrap().clone(), value);
                 }
-                stack.push_value(self.alloc.allocate(ValueKind::Object(obj)));
+                self.push_value(self.alloc.allocate(ValueKind::Object(obj)));
             }
             Instruction::LoadName(name) => {
-                let stack =  self.fn_stack_frame.last_mut().unwrap();
-                stack.push_ref((None, name.into_string()));
+                self.push_ref((None, name.into_string()));
             }
             Instruction::LoadObjectAttr(name) => {
-                let stack =  self.fn_stack_frame.last_mut().unwrap();
-                let value = stack.pop_value()?;
+                let value = self.pop_value()?;
                 if let Some(_) = value.as_object() {
-                    stack.push_ref((Some(value), name.into_string()));
+                    self.push_ref((Some(value), name.into_string()));
                 }
                 else {
                     self.state = Err(SandboxExecutionError::UnexpectedAttrError);
@@ -372,10 +364,9 @@ impl<'ctx> InstStateMachine<'ctx> {
 
             }
             Instruction::LoadObjectIndex(idx) => {
-                let stack =  self.fn_stack_frame.last_mut().unwrap();
-                let value = stack.pop_value()?;
+                let value = self.pop_value()?;
                 if let Some(_) = value.as_collection() {
-                    stack.push_idx_ref((value, idx));
+                    self.push_idx_ref((value, idx));
                 }
                 else {
                     self.state = Err(SandboxExecutionError::UnexpectedIdxError);
@@ -391,8 +382,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                 return self.state.clone()
             }
             Instruction::Pop => {
-                let stack =  self.fn_stack_frame.last_mut().unwrap();
-                stack.pop_value()?;
+                self.pop_value()?;
             }
         }
         Ok(State::Ok)

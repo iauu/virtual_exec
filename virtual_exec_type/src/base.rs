@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use crate::builtin::{VirPyFloat, VirPyInt, VirPyObject};
+use crate::builtin::{VirFloat, VirInt, VirObject};
 use crate::error::SandboxExecutionError;
 use bumpalo::Bump;
 use std::fmt::Debug;
@@ -9,9 +9,9 @@ pub type Value<'ctx> = &'ctx ValueContainer<'ctx>;
 
 #[derive(Debug, Clone)]
 pub enum ValueKind<'ctx> {
-    Int(VirPyInt),
-    Float(VirPyFloat),
-    Object(VirPyObject<'ctx>),
+    Int(VirInt),
+    Float(VirFloat),
+    Object(VirObject<'ctx>),
     ErrorWrapped(SandboxExecutionError),
     Bool(bool),
     String(String),
@@ -112,21 +112,21 @@ impl<'ctx> ValueContainer<'ctx> {
         }
     }
 
-    pub fn as_int(&self) -> Option<&VirPyInt> {
+    pub fn as_int(&self) -> Option<&VirInt> {
         match &self.kind {
             ValueKind::Int(i) => Some(i),
             _ => None,
         }
     }
 
-    pub fn as_float(&self) -> Option<&VirPyFloat> {
+    pub fn as_float(&self) -> Option<&VirFloat> {
         match &self.kind {
             ValueKind::Float(f) => Some(f),
             _ => None,
         }
     }
 
-    pub fn as_object(&self) -> Option<&VirPyObject<'ctx>> {
+    pub fn as_object(&self) -> Option<&VirObject<'ctx>> {
         match &self.kind {
             ValueKind::Object(o) => Some(o),
             _ => None,

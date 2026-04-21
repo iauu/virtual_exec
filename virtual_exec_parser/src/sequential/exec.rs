@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use virtual_exec_type::alloc::Allocator;
 use virtual_exec_type::base::{Value, ValueContainer, ValueKind};
-use virtual_exec_type::builtin::{Mapping, VirPyFloat, VirPyInt, VirPyObject};
+use virtual_exec_type::builtin::{Mapping, VirFloat, VirInt, VirObject};
 use virtual_exec_type::op::*;
 use crate::sequential::instructions::Instruction;
 
@@ -315,11 +315,11 @@ impl<'ctx> InstStateMachine<'ctx> {
             }
             Instruction::LoadLitFloat(v) => {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
-                stack.push_value(self.alloc.allocate(ValueKind::Float(VirPyFloat { value: v })));
+                stack.push_value(self.alloc.allocate(ValueKind::Float(VirFloat { value: v })));
             }
             Instruction::LoadLitInt(v) => {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
-                stack.push_value(self.alloc.allocate(ValueKind::Int(VirPyInt { value: v })));
+                stack.push_value(self.alloc.allocate(ValueKind::Int(VirInt { value: v })));
             }
             Instruction::LoadLitString(v) => {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
@@ -339,7 +339,7 @@ impl<'ctx> InstStateMachine<'ctx> {
             }
             Instruction::ConstructObj(len2) => {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
-                let mut obj = VirPyObject::new();
+                let mut obj = VirObject::new();
                 for idx in 0..len2 {
                     let name = stack.pop_value()?;
                     let value = stack.pop_value()?;

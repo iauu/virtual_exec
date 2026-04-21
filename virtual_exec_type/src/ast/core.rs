@@ -1,5 +1,5 @@
 use crate::base::{ValueContainer, ValueKind};
-use crate::builtin::{VirPyFloat, VirPyInt};
+use crate::builtin::{VirFloat, VirInt};
 use crate::error::SandboxExecutionError;
 use crate::exec_ctx::{ExecutionContext, Result};
 use crate::op::*;
@@ -225,8 +225,8 @@ impl ASTNode for Literal {
         match self {
             Literal::Bool(v) => Ok(ValueKind::Bool(*v)),
             Literal::None => Ok(ValueKind::None),
-            Literal::Int(v) => Ok(ValueKind::Int(VirPyInt::new(*v))),
-            Literal::Float(v) => Ok(ValueKind::Float(VirPyFloat::new(*v))),
+            Literal::Int(v) => Ok(ValueKind::Int(VirInt::new(*v))),
+            Literal::Float(v) => Ok(ValueKind::Float(VirFloat::new(*v))),
             Literal::String(v) => Ok(ValueKind::String(v.clone())),
         }
     }

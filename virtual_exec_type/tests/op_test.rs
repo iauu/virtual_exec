@@ -1,6 +1,6 @@
 use bumpalo::Bump;
 use virtual_exec_type::base::{ValueContainer, ValueKind};
-use virtual_exec_type::builtin::{VirPyFloat, VirPyInt};
+use virtual_exec_type::builtin::{VirFloat, VirInt};
 use virtual_exec_type::op::op_add;
 use virtual_exec_type::alloc::Allocator;
 
@@ -9,11 +9,11 @@ fn test_op_add_functionality() {
     let arena = Bump::new();
     let alloc = Allocator::new(&arena);
 
-    let lhs_int = alloc.allocate(ValueKind::Int(VirPyInt::new(15)));
-    let rhs_int = alloc.allocate(ValueKind::Int(VirPyInt::new(27)));
+    let lhs_int = alloc.allocate(ValueKind::Int(VirInt::new(15)));
+    let rhs_int = alloc.allocate(ValueKind::Int(VirInt::new(27)));
 
-    let lhs_float = alloc.allocate(ValueKind::Float(VirPyFloat::new(1.5)));
-    let rhs_float = alloc.allocate(ValueKind::Float(VirPyFloat::new(2.25)));
+    let lhs_float = alloc.allocate(ValueKind::Float(VirFloat::new(1.5)));
+    let rhs_float = alloc.allocate(ValueKind::Float(VirFloat::new(2.25)));
 
     let result_int = op_add(lhs_int, rhs_int, &alloc).expect("op_add for Int+Int should succeed");
     assert_eq!(result_int.as_int().unwrap().value, 42);

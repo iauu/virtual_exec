@@ -32,6 +32,7 @@
             pkg-config
 
             rust-analyzer
+            cargo-expand
           ];
 
           shellHook = ''

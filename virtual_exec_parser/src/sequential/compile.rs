@@ -119,7 +119,7 @@ impl GetInstruction for Expr {
         match self {
             Expr::Literal(l) => l.inst(offset),
             Expr::Wrapped(expr) => expr.kind.inst(offset),
-            Expr::Variable(v) => vec![Instruction::LoadName(v.clone())],
+            Expr::Variable(v) => vec![Instruction::LoadName(v.clone().into_boxed_str())],
             Expr::BinaryOp { left, op, right } => {
                 let mut inst = Vec::new();
                 match op {
@@ -196,7 +196,7 @@ impl GetInstruction for Literal {
             Literal::Bool(v) => vec![LoadLitBool(v.clone())],
             Literal::Int(v) => vec![Instruction::LoadLitInt(v.clone())],
             Literal::Float(v) => vec![Instruction::LoadLitFloat(v.clone())],
-            Literal::String(v) => vec![Instruction::LoadLitString(v.clone())],
+            Literal::String(v) => vec![Instruction::LoadLitString(v.clone().into_boxed_str())],
             Literal::None => vec![Instruction::LoadNone],
         }
     }
@@ -205,7 +205,7 @@ impl GetInstruction for Literal {
 impl GetInstruction for AssignExpr {
     fn inst(&self, offset: u64) -> Vec<Instruction> {
         match self {
-            AssignExpr::Variable(v) => vec![Instruction::LoadName(v.clone())],
+            AssignExpr::Variable(v) => vec![Instruction::LoadName(v.clone().into_boxed_str())],
             AssignExpr::Wrapped(expr) => expr.kind.inst(offset),
         }
     }

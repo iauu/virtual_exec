@@ -323,7 +323,7 @@ impl<'ctx> InstStateMachine<'ctx> {
             }
             Instruction::LoadLitString(v) => {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
-                stack.push_value(self.alloc.allocate(ValueKind::String(v.clone())));
+                stack.push_value(self.alloc.allocate(ValueKind::String(v.to_string())));
             }
             Instruction::LoadLitBool(v) => {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
@@ -357,13 +357,13 @@ impl<'ctx> InstStateMachine<'ctx> {
             }
             Instruction::LoadName(name) => {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
-                stack.push_ref((None, name.clone()));
+                stack.push_ref((None, name.into_string()));
             }
             Instruction::LoadObjectAttr(name) => {
                 let stack =  self.fn_stack_frame.last_mut().unwrap();
                 let value = stack.pop_value()?;
                 if let Some(_) = value.as_object() {
-                    stack.push_ref((Some(value), name.clone()));
+                    stack.push_ref((Some(value), name.into_string()));
                 }
                 else {
                     self.state = Err(SandboxExecutionError::UnexpectedAttrError);

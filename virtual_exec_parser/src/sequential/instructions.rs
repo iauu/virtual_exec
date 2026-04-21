@@ -71,12 +71,12 @@ pub enum Instruction {
     LoadNone,
     LoadLitFloat(f64),
     LoadLitInt(i64),
-    LoadLitString(String),
+    LoadLitString(Box<str>),
     LoadLitBool(bool),
     ConstructArr(u64),
     ConstructObj(u64),
-    LoadName(String),
-    LoadObjectAttr(String),
+    LoadName(Box<str>),
+    LoadObjectAttr(Box<str>),
     LoadObjectIndex(i64),
 
     // External
@@ -134,12 +134,12 @@ pub enum InstructionBuilder {
     LoadNone,
     LoadLitFloat(f64),
     LoadLitInt(i64),
-    LoadLitString(String),
+    LoadLitString(Box<str>),
     LoadLitBool(bool),
     ConstructArr(u64),
     ConstructObj(u64),
-    LoadName(String),
-    LoadObjectAttr(String),
+    LoadName(Box<str>),
+    LoadObjectAttr(Box<str>),
     LoadObjectIndex(i64),
 
     // External

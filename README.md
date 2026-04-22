@@ -3,13 +3,13 @@
 A rust library to perform sandboxed safe expression evaluation, in a similar syntax to rust
 
 ```rust
-use virtual_exec::exec;
+use virtual_exec::interpreted_exec;
 use virtual_exec_type::exec_ctx::RsValue;
 
 #[test]
 fn test_simple_assignment() {
     let code = "a = 1; b = 2; c = 3; if a != b {d = 2;} d;";
-    let result = exec(code, 100).unwrap();
+    let result = interpreted_exec(code, 100).unwrap();
     assert_eq!(result.get("a"), Some(&RsValue::Int(1)));
 }
 ```
@@ -18,6 +18,47 @@ which this allowed up to 100 operation, and would raise `TimeoutError` if it tak
 to execute.
 
 The current supported operation is expression calculation, assignment and if-statement.
+
+Compile have also been added to convert code into a linear instruction
+
+```rust
+use virtual_exec_parser::parser::parse;
+use virtual_exec_parser::sequential::compile::compile;
+use virtual_exec_parser::sequential::instructions::Instruction;
+
+#[test]
+fn test_value_creation_and_downcast() {
+    let code = "a = 1; b = 2; c = 3; if a != b {d = 2;} d += d; d;";
+    let parsed = parse(code).unwrap();
+    let compiled = compile(&parsed);
+    assert_eq!(compiled, vec![
+        Instruction::LoadName(Box::from("a")),
+        Instruction::LoadLitInt(1),
+        Instruction::Assign,
+        Instruction::LoadName(Box::from("a")),
+        Instruction::LoadLitInt(2),
+        Instruction::Assign,
+        Instruction::LoadName(Box::from("c")),
+        Instruction::LoadLitInt(3),
+        Instruction::Assign,
+        Instruction::LoadName(Box::from("a")),
+        Instruction::LoadName(Box::from("b")),
+        Instruction::NotEq,
+        Instruction::JmpZ(16),
+        Instruction::LoadName(Box::from("d")),
+        Instruction::LoadLitInt(2),
+        Instruction::Assign,
+        Instruction::LoadName(Box::from("d")),
+        Instruction::LoadName(Box::from("d")),
+        Instruction::LoadName(Box::from("d")),
+        Instruction::Add,
+        Instruction::Assign,
+        Instruction::LoadName(Box::from("d")),
+        Instruction::Pop
+    ]);
+}
+
+```
 
 WIP Feature list:
 - [x] Variable assignment

@@ -9,3 +9,4 @@ pub mod exec_ctx;
 pub mod export;
 mod op_impl;
 pub mod alloc;
+pub mod mem;

@@ -21,6 +21,15 @@ pub enum Value<'a> {
     MemoryChunk(usize)
 }
 
+pub enum OwnedValue {
+    Int(u64),
+    Float(f64),
+    Bool(bool),
+    None,
+    Collection(Vec<OwnedValue>),
+    Dictionary(HashMap<String, OwnedValue>),
+}
+
 pub struct ValueInnerPtr<'a> {
     pub inner: Value<'a>,
     size: usize,

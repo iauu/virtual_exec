@@ -8,6 +8,12 @@ pub struct MemoryError;
 
 pub type MemoryAllocator<'a> = Arc<Mutex<MemoryAllocation<'a>>>;
 
+pub trait ToOwned {
+    type Output;
+
+    fn to_owned(&self) -> Self::Output;
+}
+
 pub enum Value<'a> {
     Int(u64),
     Float(f64),
@@ -15,11 +21,33 @@ pub enum Value<'a> {
     None,
     String(Box<str>),
     Collection(Arc<RwLock<Vec<ValuePtr<'a>>>>),
-    Dictionary(Arc<RwLock<HashMap<String, ValuePtr<'a>>>>),
+    Object(Arc<RwLock<HashMap<String, ValuePtr<'a>>>>),
     #[doc(hidden)]
     _Scope(PhantomData<&'a ()>),
     #[doc(hidden)]
     MemoryChunk(usize)
+}
+
+impl ToOwned for Value<'_> {
+    type Output = OwnedValue;
+
+    fn to_owned(&self) -> Self::Output {
+        match self {
+            Value::Int(i) => OwnedValue::Int(*i),
+            Value::Float(f) => OwnedValue::Float(*f),
+            Value::Bool(b) => OwnedValue::Bool(*b),
+            Value::None => OwnedValue::None,
+            Value::String(s) => OwnedValue::String(s.to_owned()),
+            Value::Collection(c) => {
+                OwnedValue::Collection(c.read().unwrap().iter().map(|v| v.lock().unwrap().to_owned()).collect::<Vec<_>>().into())
+            },
+            Value::Object(d) => {
+                OwnedValue::Object(d.read().unwrap().iter().map(|(k, v)| (k.to_owned(), v.lock().unwrap().to_owned())).collect())
+            },
+            Value::_Scope(_) => OwnedValue::None,
+            Value::MemoryChunk(_) => OwnedValue::None
+        }
+    }
 }
 
 pub enum OwnedValue {
@@ -29,7 +57,7 @@ pub enum OwnedValue {
     String(Box<str>),
     None,
     Collection(Vec<OwnedValue>),
-    Dictionary(HashMap<String, OwnedValue>),
+    Object(HashMap<String, OwnedValue>),
 }
 
 pub struct ValueInnerPtr<'a> {
@@ -149,7 +177,7 @@ impl<'a> GetSize for Value<'a> {
             Value::Float(f) => 8,
             Value::Bool(b) => 1,
             Value::Collection(c) => c.read().unwrap().len() * 8,
-            Value::Dictionary(d) => {
+            Value::Object(d) => {
                 let map = d.read().unwrap();
                 map.len() * 8 + map.keys().map(|k| k.len()).sum::<usize>()
             },

@@ -16,6 +16,9 @@ pub enum Value<'a> {
     Dictionary(Arc<RwLock<HashMap<String, ValuePtr<'a>>>>),
     #[doc(hidden)]
     _Scope(PhantomData<&'a ()>),
+    #[doc(hidden)]
+    #[cfg(test)]
+    MemoryChunk(usize)
 }
 
 pub struct ValueInnerPtr<'a> {
@@ -131,7 +134,9 @@ impl<'a> GetSize for Value<'a> {
                 map.len() * 8 + map.keys().map(|k| k.len()).sum::<usize>()
             },
             Value::None => 1,
-            Value::_Scope(_) => 1
+            Value::_Scope(_) => 1,
+            #[cfg(test)]
+            Value::MemoryChunk(size) => *size
         }
     }
 }

@@ -111,7 +111,8 @@ impl<'a> Deref for ValuePtr<'a> {
 pub struct MemoryAllocation<'a> {
     curr: usize,
     pub max: usize,
-    _phantom: PhantomData<&'a ()>
+    _phantom: PhantomData<&'a ()>,
+    _obj: Vec<Weak<Mutex<ValueInnerPtr<'a>>>>
 }
 
 impl<'a> MemoryAllocation<'a> {
@@ -119,6 +120,7 @@ impl<'a> MemoryAllocation<'a> {
         Self {
             curr: 0, max,
             _phantom: Default::default(),
+            _obj: Vec::new()
         }
     }
 
@@ -152,8 +154,33 @@ impl<'a> MemoryAllocation<'a> {
         }
     }
 
+    pub fn gc_weak(&mut self) -> () {
+        self._obj.retain(|obj| obj.upgrade().is_some());
+    }
+
+    pub fn obj_count(&self) -> usize {
+        self._obj.len()
+    }
+
+    pub(self) fn _index_obj(&mut self, obj: &Arc<Mutex<ValueInnerPtr<'a>>>) -> () {
+        self._obj.push(Arc::downgrade(obj));
+    }
+
     pub fn curr(&self) -> usize {
         self.curr
+    }
+}
+
+impl<'a> Drop for MemoryAllocation<'a> {
+    fn drop(&mut self) {
+        self.gc_weak();
+        self._obj.iter().for_each(|obj| {
+            if let Some(ptr) = obj.upgrade() {
+                if let Ok(mut inner) = ptr.lock() {
+                    inner.inner = Value::None;
+                }
+            }
+        })
     }
 }
 
@@ -191,17 +218,20 @@ impl<'a> GetSize for Value<'a> {
 
 impl<'a> Allocator for MemoryAllocator<'a> {
     type Input = Value<'a>;
-    type Output = ValueInnerPtr<'a>;
+    type Output = Arc<Mutex<ValueInnerPtr<'a>>>;
 
     fn alloc(&mut self, input: Self::Input) -> Result<Self::Output, MemoryError> {
         let size = input.get_size();
         self.lock().unwrap()._internal_alloc(size)?;
-        Ok(ValueInnerPtr::new(input, size, self))
+        let obj = ValueInnerPtr::new(input, size, self);
+        let ptr = Arc::new(Mutex::new(obj));
+        self.lock().unwrap()._index_obj(&ptr);
+        Ok(ptr)
     }
 
     fn change_alloc(&mut self, data: &mut Self::Output) -> Result<(), MemoryError> {
-        let marked_size = data.marked_size();
-        let new_size = data.get_size();
+        let marked_size = data.lock().unwrap().marked_size();
+        let new_size = data.lock().unwrap().get_size();
         if marked_size == new_size {
             return Ok(());
         }
@@ -210,7 +240,7 @@ impl<'a> Allocator for MemoryAllocator<'a> {
         } else if marked_size > new_size {
             self.lock().unwrap()._internal_dealloc(marked_size - new_size);
         }
-        data.size = new_size;
+        data.lock().unwrap().size = new_size;
         Ok(())
 
     }

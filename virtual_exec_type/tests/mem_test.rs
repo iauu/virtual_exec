@@ -37,12 +37,12 @@ fn test_mem_change_alloc() {
     let mut obj_1 = alloc.alloc(MemoryChunk(50)).unwrap();
     let mut obj_2 = alloc.alloc(MemoryChunk(50)).unwrap();
     assert_eq!(alloc.lock().unwrap().curr(), 100);
-    obj_1.inner = MemoryChunk(60);
+    obj_1.lock().unwrap().inner = MemoryChunk(60);
     assert_eq!(alloc.change_alloc(&mut obj_1).is_err(), true, "Memory extend shouldn't be possible when there are no memory remaining");
-    obj_1.inner = MemoryChunk(50);
+    obj_1.lock().unwrap().inner = MemoryChunk(50);
     std::mem::drop(obj_1);
     assert_eq!(alloc.lock().unwrap().curr(), 50);
-    obj_2.inner = MemoryChunk(100);
+    obj_2.lock().unwrap().inner = MemoryChunk(100);
     assert_eq!(alloc.change_alloc(&mut obj_2).is_ok(), true, "Memory extend should be possible as there are 100 memory slot in total");
     assert_eq!(alloc.lock().unwrap().curr(), 100);
 }

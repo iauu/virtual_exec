@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::ops::Deref;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock, Weak};
 
+#[derive(Debug)]
 pub struct MemoryError;
 
 pub type MemoryAllocator<'a> = Arc<Mutex<MemoryAllocation<'a>>>;
@@ -17,14 +18,13 @@ pub enum Value<'a> {
     #[doc(hidden)]
     _Scope(PhantomData<&'a ()>),
     #[doc(hidden)]
-    #[cfg(test)]
     MemoryChunk(usize)
 }
 
 pub struct ValueInnerPtr<'a> {
-    inner: Value<'a>,
+    pub inner: Value<'a>,
     size: usize,
-    pub(self) alloc: MemoryAllocator<'a>
+    pub(self) alloc: Weak<Mutex<MemoryAllocation<'a>>>
 }
 
 impl<'a> Deref for ValueInnerPtr<'a> {
@@ -36,9 +36,9 @@ impl<'a> Deref for ValueInnerPtr<'a> {
 }
 
 impl<'a> ValueInnerPtr<'a> {
-    pub fn new(inner: Value<'a>, size: usize, alloc: MemoryAllocator<'a>) -> Self {
+    pub fn new(inner: Value<'a>, size: usize, alloc: &MemoryAllocator<'a>) -> Self {
         Self {
-            inner, size, alloc
+            inner, size, alloc: Arc::downgrade(alloc)
         }
     }
 
@@ -50,7 +50,12 @@ impl<'a> ValueInnerPtr<'a> {
 
 impl<'a> Drop for ValueInnerPtr<'a> {
     fn drop(&mut self) {
-        self.alloc.lock().unwrap()._internal_dealloc(self.size);
+        let ptr = self.alloc.upgrade();
+        if let Some(ptr) = ptr {
+            if let Ok(mut alloc) = ptr.lock() {
+                alloc._internal_dealloc(self.size);
+            }
+        }
     }
 }
 
@@ -65,7 +70,7 @@ impl<'a> Deref for ValuePtr<'a> {
 }
 
 pub struct MemoryAllocation<'a> {
-    pub curr: usize,
+    curr: usize,
     pub max: usize,
     _phantom: PhantomData<&'a ()>
 }
@@ -107,6 +112,10 @@ impl<'a> MemoryAllocation<'a> {
             self.curr -= size;
         }
     }
+
+    pub fn curr(&self) -> usize {
+        self.curr
+    }
 }
 
 pub trait GetSize {
@@ -135,7 +144,6 @@ impl<'a> GetSize for Value<'a> {
             },
             Value::None => 1,
             Value::_Scope(_) => 1,
-            #[cfg(test)]
             Value::MemoryChunk(size) => *size
         }
     }
@@ -148,11 +156,7 @@ impl<'a> Allocator for MemoryAllocator<'a> {
     fn alloc(&mut self, input: Self::Input) -> Result<Self::Output, MemoryError> {
         let size = input.get_size();
         self.lock().unwrap()._internal_alloc(size)?;
-        Ok(ValueInnerPtr {
-            inner: input,
-            size,
-            alloc: Arc::clone(self),
-        })
+        Ok(ValueInnerPtr::new(input, size, self))
     }
 
     fn change_alloc(&mut self, data: &mut Self::Output) -> Result<(), MemoryError> {

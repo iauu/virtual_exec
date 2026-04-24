@@ -13,6 +13,7 @@ pub enum Value<'a> {
     Float(f64),
     Bool(bool),
     None,
+    String(Box<str>),
     Collection(Arc<RwLock<Vec<ValuePtr<'a>>>>),
     Dictionary(Arc<RwLock<HashMap<String, ValuePtr<'a>>>>),
     #[doc(hidden)]
@@ -25,6 +26,7 @@ pub enum OwnedValue {
     Int(u64),
     Float(f64),
     Bool(bool),
+    String(Box<str>),
     None,
     Collection(Vec<OwnedValue>),
     Dictionary(HashMap<String, OwnedValue>),
@@ -151,6 +153,7 @@ impl<'a> GetSize for Value<'a> {
                 let map = d.read().unwrap();
                 map.len() * 8 + map.keys().map(|k| k.len()).sum::<usize>()
             },
+            Value::String(s) => s.len(),
             Value::None => 1,
             Value::_Scope(_) => 1,
             Value::MemoryChunk(size) => *size

@@ -5,7 +5,7 @@ use crate::mem::{Allocator, MemoryAllocator, Value, ValuePtr};
 use crate::error::{MemoryError, SandboxExecutionError};
 
 trait TypeCast<'a> {
-    fn as_int(&self) -> Option<u64>;
+    fn as_int(&self) -> Option<i64>;
     fn as_float(&self) -> Option<f64>;
 
     fn as_object(&self) -> Option<Arc<RwLock<HashMap<String, ValuePtr<'a>>>>>;
@@ -23,7 +23,7 @@ trait TypeCast<'a> {
 }
 
 impl<'a> TypeCast<'a> for ValuePtr<'a> {
-    fn as_int(&self) -> Option<u64> {
+    fn as_int(&self) -> Option<i64> {
         if let Value::Int(v) = self.lock().unwrap().inner {
             Some(v)
         } else {
@@ -111,6 +111,30 @@ impl<'ctx> Downcast<'ctx> for bool {
 impl<'ctx> Upcast<'ctx> for bool {
     fn from_value(&self, alloc: &MemoryAllocator<'ctx>) -> Result<ValuePtr<'ctx>, MemoryError> {
         alloc.alloc(Value::Bool(*self))
+    }
+}
+
+impl<'ctx> Downcast<'ctx> for i64 {
+    fn from_value(value: ValuePtr<'ctx>) -> Option<Self> {
+        value.as_int()
+    }
+}
+
+impl<'ctx> Upcast<'ctx> for i64 {
+    fn from_value(&self, alloc: &MemoryAllocator<'ctx>) -> Result<ValuePtr<'ctx>, MemoryError> {
+        alloc.alloc(Value::Int(*self))
+    }
+}
+
+impl<'ctx> Downcast<'ctx> for f64 {
+    fn from_value(value: ValuePtr<'ctx>) -> Option<Self> {
+        value.as_float()
+    }
+}
+
+impl<'ctx> Upcast<'ctx> for f64 {
+    fn from_value(&self, alloc: &MemoryAllocator<'ctx>) -> Result<ValuePtr<'ctx>, MemoryError> {
+        alloc.alloc(Value::Float(*self))
     }
 }
 

@@ -1,236 +1,85 @@
-use crate::base::ValueKind;
-use crate::builtin::*;
+register_op_add!(i64, i64, i64);
+register_op_add!(f64, f64, f64);
+register_op_add!(i64, f64, f64, |a, b| Ok((a as f64) + b));
+register_op_add!(f64, i64, f64, |a, b| Ok(a + (b as f64)));
 
-register_op_add!(VirInt, VirInt, ValueKind::Int);
-register_op_add!(VirFloat, VirFloat, ValueKind::Float);
-register_op_add!(VirInt, VirFloat, ValueKind::Float);
-register_op_add!(VirFloat, VirInt, ValueKind::Float);
+register_op_sub!(i64, i64, i64);
+register_op_sub!(f64, f64, f64);
+register_op_sub!(i64, f64, f64, |a, b| Ok((a as f64) - b));
+register_op_sub!(f64, i64, f64, |a, b| Ok(a - (b as f64)));
 
-register_op_sub!(VirInt, VirInt, ValueKind::Int);
-register_op_sub!(VirFloat, VirFloat, ValueKind::Float);
-register_op_sub!(VirInt, VirFloat, ValueKind::Float);
-register_op_sub!(VirFloat, VirInt, ValueKind::Float);
+register_op_mul!(i64, i64, i64);
+register_op_mul!(f64, f64, f64);
+register_op_mul!(i64, f64, f64, |a, b| Ok((a as f64) * b));
+register_op_mul!(f64, i64, f64, |a, b| Ok(a * (b as f64)));
 
-register_op_mul!(VirInt, VirInt, ValueKind::Int);
-register_op_mul!(VirFloat, VirFloat, ValueKind::Float);
-register_op_mul!(VirInt, VirFloat, ValueKind::Float);
-register_op_mul!(VirFloat, VirInt, ValueKind::Float);
+register_op_div!(i64, i64, i64);
+register_op_div!(f64, f64, f64);
+register_op_div!(i64, f64, f64, |a, b| Ok((a as f64) / b));
+register_op_div!(f64, i64, f64, |a, b| Ok(a / (b as f64)));
 
-register_op_div!(VirInt, VirInt, ValueKind::Float);
-register_op_div!(VirFloat, VirFloat, ValueKind::Float);
-register_op_div!(VirInt, VirFloat, ValueKind::Float);
-register_op_div!(VirFloat, VirInt, ValueKind::Float);
+register_op_moduls!(i64, i64, i64);
+register_op_moduls!(f64, f64, f64);
+register_op_moduls!(i64, f64, f64, |a, b| Ok((a as f64) % b));
+register_op_moduls!(f64, i64, f64, |a, b| Ok(a % (b as f64)));
 
-register_op_moduls!(VirInt, VirInt, ValueKind::Int);
-register_op_moduls!(VirFloat, VirFloat, ValueKind::Float);
-register_op_moduls!(VirInt, VirFloat, ValueKind::Float);
-register_op_moduls!(VirFloat, VirInt, ValueKind::Float);
+register_op_eq!(bool, bool, bool, |a: bool, b: bool| Ok(a == b));
+register_op_le!(bool, bool, bool, |a: bool, b: bool| Ok(a <= b));
+register_op_lt!(bool, bool, bool, |a: bool, b: bool| Ok(!a & b));
+register_op_ge!(bool, bool, bool, |a: bool, b: bool| Ok(a >= b));
+register_op_gt!(bool, bool, bool, |a: bool, b: bool| Ok(a & !b));
+register_op_ne!(bool, bool, bool, |a: bool, b: bool| Ok(a != b));
 
-register_op_eq!(bool, bool, ValueKind::Bool, |a: bool, b: bool| Ok(a == b));
-register_op_le!(bool, bool, ValueKind::Bool, |a: bool, b: bool| Ok(a <= b));
-register_op_lt!(bool, bool, ValueKind::Bool, |a: bool, b: bool| Ok(!a & b));
-register_op_ge!(bool, bool, ValueKind::Bool, |a: bool, b: bool| Ok(a >= b));
-register_op_gt!(bool, bool, ValueKind::Bool, |a: bool, b: bool| Ok(a & !b));
-register_op_ne!(bool, bool, ValueKind::Bool, |a: bool, b: bool| Ok(a != b));
+register_op_eq!(i64, i64, bool);
+register_op_eq!(f64, f64, bool);
+register_op_eq!(i64, f64, bool, |a, b| Ok(((a as f64) - b).abs() < f64::EPSILON));
+register_op_eq!(f64, i64, bool, |b, a| Ok(((a as f64) - b).abs() < f64::EPSILON));
 
-register_op_eq!(
-    VirInt,
-    VirInt,
-    ValueKind::Bool,
-    |a: VirInt, b: VirInt| Ok(a.value == b.value)
-);
-register_op_eq!(
-    VirInt,
-    VirFloat,
-    ValueKind::Bool,
-    |a: VirInt, b: VirFloat| Ok(a.value as f64 == b.value)
-);
-register_op_eq!(
-    VirFloat,
-    VirInt,
-    ValueKind::Bool,
-    |a: VirFloat, b: VirInt| Ok(a.value == b.value as f64)
-);
-register_op_eq!(
-    VirFloat,
-    VirFloat,
-    ValueKind::Bool,
-    |a: VirFloat, b: VirFloat| Ok(a.value == b.value)
-);
+register_op_le!(i64, i64, bool);
+register_op_le!(f64, f64, bool);
+register_op_le!(i64, f64, bool, |a, b| Ok((a as f64) <= b));
+register_op_le!(f64, i64, bool, |a, b| Ok(a <= (b as f64)));
 
-register_op_le!(
-    VirInt,
-    VirInt,
-    ValueKind::Bool,
-    |a: VirInt, b: VirInt| Ok(a.value <= b.value)
-);
-register_op_le!(
-    VirInt,
-    VirFloat,
-    ValueKind::Bool,
-    |a: VirInt, b: VirFloat| Ok(a.value as f64 <= b.value)
-);
-register_op_le!(
-    VirFloat,
-    VirInt,
-    ValueKind::Bool,
-    |a: VirFloat, b: VirInt| Ok(a.value <= b.value as f64)
-);
-register_op_le!(
-    VirFloat,
-    VirFloat,
-    ValueKind::Bool,
-    |a: VirFloat, b: VirFloat| Ok(a.value <= b.value)
-);
+register_op_ge!(i64, i64, bool);
+register_op_ge!(f64, f64, bool);
+register_op_ge!(i64, f64, bool, |a, b| Ok((a as f64) >= b));
+register_op_ge!(f64, i64, bool, |a, b| Ok(a >= (b as f64)));
 
-register_op_ge!(
-    VirInt,
-    VirInt,
-    ValueKind::Bool,
-    |a: VirInt, b: VirInt| Ok(a.value >= b.value)
-);
-register_op_ge!(
-    VirInt,
-    VirFloat,
-    ValueKind::Bool,
-    |a: VirInt, b: VirFloat| Ok(a.value as f64 >= b.value)
-);
-register_op_ge!(
-    VirFloat,
-    VirInt,
-    ValueKind::Bool,
-    |a: VirFloat, b: VirInt| Ok(a.value >= b.value as f64)
-);
-register_op_ge!(
-    VirFloat,
-    VirFloat,
-    ValueKind::Bool,
-    |a: VirFloat, b: VirFloat| Ok(a.value >= b.value)
-);
+register_op_lt!(i64, i64, bool);
+register_op_lt!(f64, f64, bool);
+register_op_lt!(i64, f64, bool, |a, b| Ok((a as f64) < b));
+register_op_lt!(f64, i64, bool, |a, b| Ok(a < (b as f64)));
 
-register_op_lt!(
-    VirInt,
-    VirInt,
-    ValueKind::Bool,
-    |a: VirInt, b: VirInt| Ok(a.value < b.value)
-);
-register_op_lt!(
-    VirInt,
-    VirFloat,
-    ValueKind::Bool,
-    |a: VirInt, b: VirFloat| Ok((a.value as f64) < b.value)
-);
-register_op_lt!(
-    VirFloat,
-    VirInt,
-    ValueKind::Bool,
-    |a: VirFloat, b: VirInt| Ok(a.value < b.value as f64)
-);
-register_op_lt!(
-    VirFloat,
-    VirFloat,
-    ValueKind::Bool,
-    |a: VirFloat, b: VirFloat| Ok(a.value < b.value)
-);
+register_op_gt!(i64, i64, bool);
+register_op_gt!(f64, f64, bool);
+register_op_gt!(i64, f64, bool, |a, b| Ok((a as f64) > b));
+register_op_gt!(f64, i64, bool, |a, b| Ok(a > (b as f64)));
 
-register_op_gt!(
-    VirInt,
-    VirInt,
-    ValueKind::Bool,
-    |a: VirInt, b: VirInt| Ok(a.value > b.value)
-);
-register_op_gt!(
-    VirInt,
-    VirFloat,
-    ValueKind::Bool,
-    |a: VirInt, b: VirFloat| Ok(a.value as f64 > b.value)
-);
-register_op_gt!(
-    VirFloat,
-    VirInt,
-    ValueKind::Bool,
-    |a: VirFloat, b: VirInt| Ok(a.value > b.value as f64)
-);
-register_op_gt!(
-    VirFloat,
-    VirFloat,
-    ValueKind::Bool,
-    |a: VirFloat, b: VirFloat| Ok(a.value > b.value)
-);
+register_op_ne!(i64, i64, bool);
+register_op_ne!(f64, f64, bool);
+register_op_ne!(i64, f64, bool, |a, b| Ok(((a as f64) - b).abs() >= f64::EPSILON));
+register_op_ne!(f64, i64, bool, |b, a| Ok(((a as f64) - b).abs() >= f64::EPSILON));
 
-register_op_ne!(
-    VirInt,
-    VirInt,
-    ValueKind::Bool,
-    |a: VirInt, b: VirInt| Ok(a.value != b.value)
-);
-register_op_ne!(
-    VirInt,
-    VirFloat,
-    ValueKind::Bool,
-    |a: VirInt, b: VirFloat| Ok(a.value as f64 != b.value)
-);
-register_op_ne!(
-    VirFloat,
-    VirInt,
-    ValueKind::Bool,
-    |a: VirFloat, b: VirInt| Ok(a.value != b.value as f64)
-);
-register_op_ne!(
-    VirFloat,
-    VirFloat,
-    ValueKind::Bool,
-    |a: VirFloat, b: VirFloat| Ok(a.value != b.value)
-);
-
-register_op_bsl!(
-    VirInt,
-    VirInt,
-    ValueKind::Int,
-    |a: VirInt, b: VirInt| Ok(VirInt::new(a.value << b.value))
-);
-register_op_bsr!(
-    VirInt,
-    VirInt,
-    ValueKind::Int,
-    |a: VirInt, b: VirInt| Ok(VirInt::new(a.value >> b.value))
-);
-register_op_band!(
-    VirInt,
-    VirInt,
-    ValueKind::Int,
-    |a: VirInt, b: VirInt| Ok(VirInt::new(a.value & b.value))
-);
-register_op_bor!(
-    VirInt,
-    VirInt,
-    ValueKind::Int,
-    |a: VirInt, b: VirInt| Ok(VirInt::new(a.value | b.value))
-);
-register_op_and!(bool, bool, ValueKind::Bool, |a: bool, b: bool| Ok(a && b));
-register_op_or!(bool, bool, ValueKind::Bool, |a: bool, b: bool| Ok(a || b));
-register_op_bxor!(bool, bool, ValueKind::Bool, |a: bool, b: bool| Ok(a ^ b));
-// register_op_bsl!(VirFloat, VirInt, ValueKind::Float, |a: VirFloat, b: VirInt| Ok(VirFloat::new(a.value << b.value)));
-// register_op_bsr!(VirFloat, VirInt, ValueKind::Float, |a: VirFloat, b: VirInt| Ok(VirFloat::new(a.value >> b.value)));
+register_op_bsl!(i64, i64, i64);
+register_op_bsr!(i64, i64, i64);
+register_op_band!(i64, i64, i64);
+register_op_bor!(i64, i64, i64);
+register_op_and!(bool, bool, bool, |a: bool, b: bool| Ok(a && b));
+register_op_or!(bool, bool, bool, |a: bool, b: bool| Ok(a || b));
+register_op_bor!(bool, bool, bool, |a: bool, b: bool| Ok(a ^ b));
+// register_op_bsl!(VirFloat, VirInt, |a: VirFloat, b: VirInt| Ok(VirFloat::new(a.value << b.value)));
+// register_op_bsr!(VirFloat, VirInt, |a: VirFloat, b: VirInt| Ok(VirFloat::new(a.value >> b.value)));
 // Best attempt would be using i64::pow, but overflow would be a big issue
 
-register_op_not!(bool, ValueKind::Bool, |a: bool| Ok(!a));
-register_op_pos!(VirInt, ValueKind::Int, |a: VirInt| Ok(VirInt::new(
-    a.value
-)));
-register_op_pos!(VirFloat, ValueKind::Float, |a: VirFloat| Ok(
-    VirFloat::new(a.value)
-));
-register_op_neg!(VirInt, ValueKind::Int, |a: VirInt| Ok(VirInt::new(
-    -a.value
-)));
-register_op_neg!(VirFloat, ValueKind::Float, |a: VirFloat| Ok(
-    VirFloat::new(-a.value)
-));
+register_op_not!(bool, bool, |a: bool| Ok(!a));
+register_op_pos!(i64, i64, |a| Ok(a));
+register_op_pos!(f64, f64, |a| Ok(a));
+register_op_neg!(i64, i64);
+register_op_neg!(f64, f64);
 
 register_op_add!(
     String,
     String,
-    ValueKind::String,
+    String,
     |a: String, b: String| Ok(format!("{}{}", a, b).to_string())
 );

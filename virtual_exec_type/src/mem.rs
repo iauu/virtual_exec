@@ -13,7 +13,7 @@ pub trait ToOwned {
 }
 
 pub enum Value<'a> {
-    Int(u64),
+    Int(i64),
     Float(f64),
     Bool(bool),
     None,
@@ -51,7 +51,7 @@ impl ToOwned for Value<'_> {
 }
 
 pub enum OwnedValue {
-    Int(u64),
+    Int(i64),
     Float(f64),
     Bool(bool),
     String(Box<str>),

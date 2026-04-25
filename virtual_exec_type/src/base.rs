@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex, RwLock};
-use crate::mem::{Allocator, MemoryAllocator, MemoryError, Value, ValuePtr};
+use crate::mem::{Allocator, MemoryAllocator, Value, ValuePtr};
+use crate::error::{MemoryError, SandboxExecutionError};
 
 trait TypeCast<'a> {
     fn as_int(&self) -> Option<u64>;
@@ -16,6 +17,8 @@ trait TypeCast<'a> {
     fn as_bool(&self) -> Option<bool>;
 
     fn as_none(&self) -> Option<()>;
+
+    fn as_error(&self) -> Option<SandboxExecutionError>;
 
 }
 
@@ -81,6 +84,14 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
             None
         }
     }
+
+    fn as_error(&self) -> Option<SandboxExecutionError> {
+        if let Value::Error(e) = &self.lock().unwrap().inner {
+            Some(e.clone())
+        } else {
+            None
+        }
+    }
 }
 
 pub trait Downcast<'ctx>: Sized {
@@ -136,5 +147,17 @@ impl<'ctx> Downcast<'ctx> for () {
 impl<'ctx> Upcast<'ctx> for () {
     fn from_value(&self, alloc: &MemoryAllocator<'ctx>) -> Result<ValuePtr<'ctx>, MemoryError> {
         alloc.alloc(Value::None)
+    }
+}
+
+impl<'ctx> Downcast<'ctx> for SandboxExecutionError {
+    fn from_value(value: ValuePtr<'ctx>) -> Option<Self> {
+        value.as_error()
+    }
+}
+
+impl<'ctx> Upcast<'ctx> for SandboxExecutionError {
+    fn from_value(&self, alloc: &MemoryAllocator<'ctx>) -> Result<ValuePtr<'ctx>, MemoryError> {
+        alloc.alloc(Value::Error(self.clone()))
     }
 }

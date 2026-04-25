@@ -2,9 +2,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::sync::{Arc, Mutex, RwLock, Weak};
-
-#[derive(Debug)]
-pub struct MemoryError;
+use crate::error::{MemoryError, SandboxExecutionError};
 
 pub type MemoryAllocator<'a> = Arc<Mutex<MemoryAllocation<'a>>>;
 
@@ -25,7 +23,8 @@ pub enum Value<'a> {
     #[doc(hidden)]
     _Scope(PhantomData<&'a ()>),
     #[doc(hidden)]
-    MemoryChunk(usize)
+    MemoryChunk(usize),
+    Error(SandboxExecutionError)
 }
 
 impl ToOwned for Value<'_> {
@@ -45,7 +44,8 @@ impl ToOwned for Value<'_> {
                 OwnedValue::Object(d.read().unwrap().iter().map(|(k, v)| (k.to_owned(), v.lock().unwrap().to_owned())).collect())
             },
             Value::_Scope(_) => OwnedValue::None,
-            Value::MemoryChunk(_) => OwnedValue::None
+            Value::MemoryChunk(_) => OwnedValue::None,
+            Value::Error(e) => OwnedValue::Error(e.clone())
         }
     }
 }
@@ -58,6 +58,7 @@ pub enum OwnedValue {
     None,
     Collection(Vec<OwnedValue>),
     Object(HashMap<String, OwnedValue>),
+    Error(SandboxExecutionError)
 }
 
 pub struct ValueInnerPtr<'a> {
@@ -203,7 +204,8 @@ impl<'a> GetSize for Value<'a> {
             Value::String(s) => s.len(),
             Value::None => 1,
             Value::_Scope(_) => 1,
-            Value::MemoryChunk(size) => *size
+            Value::MemoryChunk(size) => *size,
+            Value::Error(_) => 1024
         }
     }
 }

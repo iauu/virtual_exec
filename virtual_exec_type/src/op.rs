@@ -1,11 +1,12 @@
 use crate::mem::ValuePtr;
 use bumpalo::Bump;
+use crate::error::TypeConversionError;
 use crate::mem::MemoryAllocator;
 
 type BinaryOpFn =
-    for<'ctx> fn(lhs: ValuePtr<'ctx>, rhs: ValuePtr<'ctx>, arena: &MemoryAllocator<'ctx>) -> Option<ValuePtr<'ctx>>;
+    for<'ctx> fn(lhs: &ValuePtr<'ctx>, rhs: &ValuePtr<'ctx>, arena: &MemoryAllocator<'ctx>) ->  Option<Result<ValuePtr<'ctx>, TypeConversionError>>;
 
-type UnaryOpFn = for<'ctx> fn(rhs: ValuePtr<'ctx>, arena: &MemoryAllocator<'ctx>) -> Option<ValuePtr<'ctx>>;
+type UnaryOpFn = for<'ctx> fn(rhs: &ValuePtr<'ctx>, arena: &MemoryAllocator<'ctx>) ->  Option<Result<ValuePtr<'ctx>, TypeConversionError>>;
 
 #[macro_export]
 macro_rules! __binary_op_register {
@@ -18,20 +19,23 @@ macro_rules! __binary_op_register {
     ) => {
         const _: () = {
             fn _op_impl<'ctx>(
-                lhs: $crate::mem::ValuePtr<'ctx>,
-                rhs: $crate::mem::ValuePtr<'ctx>,
+                lhs: &$crate::mem::ValuePtr<'ctx>,
+                rhs: &$crate::mem::ValuePtr<'ctx>,
                 arena: &$crate::mem::MemoryAllocator<'ctx>,
-            ) -> Option<$crate::mem::ValuePtr<'ctx>> {
+            ) -> Option<Result<$crate::mem::ValuePtr<'ctx>, $crate::error::TypeConversionError>> {
                 let lhs_val = <$lhs_type as $crate::base::Downcast>::from_value(lhs)?;
                 let rhs_val = <$rhs_type as $crate::base::Downcast>::from_value(rhs)?;
-                match $func(lhs_val.clone(), rhs_val.clone()) {
+                fn checked<R, F>(f: F)
+                where
+                    R : $crate::base::Upcase,
+                    F: Fn($lhs_type, $rhs_type) -> ::core::result::Result<R, $crate:err::TypeConversionError>> {}
+                checked($func);
+                Some(match ($func)(lhs_val.clone(), rhs_val.clone()) {
                     Ok(result) => Some(arena.allocate(
                         $output_wrapper(result)
                     )),
-                    Err(err) => Some(arena.allocate(
-                        $crate::base::ValueKind::ErrorWrapped(err)
-                    )),
-                }
+                    Err(err) => err,
+                })
             }
 
             ::inventory::submit! {
@@ -49,29 +53,14 @@ macro_rules! __binary_op_create {
         ::paste::paste!{
             pub struct [< Op $alt_name Impl>] {pub function: $crate::op::BinaryOpFn }
             ::inventory::collect!([< Op $alt_name Impl>]);
-            pub fn [< op_ $name>]<'ctx>(lhs: $crate::base::Value<'ctx>, rhs: $crate::base::Value<'ctx>, arena: &$crate::alloc::Allocator<'ctx>) -> ::core::option::Option<$crate::base::Value<'ctx>> {
-                for implementation in ::inventory::iter::<[<Op $alt_name Impl>]> {
-                    if let ::core::option::Option::Some(result) = (implementation.function)(lhs, rhs, arena) {
-                        return Some(result);
-                    }
-                }
-                None
-            }
 
-            pub fn [<err_op_ $name>]<'ctx>(lhs: $crate::base::Value<'ctx>, rhs: $crate::base::Value<'ctx>, arena: &$crate::alloc::Allocator<'ctx>) -> ::core::result::Result<$crate::base::Value<'ctx>, $crate::error::SandboxExecutionError> {
+            pub fn [<err_op_ $name>]<'ctx>(lhs: $crate::mem::ValuePtr<'ctx>, rhs: $crate::mem::ValuePtr<'ctx>, arena: &$crate::mem::MemoryAllocator<'ctx>) -> ::core::result::Result<$crate::mem::ValuePtr<'ctx>, $crate::error::TypeConversionError> {
                 for implementation in ::inventory::iter::<[<Op $alt_name Impl>]> {
-                    if let ::core::option::Option::Some(result) = (implementation.function)(lhs, rhs, arena) {
-                       match &result.kind {
-                           $crate::base::ValueKind::ErrorWrapped(err) => {
-                               return Err(err.clone());
-                           }
-                           _ => {
-                               return Ok(result);
-                           }
-                       }
+                    if let ::core::option::Option::Some(result) = (implementation.function)(&lhs, &rhs, arena) {
+                       return result;
                     }
                 }
-                return Err($crate::error::SandboxExecutionError::UndefinedOperatorMethodError)
+                return Err($crate::error::TypeConversionError::UndefinedOperatorMethodError)
             }
 
             #[macro_export]
@@ -97,18 +86,21 @@ macro_rules! __unary_op_register {
     ) => {
         const _: () = {
             fn _op_impl<'ctx>(
-                rhs: $crate::base::Value<'ctx>,
-                arena: &$crate::alloc::Allocator<'ctx>,
-            ) -> Option<$crate::base::Value<'ctx>> {
+                rhs: &$crate::mem::ValuePtr<'ctx>,
+                arena: &$crate::mem::MemoryAllocator<'ctx>,
+            ) -> Option<Result<$crate::mem::ValuePtr<'ctx>, $crate::error::TypeConversionError>> {
                 let rhs_val = <$rhs_type as $crate::base::Downcast>::from_value(rhs)?;
-                match $func(rhs_val.clone()) {
+                fn checked<R, F>(f: F)
+                where
+                    R : $crate::base::Upcase,
+                    F: Fn($rhs_type) -> ::core::result::Result<R, $crate:err::TypeConversionError>> {}
+                checked($func);
+                Some(match ($func)(rhs_val.clone()) {
                     Ok(result) => Some(arena.allocate(
                         $output_wrapper(result),
                     )),
-                    Err(err) => Some(arena.allocate(
-                        $crate::base::ValueKind::ErrorWrapped(err),
-                    )),
-                }
+                    Err(err) => err,
+                })
             }
 
             ::inventory::submit! {
@@ -126,28 +118,13 @@ macro_rules! __unary_op_create {
         ::paste::paste!{
             pub struct [< Op $alt_name Impl>] {pub function: $crate::op::UnaryOpFn }
             ::inventory::collect!([< Op $alt_name Impl>]);
-            pub fn [< op_ $name>]<'ctx>(rhs: $crate::base::Value<'ctx>, arena: &$crate::alloc::Allocator<'ctx>) -> ::core::option::Option<$crate::base::Value<'ctx>> {
+            pub fn [<err_op_ $name>]<'ctx>(rhs: $crate::mem::ValuePtr<'ctx>, arena: &$crate::mem::MemoryAllocator<'ctx>) -> ::core::result::Result<$crate::mem::ValuePtr<'ctx>, $crate::error::TypeConversionError> {
                 for implementation in ::inventory::iter::<[<Op $alt_name Impl>]> {
-                    if let ::core::option::Option::Some(result) = (implementation.function)(rhs, arena) {
-                        return Some(result);
+                    if let ::core::option::Option::Some(result) = (implementation.function)(&rhs, arena) {
+                       return result;
                     }
                 }
-                None
-            }
-            pub fn [<err_op_ $name>]<'ctx>(rhs: $crate::base::Value<'ctx>, arena: &$crate::alloc::Allocator<'ctx>) -> ::core::result::Result<$crate::base::Value<'ctx>, $crate::error::SandboxExecutionError> {
-                for implementation in ::inventory::iter::<[<Op $alt_name Impl>]> {
-                    if let ::core::option::Option::Some(result) = (implementation.function)(rhs, arena) {
-                       match &result.kind {
-                           $crate::base::ValueKind::ErrorWrapped(err) => {
-                               return Err(err.clone());
-                           }
-                           _ => {
-                               return Ok(result);
-                           }
-                       }
-                    }
-                }
-                return Err($crate::error::SandboxExecutionError::UndefinedOperatorMethodError)
+                return Err($crate::error::TypeConversionError::UndefinedOperatorMethodError)
             }
 
             #[macro_export]

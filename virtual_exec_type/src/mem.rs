@@ -98,15 +98,7 @@ impl<'a> Drop for ValueInnerPtr<'a> {
     }
 }
 
-pub struct ValuePtr<'a>(Arc<Mutex<ValueInnerPtr<'a>>>);
-
-impl<'a> Deref for ValuePtr<'a> {
-    type Target = Arc<Mutex<ValueInnerPtr<'a>>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+pub type ValuePtr<'a> = Arc<Mutex<ValueInnerPtr<'a>>>;
 
 pub struct MemoryAllocation<'a> {
     curr: usize,
@@ -192,9 +184,9 @@ pub trait Allocator {
     type Input : GetSize;
     type Output;
 
-    fn alloc(&mut self, input: Self::Input) -> Result<Self::Output, MemoryError>;
+    fn alloc(&self, input: Self::Input) -> Result<Self::Output, MemoryError>;
 
-    fn change_alloc(&mut self, data: &mut Self::Output) -> Result<(), MemoryError>;
+    fn change_alloc(&self, data: &mut Self::Output) -> Result<(), MemoryError>;
 }
 
 impl<'a> GetSize for Value<'a> {
@@ -220,7 +212,7 @@ impl<'a> Allocator for MemoryAllocator<'a> {
     type Input = Value<'a>;
     type Output = Arc<Mutex<ValueInnerPtr<'a>>>;
 
-    fn alloc(&mut self, input: Self::Input) -> Result<Self::Output, MemoryError> {
+    fn alloc(&self, input: Self::Input) -> Result<Self::Output, MemoryError> {
         let size = input.get_size();
         self.lock().unwrap()._internal_alloc(size)?;
         let obj = ValueInnerPtr::new(input, size, self);
@@ -229,7 +221,7 @@ impl<'a> Allocator for MemoryAllocator<'a> {
         Ok(ptr)
     }
 
-    fn change_alloc(&mut self, data: &mut Self::Output) -> Result<(), MemoryError> {
+    fn change_alloc(&self, data: &mut Self::Output) -> Result<(), MemoryError> {
         let marked_size = data.lock().unwrap().marked_size();
         let new_size = data.lock().unwrap().get_size();
         if marked_size == new_size {

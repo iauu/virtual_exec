@@ -1,11 +1,11 @@
-use crate::base::Value;
+use crate::mem::ValuePtr;
 use bumpalo::Bump;
-use crate::alloc::Allocator;
+use crate::mem::MemoryAllocator;
 
 type BinaryOpFn =
-    for<'ctx> fn(lhs: Value<'ctx>, rhs: Value<'ctx>, arena: &Allocator<'ctx>) -> Option<Value<'ctx>>;
+    for<'ctx> fn(lhs: ValuePtr<'ctx>, rhs: ValuePtr<'ctx>, arena: &MemoryAllocator<'ctx>) -> Option<ValuePtr<'ctx>>;
 
-type UnaryOpFn = for<'ctx> fn(rhs: Value<'ctx>, arena: &Allocator<'ctx>) -> Option<Value<'ctx>>;
+type UnaryOpFn = for<'ctx> fn(rhs: ValuePtr<'ctx>, arena: &MemoryAllocator<'ctx>) -> Option<ValuePtr<'ctx>>;
 
 #[macro_export]
 macro_rules! __binary_op_register {
@@ -18,10 +18,10 @@ macro_rules! __binary_op_register {
     ) => {
         const _: () = {
             fn _op_impl<'ctx>(
-                lhs: $crate::base::Value<'ctx>,
-                rhs: $crate::base::Value<'ctx>,
-                arena: &$crate::alloc::Allocator<'ctx>,
-            ) -> Option<$crate::base::Value<'ctx>> {
+                lhs: $crate::mem::ValuePtr<'ctx>,
+                rhs: $crate::mem::ValuePtr<'ctx>,
+                arena: &$crate::mem::MemoryAllocator<'ctx>,
+            ) -> Option<$crate::mem::ValuePtr<'ctx>> {
                 let lhs_val = <$lhs_type as $crate::base::Downcast>::from_value(lhs)?;
                 let rhs_val = <$rhs_type as $crate::base::Downcast>::from_value(rhs)?;
                 match $func(lhs_val.clone(), rhs_val.clone()) {

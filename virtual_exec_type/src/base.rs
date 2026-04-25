@@ -1,170 +1,140 @@
-use std::cell::RefCell;
-use crate::builtin::{VirFloat, VirInt, VirObject};
-use crate::error::SandboxExecutionError;
-use bumpalo::Bump;
+use std::collections::HashMap;
 use std::fmt::Debug;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex, RwLock};
+use crate::mem::{Allocator, MemoryAllocator, MemoryError, Value, ValuePtr};
 
-pub type Value<'ctx> = &'ctx ValueContainer<'ctx>;
+trait TypeCast<'a> {
+    fn as_int(&self) -> Option<u64>;
+    fn as_float(&self) -> Option<f64>;
 
-#[derive(Debug, Clone)]
-pub enum ValueKind<'ctx> {
-    Int(VirInt),
-    Float(VirFloat),
-    Object(VirObject<'ctx>),
-    ErrorWrapped(SandboxExecutionError),
-    Bool(bool),
-    String(String),
-    Collection(Rc<RefCell<Vec<Value<'ctx>>>>),
-    None,
+    fn as_object(&self) -> Option<Arc<RwLock<HashMap<String, ValuePtr<'a>>>>>;
+
+    fn as_collections(&self) -> Option<Arc<RwLock<Vec<ValuePtr<'a>>>>>;
+
+    fn as_string(&self) -> Option<String>;
+
+    fn as_bool(&self) -> Option<bool>;
+
+    fn as_none(&self) -> Option<()>;
+
+}
+
+impl<'a> TypeCast<'a> for ValuePtr<'a> {
+    fn as_int(&self) -> Option<u64> {
+        if let Value::Int(v) = self.lock().unwrap().inner {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    fn as_bool(&self) -> Option<bool> {
+        if let Value::Bool(b) = self.lock().unwrap().inner {
+            Some(b)
+        } else {
+            None
+        }
+    }
+
+    fn as_float(&self) -> Option<f64> {
+        if let Value::Float(v) = self.lock().unwrap().inner {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    fn as_object(&self) -> Option<Arc<RwLock<HashMap<String, ValuePtr<'a>>>>> {
+        if let Value::Object(o) = &self.clone().lock().unwrap().inner {
+            Some(o.clone())
+        } else {
+            None
+        }
+    }
+
+    fn as_collections(&self) -> Option<Arc<RwLock<Vec<ValuePtr<'a>>>>> {
+        if let Value::Collection(c) = &self.clone().lock().unwrap().inner {
+            Some(c.clone())
+        } else {
+            None
+        }
+    }
+
+    fn as_string(&self) -> Option<String> {
+        if let Value::String(s) = &self.lock().unwrap().inner {
+            Some(s.to_string())
+        } else {
+            None
+        }
+    }
+
+    fn as_none(&self) -> Option<()> {
+        let item = &self.lock().unwrap().inner;
+        if let Value::None = item {
+            Some(())
+        } else if let Value::MemoryChunk(_) = item  {
+            Some(())
+        } else if let Value::_Scope(_) = item {
+            Some(())
+        }
+        else {
+            None
+        }
+    }
 }
 
 pub trait Downcast<'ctx>: Sized {
-    fn from_value(value: Value<'ctx>) -> Option<&'ctx Self>;
+    fn from_value(value: ValuePtr<'ctx>) -> Option<Self>;
 }
 
 pub trait Upcast<'ctx>: Sized {
-    fn from_value(&'ctx self) -> ValueKind<'ctx>;
+    fn from_value(&self, alloc: &MemoryAllocator<'ctx>) -> Result<ValuePtr<'ctx>, MemoryError>;
 }
 
 impl<'ctx> Downcast<'ctx> for bool {
-    fn from_value(value: Value<'ctx>) -> Option<&'ctx Self> {
+    fn from_value(value: ValuePtr<'ctx>) -> Option<Self> {
         value.as_bool()
     }
 }
 
 impl<'ctx> Upcast<'ctx> for bool {
-    fn from_value(&'ctx self) -> ValueKind<'ctx> {
-        ValueKind::Bool(*self)
+    fn from_value(&self, alloc: &MemoryAllocator<'ctx>) -> Result<ValuePtr<'ctx>, MemoryError> {
+        alloc.alloc(Value::Bool(*self))
     }
 }
 
-impl<'ctx> Downcast<'ctx> for Rc<RefCell<Vec<Value<'ctx>>>> {
-    fn from_value(value: Value<'ctx>) -> Option<&'ctx Self> {
-        value.as_collection()
+impl<'ctx> Downcast<'ctx> for Arc<RwLock<Vec<ValuePtr<'ctx>>>> {
+    fn from_value(value: ValuePtr<'ctx>) -> Option<Self> {
+        value.as_collections()
     }
 }
 
-impl<'ctx> Upcast<'ctx> for Rc<RefCell<Vec<Value<'ctx>>>> {
-    fn from_value(&'ctx self) -> ValueKind<'ctx> {
-        ValueKind::Collection(self.clone())
+impl<'ctx> Upcast<'ctx> for Arc<RwLock<Vec<ValuePtr<'ctx>>>> {
+    fn from_value(&self, alloc: &MemoryAllocator<'ctx>) -> Result<ValuePtr<'ctx>, MemoryError> {
+        alloc.alloc(Value::Collection(self.clone()))
     }
 }
 
 impl<'ctx> Downcast<'ctx> for String {
-    fn from_value(value: Value<'ctx>) -> Option<&'ctx Self> {
+    fn from_value(value: ValuePtr<'ctx>) -> Option<Self> {
         value.as_string()
     }
 }
 
 impl<'ctx> Upcast<'ctx> for String {
-    fn from_value(&'ctx self) -> ValueKind<'ctx> {
-        ValueKind::String((*self).clone())
+    fn from_value(&self, alloc: &MemoryAllocator<'ctx>) -> Result<ValuePtr<'ctx>, MemoryError> {
+        alloc.alloc(Value::String(self.clone().into_boxed_str()))
     }
 }
 
 impl<'ctx> Downcast<'ctx> for () {
-    fn from_value(value: Value<'ctx>) -> Option<&'ctx Self> {
+    fn from_value(value: ValuePtr<'ctx>) -> Option<Self> {
         value.as_none()
     }
 }
 
 impl<'ctx> Upcast<'ctx> for () {
-    fn from_value(&'ctx self) -> ValueKind<'ctx> {
-        ValueKind::None
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ValueContainer<'ctx> {
-    pub kind: ValueKind<'ctx>,
-}
-
-impl<'ctx> ValueContainer<'ctx> {
-    pub fn new(kind: ValueKind<'ctx>, arena: &'ctx Bump) -> Value<'ctx> {
-        arena.alloc(ValueContainer { kind })
-    }
-
-    pub fn clone_in_arena(&self, arena: &'ctx Bump) -> Value<'ctx> {
-        let new_kind = match &self.kind {
-            ValueKind::Int(i) => ValueKind::Int(*i),
-            ValueKind::Float(f) => ValueKind::Float(*f),
-            ValueKind::Object(o) => ValueKind::Object(o.clone()),
-            ValueKind::ErrorWrapped(e) => ValueKind::ErrorWrapped(e.clone()),
-            ValueKind::Bool(b) => ValueKind::Bool(*b),
-            ValueKind::String(s) => ValueKind::String(s.clone()),
-            ValueKind::None => ValueKind::None,
-            ValueKind::Collection(c) => ValueKind::Collection(c.clone()),
-        };
-        ValueContainer::new(new_kind, arena)
-    }
-
-    pub fn is_truthy(&self) -> bool {
-        match &self.kind {
-            ValueKind::Int(i) => i.value != 0,
-            ValueKind::Float(f) => f.value != 0.0,
-            ValueKind::Bool(b) => *b,
-            ValueKind::None => false,
-            ValueKind::String(s) => !s.is_empty(),
-            ValueKind::Collection(c) => !c.borrow().is_empty(),
-            ValueKind::Object(_) => true,
-            ValueKind::ErrorWrapped(_) => true,
-        }
-    }
-
-    pub fn as_int(&self) -> Option<&VirInt> {
-        match &self.kind {
-            ValueKind::Int(i) => Some(i),
-            _ => None,
-        }
-    }
-
-    pub fn as_float(&self) -> Option<&VirFloat> {
-        match &self.kind {
-            ValueKind::Float(f) => Some(f),
-            _ => None,
-        }
-    }
-
-    pub fn as_object(&self) -> Option<&VirObject<'ctx>> {
-        match &self.kind {
-            ValueKind::Object(o) => Some(o),
-            _ => None,
-        }
-    }
-
-    pub fn as_error(&self) -> Option<&SandboxExecutionError> {
-        match &self.kind {
-            ValueKind::ErrorWrapped(e) => Some(e),
-            _ => None,
-        }
-    }
-
-    pub fn as_bool(&self) -> Option<&bool> {
-        match &self.kind {
-            ValueKind::Bool(e) => Some(e),
-            _ => None,
-        }
-    }
-
-    pub fn as_string(&self) -> Option<&String> {
-        match &self.kind {
-            ValueKind::String(e) => Some(e),
-            _ => None,
-        }
-    }
-
-    pub fn as_none(&self) -> Option<&()> {
-        match &self.kind {
-            ValueKind::None => Some(&()),
-            _ => None,
-        }
-    }
-
-    pub fn as_collection(&self) -> Option<&Rc<RefCell<Vec<Value<'ctx>>>>> {
-        match &self.kind {
-            ValueKind::Collection(e) => Some(e),
-            _ => None,
-        }
+    fn from_value(&self, alloc: &MemoryAllocator<'ctx>) -> Result<ValuePtr<'ctx>, MemoryError> {
+        alloc.alloc(Value::None)
     }
 }

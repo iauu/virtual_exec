@@ -35,6 +35,55 @@ pub fn convert_stmt(stmt: tokenizer::Stmt) -> Result<final_ast::Node<final_ast::
                 test: final_test,
                 body: final_body,
             }
+        },
+        tokenizer::Stmt::Fn { name, args, body} => {
+            let final_body = body.stmts.into_iter().map(convert_fn_stmt).collect::<Result<_, _>>()?;
+            final_ast::Stmt::FunctionDef {
+                name: name,
+                args: args,
+                body: final_body,
+            }
+        }
+    };
+    Ok(final_ast::Node { kind, span: None })
+}
+
+pub fn convert_fn_stmt(stmt: tokenizer::FnStmt) -> Result<final_ast::Node<final_ast::Stmt>, ParseError> {
+    let kind = match stmt {
+        tokenizer::FnStmt::Expr(expr) => final_ast::Stmt::Expression(convert_expr(expr)),
+        tokenizer::FnStmt::Assign { target, value } => {
+            final_ast::Stmt::Assign {
+                target: convert_assign_expr(target),
+                value: convert_expr(value),
+            }
+        }
+        tokenizer::FnStmt::Scoped(block) => {
+            let body = block.stmts.into_iter().map(convert_stmt).collect::<Result<_, _>>()?;
+            final_ast::Stmt::Scoped(body)
+        }
+        tokenizer::FnStmt::If { test, body, otherwise } => {
+            let final_test = convert_expr(test);
+            let final_body = body.stmts.into_iter().map(convert_fn_stmt).collect::<Result<_, _>>()?;
+            let final_otherwise = otherwise
+                .map(|b| b.stmts.into_iter().map(convert_fn_stmt).collect())
+                .transpose()?;
+
+            final_ast::Stmt::If {
+                test: final_test,
+                body: final_body,
+                otherwise: final_otherwise,
+            }
+        },
+        tokenizer::FnStmt::Loop { test, body } => {
+            let final_test = convert_expr(test);
+            let final_body = body.stmts.into_iter().map(convert_fn_stmt).collect::<Result<_, _>>()?;
+            final_ast::Stmt::Loop {
+                test: final_test,
+                body: final_body,
+            }
+        },
+        tokenizer::FnStmt::Return(expr) => {
+            final_ast::Stmt::Return(expr.map(|x| convert_expr(x)))
         }
     };
     Ok(final_ast::Node { kind, span: None })

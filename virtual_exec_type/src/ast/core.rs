@@ -274,7 +274,13 @@ pub enum Stmt {
     Loop {
         test: Node<Expr>,
         body: Vec<Node<Stmt>>,
-    }
+    },
+    FunctionDef {
+        name: String,
+        args: Vec<String>,
+        body: Vec<Node<Stmt>>,
+    },
+    Return(Option<Node<Expr>>),
     // FunctionDef {
     //     name: String,
     //     args: Vec<String>,
@@ -296,7 +302,6 @@ pub enum Stmt {
     //     body: Vec<Node<Stmt>>,
     //     otherwise: Option<Vec<Node<Stmt>>>, // Added otherwise
     // },
-    // Return(Option<Node<Expr>>),
     // Break,
     // Continue,
 }

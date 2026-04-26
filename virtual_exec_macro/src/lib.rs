@@ -59,7 +59,7 @@ fn atom_to_token(atom: Atom) -> TokenStream2 {
         }
         Atom::Paren(expr) => {
             let expr_token = expr_to_token(*expr);
-            return quote! {
+            quote! {
                 ::virtual_exec_type::ast::core::Expr::Wrapped(
                     Box::new(#expr_token)
                 )
@@ -137,6 +137,104 @@ fn stmts_to_token(stmts: Vec<Stmt>) -> impl ToTokens {
     }
 }
 
+fn fn_stmts_to_token(stmts: Vec<virtual_exec_parser::tokenizer::FnStmt>) -> impl ToTokens {
+    let mut e = Vec::new();
+    for fn_stmt in stmts {
+        e.push(fn_stmt_to_token(fn_stmt));
+    }
+    quote! {
+        vec![
+            #(#e),*
+        ]
+    }
+}
+
+fn fn_stmt_to_token(stmt: virtual_exec_parser::tokenizer::FnStmt) -> impl ToTokens {
+    match stmt {
+        virtual_exec_parser::tokenizer::FnStmt::Expr(expr) => {
+            let expr_token = expr_to_token(expr);
+            quote! {
+                ::virtual_exec_type::ast::core::Node {
+                    kind: ::virtual_exec_type::ast::core::Stmt::Expression( #expr_token ),
+                    span: None,
+                }
+            }
+        }
+        virtual_exec_parser::tokenizer::FnStmt::Assign { target, value } => {
+            let target_token = assign_expr_to_token(target);
+            let value_token = expr_to_token(value);
+            quote! {
+                ::virtual_exec_type::ast::core::Node {
+                    kind: ::virtual_exec_type::ast::core::Stmt::Assign {
+                        target: #target_token,
+                        value: #value_token,
+                    },
+                    span: None,
+                }
+            }
+        }
+        virtual_exec_parser::tokenizer::FnStmt::If { test, body, otherwise } => {
+            let test_token = expr_to_token(test);
+            let body_token = fn_stmts_to_token(body.stmts);
+            let otherwise_token = match otherwise {
+                Some(b) => {
+                    let stmts = fn_stmts_to_token(b.stmts);
+                    quote! { Some(#stmts) }
+                }
+                None => quote! { None },
+            };
+
+            quote! {
+                ::virtual_exec_type::ast::core::Node {
+                    kind: ::virtual_exec_type::ast::core::Stmt::If {
+                        test: #test_token,
+                        body: #body_token,
+                        otherwise: #otherwise_token,
+                    },
+                    span: None,
+                }
+            }
+        },
+        virtual_exec_parser::tokenizer::FnStmt::Scoped(block) => {
+            let stmts = stmts_to_token(block.stmts);
+            quote! {
+                ::virtual_exec_type::ast::core::Node {
+                    kind: ::virtual_exec_type::ast::core::Stmt::Scoped(#stmts),
+                    span: None,
+                }
+            }
+        },
+        virtual_exec_parser::tokenizer::FnStmt::Loop { test, body } => {
+            let test_token = expr_to_token(test);
+            let body_token = fn_stmts_to_token(body.stmts);
+            quote! {
+                ::virtual_exec_type::ast::core::Node {
+                    kind: ::virtual_exec_type::ast::core::Stmt::Loop {
+                        test: #test_token,
+                        body: #body_token,
+                    },
+                    span: None,
+                }
+            }
+        },
+        virtual_exec_parser::tokenizer::FnStmt::Return(expr) => {
+            let expr_token = match expr {
+                Some(e) => {
+                    let et = expr_to_token(e);
+                    quote! { Some(#et) }
+                },
+                None => quote! { None }
+            };
+            quote! {
+                ::virtual_exec_type::ast::core::Node {
+                    kind: ::virtual_exec_type::ast::core::Stmt::Return( #expr_token ),
+                    span: None,
+                }
+            }
+        }
+    }
+}
+
 fn stmt_to_token(stmt: Stmt) -> impl ToTokens {
     match stmt {
         Stmt::Expr(expr) => {
@@ -204,7 +302,21 @@ fn stmt_to_token(stmt: Stmt) -> impl ToTokens {
                     span: None,
                 }
             }
-        }
+        },
+        Stmt::Fn { name, args, body } => {
+            let body_token = fn_stmts_to_token(body.stmts);
+            
+            quote! {
+                ::virtual_exec_type::ast::core::Node {
+                    kind: ::virtual_exec_type::ast::core::Stmt::FunctionDef {
+                        name: #name.to_string(),
+                        args: vec![ #(#args.to_string()),* ],
+                        body: #body_token,
+                    },
+                    span: None,
+                }
+            }
+        },
     }
 }
 

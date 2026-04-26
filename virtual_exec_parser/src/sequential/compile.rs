@@ -127,7 +127,11 @@ impl GetInstruction for Stmt {
                 inst.extend(body_inst);
                 inst.push(Jmp(initial));
                 inst
-            }
+            },
+            Stmt::FunctionDef { name, args, body } => {
+                todo!()
+            },
+            Stmt::Return(_) => todo!()
         }
     }
 }

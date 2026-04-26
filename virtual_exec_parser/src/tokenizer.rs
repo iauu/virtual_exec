@@ -1,7 +1,9 @@
 use crate::token;
 use syn::parse::{Parse, ParseStream, Result};
-use syn::{braced, parenthesized, Ident, Lit, Token};
+use syn::{braced, bracketed, parenthesized, Ident, Lit, Token};
+use syn::punctuated::Punctuated;
 use virtual_exec_type::ast::core as final_ast;
+use virtual_exec_type::ast::core::Literal;
 
 #[derive(Clone)]
 pub struct TopLevelBlock {
@@ -21,6 +23,11 @@ impl Parse for TopLevelBlock {
 #[derive(Clone)]
 pub struct Block {
     pub stmts: Vec<Stmt>,
+}
+
+#[derive(Clone)]
+pub struct FnBlock {
+    pub stmts: Vec<FnStmt>,
 }
 
 #[derive(Clone)]
@@ -76,6 +83,31 @@ pub enum Stmt {
         test: Expr,
         body: Block
     },
+    Fn {
+        name: String,
+        args: Vec<String>,
+        body: FnBlock,
+    }
+}
+
+#[derive(Clone)]
+pub enum FnStmt {
+    Expr(Expr),
+    Assign {
+        target: AssignExpr,
+        value: Expr,
+    },
+    If {
+        test: Expr,
+        body: FnBlock,
+        otherwise: Option<FnBlock>,
+    },
+    Scoped(Block),
+    Loop {
+        test: Expr,
+        body: FnBlock
+    },
+    Return(Option<Expr>)
 }
 
 #[derive(Clone)]
@@ -103,6 +135,18 @@ impl Parse for Block {
             stmts.push(content.parse()?);
         }
         Ok(Block { stmts })
+    }
+}
+
+impl Parse for FnBlock {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let content;
+        braced!(content in input);
+        let mut stmts = Vec::new();
+        while !content.is_empty() {
+            stmts.push(content.parse()?);
+        }
+        Ok(FnBlock { stmts })
     }
 }
 
@@ -151,6 +195,83 @@ impl Parse for Stmt {
     }
 }
 
+impl Parse for FnStmt {
+    fn parse(input: ParseStream) -> Result<Self> {
+        if input.peek(Token![if]) {
+            return parse_if_statement(input).map(FnStmt::from);
+        }
+        else if input.peek(Token![while]) {
+            return parse_while_statement(input).map(FnStmt::from);
+        }
+        else if input.peek(Token![return]) {
+            input.parse::<Token![return]>()?;
+            if input.peek(Token![;]) {
+                input.parse::<Token![;]>()?;
+                return Ok(FnStmt::Return(None));
+            }
+            let expr = input.parse::<Expr>()?;
+            input.parse::<Token![;]>()?;
+            return Ok(FnStmt::Return(Some(expr)));
+        }
+
+        let fork = input.fork();
+        let _ = fork.parse::<Expr>()?;
+
+        if fork.peek(Token![=])
+            || fork.peek(token::PlusAssign) || fork.peek(token::MinusAssign)
+            || fork.peek(token::StarAssign) || fork.peek(token::SlashAssign)
+            || fork.peek(token::PercentAssign) || fork.peek(token::BitAndAssign)
+            || fork.peek(token::BitOrAssign) || fork.peek(token::BitXorAssign)
+            || fork.peek(token::LeftShiftAssign) || fork.peek(token::RightShiftAssign)
+        {
+            let target = input.parse::<AssignExpr>()?;
+            let op: AssignOp = input.parse()?;
+            let value = input.parse::<Expr>()?;
+            input.parse::<Token![;]>()?;
+
+            let final_value = match map_assign_op_to_binary_op(op) {
+                None => value,
+                Some(binary_op) => Expr::Binary(Box::new(target.clone().into()), binary_op, Box::new(value))
+            };
+
+            Ok(FnStmt::Assign { target, value: final_value })
+
+        }
+        else if input.peek(syn::token::Brace) {
+            let stmts = input.parse::<Block>()?;
+            input.parse::<Token![;]>()?;
+            Ok(FnStmt::Scoped(stmts))
+        }
+        else {
+            let expr = input.parse::<Expr>()?;
+            input.parse::<Token![;]>()?;
+            Ok(FnStmt::Expr(expr))
+        }
+    }
+}
+
+impl From<Stmt> for FnStmt {
+    fn from(value: Stmt) -> Self {
+        match value {
+            Stmt::Expr(expr) => FnStmt::Expr(expr),
+            Stmt::Assign { target, value } => FnStmt::Assign { target, value },
+            Stmt::If { test, body, otherwise } => FnStmt::If { test, body: body.into(), otherwise: otherwise.map(|x| x.into()) },
+            Stmt::Scoped(stmts) => FnStmt::Scoped(stmts),
+            Stmt::Loop { test, body } => FnStmt::Loop { test, body: body.into() },
+            // TODO: Perper way to handle people trying to define function within a function
+            Stmt::Fn { name, args, body } => FnStmt::Expr(Expr::Atom(Atom::Literal(Literal::Int(0)))) 
+        }
+    }
+}
+
+impl From<Block> for FnBlock {
+    fn from(value: Block) -> Self {
+        FnBlock {
+            stmts: value.stmts.into_iter().map(|stmt| stmt.into()).collect()
+        }
+    }
+}
+
 fn parse_if_statement(input: ParseStream) -> Result<Stmt> {
     input.parse::<Token![if]>()?;
     let test = input.parse::<Expr>()?;
@@ -175,6 +296,16 @@ fn parse_while_statement(input: ParseStream) -> Result<Stmt> {
     let test = input.parse::<Expr>()?;
     let body = input.parse::<Block>()?;
     Ok(Stmt::Loop { test, body })
+}
+
+fn parse_fn_statement(input: ParseStream) -> Result<Stmt> {
+    input.parse::<Token![fn]>()?;
+    let name = input.parse::<Ident>()?.to_string();
+    let content;
+    let bracket = parenthesized!(content in input);
+    let arr: Punctuated<Ident, Token![,]> = Punctuated::parse_terminated(&content)?;
+    let args: Vec<String> = arr.iter().map(|i| i.to_string()).collect();
+    Ok(Stmt::Fn { name, args, body: input.parse()? })
 }
 
 impl Parse for Expr {

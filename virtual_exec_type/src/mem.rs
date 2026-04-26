@@ -28,6 +28,23 @@ pub enum Value<'a> {
     Error(ExecutionError)
 }
 
+impl PartialEq for Value<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Value::Int(a), Value::Int(b)) => a == b,
+            (Value::Float(a), Value::Float(b)) => a == b,
+            (Value::Bool(a), Value::Bool(b)) => a == b,
+            (Value::None, Value::None) => true,
+            (Value::String(a), Value::String(b)) => a == b,
+            (Value::Collection(a), Value::Collection(b)) => Arc::ptr_eq(a, b),
+            (Value::Object(a), Value::Object(b)) => Arc::ptr_eq(a, b),
+            (Value::MemoryChunk(a), Value::MemoryChunk(b)) => a == b,
+            (Value::Error(a), Value::Error(b)) => a == b,
+            _ => false
+        }
+    }
+}
+
 impl ToOwned for Value<'_> {
     type Output = OwnedValue;
 
@@ -51,7 +68,7 @@ impl ToOwned for Value<'_> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum OwnedValue {
     Int(i64),
     Float(f64),
@@ -104,6 +121,7 @@ impl<'a> Drop for ValueInnerPtr<'a> {
 
 pub type ValuePtr<'a> = Arc<Mutex<ValueInnerPtr<'a>>>;
 
+#[derive(Debug)]
 pub struct MemoryAllocation<'a> {
     curr: usize,
     pub max: usize,

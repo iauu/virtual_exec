@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialOrd, PartialEq)]
 pub enum Instruction {
@@ -85,6 +86,12 @@ pub enum Instruction {
 
     // Stack
     Pop
+}
+
+impl Display for Instruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

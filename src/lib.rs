@@ -1,26 +1,32 @@
+use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 use virtual_exec_parser::error::ParseError;
-use virtual_exec_type::error::ExecutionError as InterpretedSandboxExecutionError;
+use virtual_exec_parser::sequential::exec::{FnStackFrame, InstStateMachine, State};
+use virtual_exec_parser::sequential::instructions::Instruction;
+use virtual_exec_type::error::{ExecutionError as InterpretedSandboxExecutionError, ExecutionError};
+use virtual_exec_type::mem::{MemoryAllocator, MemoryAllocatorConstructor, OwnedValue, ToOwned};
+pub use virtual_exec_parser::{parser::parse, sequential::compile::compile};
 
 /// The interpreted unified error type for the `virtual_exec` library.
-#[derive(Debug)]
-pub enum InterpretedExecError {
-    /// An error that occurred during the parsing phase.
-    Parse(ParseError),
-    /// An error that occurred during the execution phase.
-    Execution(InterpretedSandboxExecutionError),
-}
-
-impl From<ParseError> for InterpretedExecError {
-    fn from(e: ParseError) -> Self {
-        InterpretedExecError::Parse(e)
-    }
-}
-
-impl From<InterpretedSandboxExecutionError> for InterpretedExecError {
-    fn from(e: InterpretedSandboxExecutionError) -> Self {
-        InterpretedExecError::Execution(e)
-    }
-}
+// #[derive(Debug)]
+// pub enum InterpretedExecError {
+//     /// An error that occurred during the parsing phase.
+//     Parse(ParseError),
+//     /// An error that occurred during the execution phase.
+//     Execution(InterpretedSandboxExecutionError),
+// }
+//
+// impl From<ParseError> for InterpretedExecError {
+//     fn from(e: ParseError) -> Self {
+//         InterpretedExecError::Parse(e)
+//     }
+// }
+//
+// impl From<InterpretedSandboxExecutionError> for InterpretedExecError {
+//     fn from(e: InterpretedSandboxExecutionError) -> Self {
+//         InterpretedExecError::Execution(e)
+//     }
+// }
 
 // Executes a string of code in a sandboxed environment.
 //
@@ -50,4 +56,50 @@ impl From<InterpretedSandboxExecutionError> for InterpretedExecError {
 //     Ok(final_state)
 // }
 
+#[derive(Debug)]
+pub struct Machine<'a> {
+    alloc: MemoryAllocator<'a>,
+    machine: InstStateMachine<'a>
+}
+
+impl<'a> Machine<'a> {
+    pub fn new(instructions: Vec<Instruction>, memory_lim: usize, inst_limit: u64) -> Self {
+        let alloc = MemoryAllocator::construct(memory_lim);
+        let machine = InstStateMachine {
+            lim: inst_limit,
+            fn_stack_frame: vec![FnStackFrame {
+                ptr: 0,
+                mapping: Arc::new(RwLock::new(HashMap::new()))
+            }],
+            alloc: alloc.clone(),
+            instructions,
+            state: Ok(State::Ok),
+            stack: vec![],
+        };
+        Self {
+            alloc,
+            machine
+        }
+    }
+
+    pub fn run_once(&mut self) -> Result<State, ExecutionError> {
+        self.machine.run_once()
+    }
+
+    pub fn run_all(&mut self) -> Result<State, ExecutionError> {
+        while let Ok(State::Ok) = self.machine.state {
+            self.machine.run_once()?;
+        }
+        self.machine.state.clone()
+    }
+    
+    pub fn get(&self, name: &str) -> Option<OwnedValue> {
+        for fn_frame in self.machine.fn_stack_frame.iter().rev() {
+            if let Some(v) = fn_frame.mapping.read().unwrap().get(name).cloned() {
+                return Some(v.lock().unwrap().inner.to_owned_value());
+            }
+        }
+        None
+    }
+}
 

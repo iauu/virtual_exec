@@ -1,10 +1,22 @@
-// use virtual_exec::interpreted_exec;
-// use virtual_exec_type::exec_ctx::RsValue;
-// 
-// #[test]
-// fn test_simple_assignment() {
-//     let code = "a = 1; b = 2; c = 3; if a != b {d = 2;} d += d; d;";
-//     let result = interpreted_exec(code, 100).unwrap();
-//     assert_eq!(result.get("a"), Some(&RsValue::Int(1)));
-//     assert_eq!(result.get("d"), Some(&RsValue::Int(4)));
-// }
+use virtual_exec::{Machine, parse, compile};
+use virtual_exec_parser::sequential::exec::State;
+use virtual_exec_type::mem::OwnedValue;
+
+#[test]
+fn test_simple_assignment() {
+    let code = "a = 1; b = 2; c = 3; if a != b {d = 2;} d += d; d;";
+    let compiled = compile(&parse(code).unwrap());
+    println!("{:?}", compiled);
+    let mut machine = Machine::new(compiled, 100, 100);
+    match machine.run_all() {
+        Ok(State::Ok) => {},
+        Ok(reason) => {
+            println!("Machine: {:?}, state: {:?}", machine, reason);
+        },
+        Err(e) => {
+            println!("Machine: {:?}, err: {:?}", machine, e);
+        }
+    }
+    assert_eq!(machine.get("a"), Some(OwnedValue::Int(1)));
+    assert_eq!(machine.get("d"), Some(OwnedValue::Int(4)));
+}

@@ -1,8 +1,8 @@
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct MemoryError;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Copy)]
 pub enum TypeConversionError {
     DivideByZeroError,
     UndefinedOperatorMethodError,
@@ -10,7 +10,7 @@ pub enum TypeConversionError {
     MemoryError
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
 pub enum ExecutionError {
     TimeoutError,
     ReferenceNotExistError(String),

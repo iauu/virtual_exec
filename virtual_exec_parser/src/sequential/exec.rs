@@ -35,11 +35,13 @@ impl<'ctx> From<ValuePtr<'ctx>> for StackItem<'ctx> {
     }
 }
 
+#[derive(Debug)]
 pub struct FnStackFrame<'ctx> {
     pub ptr: u64,
     pub mapping: Arc<RwLock<HashMap<String, ValuePtr<'ctx>>>>,
 }
 
+#[derive(Debug)]
 pub struct InstStateMachine<'ctx> {
     pub lim: u64,
     pub fn_stack_frame: Vec<FnStackFrame<'ctx>>,
@@ -372,8 +374,12 @@ impl<'ctx> InstStateMachine<'ctx> {
                 return self.state.clone()
             }
             Instruction::Pop => {
-                self.pop_value()?;
+                self.pop()?;
             }
+        }
+        if (self.fn_stack_frame.last().unwrap().ptr as usize == self.instructions.len()) {
+            self.state = Ok(State::Terminated);
+            return self.state.clone()
         }
         Ok(State::Ok)
     }

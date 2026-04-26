@@ -78,7 +78,7 @@ pub enum Instruction {
     ConstructObj(u64),
     LoadName(Box<str>),
     LoadObjectAttr(Box<str>),
-    LoadObjectIndex(i64),
+    LoadObjectIndex(SubscriptLoad),
 
     // External
     Terminate,
@@ -92,6 +92,12 @@ impl Display for Instruction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, PartialOrd)]
+pub enum SubscriptLoad {
+    String(Box<str>),
+    Idx(i64)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -147,7 +153,7 @@ pub enum InstructionBuilder {
     ConstructObj(u64),
     LoadName(Box<str>),
     LoadObjectAttr(Box<str>),
-    LoadObjectIndex(i64),
+    LoadObjectIndex(SubscriptLoad),
 
     // External
     Terminate,

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use virtual_exec_type::mem::{Allocator, MemoryAllocator, Value, ValuePtr};
 use virtual_exec_type::op::*;
-use crate::sequential::instructions::Instruction;
+use crate::sequential::instructions::{Instruction, SubscriptLoad};
 use virtual_exec_type::base::{IsTruhy, TypeCast};
 pub use virtual_exec_type::error::ExecutionError;
 
@@ -358,7 +358,14 @@ impl<'ctx> InstStateMachine<'ctx> {
             Instruction::LoadObjectIndex(idx) => {
                 let value = self.pop_value()?;
                 if let Some(_) = value.as_collections() {
-                    self.push_idx_ref((value, idx));
+                    if let SubscriptLoad::Idx(idx) = idx {
+                        self.push_idx_ref((value, idx));
+                    }
+                }
+                else if let Some(_) = value.as_object() {
+                    if let SubscriptLoad::String(s) = idx {
+                        self.push_ref((Some(value), s.into_string()));
+                    }
                 }
                 else {
                     self.state = Err(ExecutionError::UnexpectedIdxError);

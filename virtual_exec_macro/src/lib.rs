@@ -3,7 +3,7 @@ use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
 use syn::parse_macro_input;
 use virtual_exec_parser::parser::convert_stmt;
-use virtual_exec_parser::sequential::instructions::Instruction;
+use virtual_exec_parser::sequential::instructions::{Instruction, SubscriptLoad};
 use virtual_exec_parser::tokenizer::{Stmt, Expr, Atom, TopLevelBlock, AssignExpr};
 use virtual_exec_type::ast::core::{BinaryOperator, UnaryOperator, Literal, Module};
 
@@ -212,6 +212,17 @@ pub fn parse(input: TokenStream) -> TokenStream {
     quote! { #token_content }.into()
 }
 
+fn subscript_to_token(sub: &SubscriptLoad) -> impl ToTokens {
+    match sub {
+        SubscriptLoad::Idx(idx) => {
+            quote! { ::virtual_exec_parser::sequential::instruction::SubscriptLoad::Idx(#idx) }
+        },
+        SubscriptLoad::String(s) => {
+            quote! { ::virtual_exec_parser::sequential::instruction::SubscriptLoad::String(::std::boxed::Box::from(#s))}
+        }
+    }
+}
+
 fn inst_to_token(inst: Instruction) -> impl ToTokens {
     match inst {
         Instruction::Add => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Add },
@@ -249,7 +260,10 @@ fn inst_to_token(inst: Instruction) -> impl ToTokens {
         Instruction::ConstructObj(len2) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::ConstructObj(#len2) },
         Instruction::LoadName(name) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadName(::std::boxed::Box::from(#name)) },
         Instruction::LoadObjectAttr(attr) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadObjectAttr(::std::boxed::Box::from(#attr)) },
-        Instruction::LoadObjectIndex(idx) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadObjectIndex(#idx) },
+        Instruction::LoadObjectIndex(idx) => {
+            let decoded = subscript_to_token(&idx);
+            quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadObjectIndex(#decoded) }
+        },
         Instruction::Terminate => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Terminate },
         Instruction::Interrupt => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Interrupt },
         Instruction::Pop => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Pop }

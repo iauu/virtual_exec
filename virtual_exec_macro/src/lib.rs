@@ -92,6 +92,16 @@ fn expr_to_token(expr: Expr) -> impl ToTokens {
                     operand: Box::new(#operand_token),
                 }
             }
+        },
+        Expr::Call(func, args) => {
+            let func = expr_to_token(*func);
+            let args = args.iter().map(|x| expr_to_token(x.clone())).collect::<Vec<_>>();
+            quote! {
+                ::virtual_exec_type::ast::core::Expr::Call {
+                    function: Box::new(#func),
+                    args: vec![ #(#args),* ],
+                }
+            }
         }
     };
     quote! {

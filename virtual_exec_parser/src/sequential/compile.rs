@@ -133,20 +133,27 @@ impl GetInstruction for Stmt {
                 let mut inst: Vec<Instruction> = Vec::new();
                 inst.push(Instruction::LoadName(name.clone().into_boxed_str()));
                 offset += 1;
-                inst.push(Instruction::LoadDPtr(offset + 2));
+                inst.push(Instruction::LoadDPtr(offset + 3));
                 inst.push(Instruction::Assign);
                 offset += 2;
+                // Jmp (non-hidden)
+                offset += 1;
+                let mut fn_inst: Vec<Instruction> = Vec::new();
                 for arg in args {
-                    inst.push(Instruction::LoadName(arg.clone().into_boxed_str()));
-                    inst.push(Instruction::Swap);
-                    inst.push(Instruction::Assign);
+                    fn_inst.push(Instruction::LoadName(arg.clone().into_boxed_str()));
+                    fn_inst.push(Instruction::Swap);
+                    fn_inst.push(Instruction::Assign);
                     offset += 3;
                 }
+                // [value1] [value0] |inst boundary| [var0] [var1]
                 let body_inst = body.inst(offset);
                 offset += body_inst.len() as u64;
-                inst.extend(body_inst);
-                inst.push(Instruction::LoadNone);
-                inst.push(Instruction::Ret);
+                fn_inst.extend(body_inst);
+                fn_inst.push(Instruction::LoadNone);
+                fn_inst.push(Instruction::Ret);
+                offset += 2;
+                inst.push(Instruction::Jmp(offset));
+                inst.extend(fn_inst);
                 inst
             },
             Stmt::Return(expr) => {
@@ -234,6 +241,21 @@ impl GetInstruction for Expr {
                     UnaryOperator::Negative => inst.push(Instruction::UnaryMinus),
                     UnaryOperator::Not => inst.push(Instruction::Not),
                 }
+                inst
+            },
+            Expr::Call { function, args} => {
+                let mut inst = Vec::new();
+                let mut offset = offset;
+                for arg in args.iter().rev() {
+                    let arg_inst = arg.kind.inst(offset);
+                    offset += arg_inst.len() as u64;
+                    inst.extend(arg_inst);
+                }
+                let function_inst = function.kind.inst(offset);
+                offset += function_inst.len() as u64;
+                inst.extend(function_inst);
+                inst.push(Instruction::Call);
+                // [value1] [value0] ([func] [call]) |inst boundary| [var0] [var1]
                 inst
             }
         }

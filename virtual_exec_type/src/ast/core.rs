@@ -77,10 +77,10 @@ pub enum Expr {
         operand: Box<Node<Expr>>,
     },
     Wrapped(Box<Node<Expr>>),
-    // Call {
-    //     function: Box<Node<Expr>>,
-    //     args: Vec<Node<Expr>>,
-    // },
+    Call {
+        function: Box<Node<Expr>>,
+        args: Vec<Node<Expr>>,
+    },
     // Attribute {
     //     value: Box<Node<Expr>>,
     //     attr: String,

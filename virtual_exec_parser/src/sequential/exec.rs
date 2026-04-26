@@ -81,6 +81,8 @@ macro_rules! __unary_autogen {
 }
 
 impl<'ctx> InstStateMachine<'ctx> {
+
+    #[allow(unused)]
     fn pop_value(&mut self) -> Result<ValuePtr<'ctx>, ExecutionError> {
         let result = self.stack.pop().ok_or(ExecutionError::VStackUnderflowError)?;
         match result {
@@ -245,7 +247,7 @@ impl<'ctx> InstStateMachine<'ctx> {
             Instruction::Gt => { __binary_autogen!(err_op_gt, self); },
             Instruction::Gte => { __binary_autogen!(err_op_ge, self); },
             Instruction::Assign => {
-                let value = self.pop_value()?;
+                let value = self.pop_get()?;
                 let target = self.pop()?;
                 match target {
                     StackItem::Value(_value) => {
@@ -282,14 +284,14 @@ impl<'ctx> InstStateMachine<'ctx> {
                 }
             }
             Instruction::JmpNz(loc) => {
-                let a = self.pop_value()?;
+                let a = self.pop_get()?;
                 if a.is_truthy() {
                     let stack =  self.get_mut_stack_ref()?;
                     stack.ptr = loc;
                 }
             }
             Instruction::JmpZ(loc) => {
-                let a = self.pop_value()?;
+                let a = self.pop_get()?;
                 if !a.is_truthy() {
                     let stack =  self.get_mut_stack_ref()?;
                     stack.ptr = loc;
@@ -300,19 +302,14 @@ impl<'ctx> InstStateMachine<'ctx> {
                 stack.ptr = loc;
             }
             Instruction::Call => {
-                let ptr = self.pop()?;
-                if let StackItem::Value(item) = ptr {
-                    if let Some(ptr) = item.as_dptr() {
-                        self.fn_stack_frame.push(
-                            FnStackFrame {
-                                ptr,
-                                mapping: Arc::new(Default::default()),
-                            }
-                        )
-                    } else {
-                        self.state = Err(ExecutionError::UnexpectedFunctionCall);
-                        return self.state.clone()
-                    }
+                let ptr = self.pop_get()?;
+                if let Some(ptr) = ptr.as_dptr() {
+                    self.fn_stack_frame.push(
+                        FnStackFrame {
+                            ptr,
+                            mapping: Arc::new(Default::default()),
+                        }
+                    )
                 } else {
                     self.state = Err(ExecutionError::UnexpectedFunctionCall);
                     return self.state.clone()
@@ -339,19 +336,19 @@ impl<'ctx> InstStateMachine<'ctx> {
             Instruction::ConstructArr(len) => {
                 let mut arr = Vec::with_capacity(len as usize);
                 for _ in 0..len {
-                    arr.push(self.pop_value()?);
+                    arr.push(self.pop_get()?);
                 }
                 self.push_value(self.alloc(Value::Collection(Arc::new(RwLock::new(arr))))?);
             }
             Instruction::ConstructObj(len2) => {
                 let mut obj = HashMap::new();
                 for idx in 0..len2 {
-                    let name = self.pop_value()?;
-                    let value = self.pop_value()?;
+                    let name = self.pop_get()?;
+                    let value = self.pop_get()?;
                     if name.as_string().is_none() {
                         let remaining_stackdrop = (len2 - idx) * 2;
                         for _ in 0..remaining_stackdrop {
-                            let _ = self.pop_value(); // Drop error since AttrNotStringError is the primary issue, although otherwise this would cause error as well for stack underflow
+                            let _ = self.pop_get(); // Drop error since AttrNotStringError is the primary issue, although otherwise this would cause error as well for stack underflow
                         }
                         self.state = Err(ExecutionError::AttrNotStringError);
                         return self.state.clone()
@@ -364,7 +361,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                 self.push_ref((None, name.into_string()));
             }
             Instruction::LoadObjectAttr(name) => {
-                let value = self.pop_value()?;
+                let value = self.pop_get()?;
                 if let Some(_) = value.as_object() {
                     self.push_ref((Some(value), name.into_string()));
                 }
@@ -375,7 +372,7 @@ impl<'ctx> InstStateMachine<'ctx> {
 
             }
             Instruction::LoadObjectIndex(idx) => {
-                let value = self.pop_value()?;
+                let value = self.pop_get()?;
                 if let Some(_) = value.as_collections() {
                     if let SubscriptLoad::Idx(idx) = idx {
                         self.push_idx_ref((value, idx));

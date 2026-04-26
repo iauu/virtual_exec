@@ -106,6 +106,10 @@ fn convert_expr(expr: tokenizer::Expr) -> final_ast::Node<final_ast::Expr> {
             op,
             operand: Box::new(convert_expr(*operand)),
         },
+        tokenizer::Expr::Call(func, args) => final_ast::Expr::Call {
+            function: Box::new(convert_expr(*func)),
+            args: args.into_iter().map(convert_expr).collect(),
+        }
     };
     final_ast::Node { kind, span: None }
 }

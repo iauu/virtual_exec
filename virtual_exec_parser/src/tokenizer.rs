@@ -1,6 +1,6 @@
 use crate::token;
 use syn::parse::{Parse, ParseStream, Result};
-use syn::{braced, bracketed, parenthesized, Ident, Lit, Token};
+use syn::{braced, parenthesized, Ident, Lit, Token};
 use syn::punctuated::Punctuated;
 use virtual_exec_type::ast::core as final_ast;
 use virtual_exec_type::ast::core::Literal;
@@ -115,6 +115,7 @@ pub enum Expr {
     Atom(Atom),
     Binary(Box<Expr>, final_ast::BinaryOperator, Box<Expr>),
     Unary(final_ast::UnaryOperator, Box<Expr>),
+    Call(Box<Expr>, Vec<Expr>)
 }
 
 #[derive(Clone)]
@@ -157,6 +158,8 @@ impl Parse for Stmt {
         }
         else if input.peek(Token![while]) {
             return parse_while_statement(input);
+        } else if input.peek(Token![fn]) {
+            return parse_fn_statement(input);
         }
 
         let fork = input.fork();
@@ -259,7 +262,7 @@ impl From<Stmt> for FnStmt {
             Stmt::Scoped(stmts) => FnStmt::Scoped(stmts),
             Stmt::Loop { test, body } => FnStmt::Loop { test, body: body.into() },
             // TODO: Perper way to handle people trying to define function within a function
-            Stmt::Fn { name, args, body } => FnStmt::Expr(Expr::Atom(Atom::Literal(Literal::Int(0)))) 
+            Stmt::Fn { .. } => FnStmt::Expr(Expr::Atom(Atom::Literal(Literal::Int(0))))
         }
     }
 }
@@ -302,7 +305,7 @@ fn parse_fn_statement(input: ParseStream) -> Result<Stmt> {
     input.parse::<Token![fn]>()?;
     let name = input.parse::<Ident>()?.to_string();
     let content;
-    let bracket = parenthesized!(content in input);
+    let _ = parenthesized!(content in input);
     let arr: Punctuated<Ident, Token![,]> = Punctuated::parse_terminated(&content)?;
     let args: Vec<String> = arr.iter().map(|i| i.to_string()).collect();
     Ok(Stmt::Fn { name, args, body: input.parse()? })
@@ -310,7 +313,14 @@ fn parse_fn_statement(input: ParseStream) -> Result<Stmt> {
 
 impl Parse for Expr {
     fn parse(input: ParseStream) -> Result<Self> {
-        parse_expr_with_precedence(input, 0)
+        let mut result = parse_expr_with_precedence(input, 0)?;
+        while input.peek(syn::token::Paren) {
+            let content;
+            parenthesized!(content in input);
+            let arr: Punctuated<Expr, Token![,]> = Punctuated::parse_terminated(&content)?;
+            result = Expr::Call(Box::from(result), arr.into_iter().collect());
+        }
+        Ok(result)
     }
 }
 

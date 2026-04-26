@@ -105,7 +105,7 @@ WIP Feature list:
 - [x] Function call
 - [x] `while` loop
 - [ ] `for` loop
-- [ ] FFI function (Calling rust function from sandbox code with custom lifetime consumption) **The planned behaviour is it would terminate after the function call if it is dynamic lifetime, while terminate before the function call if it is static lifetime**
+- [ ] FFI function (Calling rust function from sandbox code with custom lifetime consumption)
 - [x] Function definition
 - [x] `if` statement
 - [ ] Custom object definition

@@ -9,9 +9,10 @@ pub type MemoryAllocator<'a> = Arc<Mutex<MemoryAllocation<'a>>>;
 pub trait ToOwned {
     type Output;
 
-    fn to_owned(&self) -> Self::Output;
+    fn to_owned_value(&self) -> Self::Output;
 }
 
+#[derive(Debug, Clone)]
 pub enum Value<'a> {
     Int(i64),
     Float(f64),
@@ -30,7 +31,7 @@ pub enum Value<'a> {
 impl ToOwned for Value<'_> {
     type Output = OwnedValue;
 
-    fn to_owned(&self) -> Self::Output {
+    fn to_owned_value(&self) -> Self::Output {
         match self {
             Value::Int(i) => OwnedValue::Int(*i),
             Value::Float(f) => OwnedValue::Float(*f),
@@ -38,10 +39,10 @@ impl ToOwned for Value<'_> {
             Value::None => OwnedValue::None,
             Value::String(s) => OwnedValue::String(s.to_owned()),
             Value::Collection(c) => {
-                OwnedValue::Collection(c.read().unwrap().iter().map(|v| v.lock().unwrap().to_owned()).collect::<Vec<_>>().into())
+                OwnedValue::Collection(c.read().unwrap().iter().map(|v| v.lock().unwrap().to_owned_value()).collect::<Vec<_>>().into())
             },
             Value::Object(d) => {
-                OwnedValue::Object(d.read().unwrap().iter().map(|(k, v)| (k.to_owned(), v.lock().unwrap().to_owned())).collect())
+                OwnedValue::Object(d.read().unwrap().iter().map(|(k, v)| (k.to_owned(), v.lock().unwrap().to_owned_value())).collect())
             },
             Value::_Scope(_) => OwnedValue::None,
             Value::MemoryChunk(_) => OwnedValue::None,
@@ -50,6 +51,7 @@ impl ToOwned for Value<'_> {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum OwnedValue {
     Int(i64),
     Float(f64),
@@ -61,6 +63,7 @@ pub enum OwnedValue {
     Error(SandboxExecutionError)
 }
 
+#[derive(Debug)]
 pub struct ValueInnerPtr<'a> {
     pub inner: Value<'a>,
     size: usize,
@@ -209,6 +212,14 @@ impl<'a> GetSize for Value<'a> {
         }
     }
 }
+
+pub trait MemoryAllocatorConstructor<'a> {
+    fn construct(max: usize) -> MemoryAllocator<'a> {
+        Arc::new(Mutex::new(MemoryAllocation::new(max)))
+    }
+}
+
+impl<'a> MemoryAllocatorConstructor<'a> for MemoryAllocator<'a> {}
 
 impl<'a> Allocator for MemoryAllocator<'a> {
     type Input = Value<'a>;

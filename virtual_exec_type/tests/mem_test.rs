@@ -5,7 +5,7 @@ use virtual_exec_type::mem::*;
 fn test_mem_alloc() {
     use virtual_exec_type::mem::Value::MemoryChunk;
     let alloc = MemoryAllocation::new(100);
-    let mut alloc = Arc::new(Mutex::new(alloc));
+    let alloc = Arc::new(Mutex::new(alloc));
     let obj_1 = alloc.alloc(MemoryChunk(50)).unwrap();
     assert_eq!(alloc.lock().unwrap().curr(), 50);
     let obj_2 = alloc.alloc(MemoryChunk(50)).unwrap();
@@ -17,7 +17,7 @@ fn test_mem_alloc() {
 fn test_mem_dealloc() {
     use virtual_exec_type::mem::Value::MemoryChunk;
     let alloc = MemoryAllocation::new(100);
-    let mut alloc = Arc::new(Mutex::new(alloc));
+    let alloc = Arc::new(Mutex::new(alloc));
     let obj_1 = alloc.alloc(MemoryChunk(50)).unwrap();
     assert_eq!(alloc.lock().unwrap().curr(), 50);
     let obj_2 = alloc.alloc(MemoryChunk(50)).unwrap();
@@ -33,7 +33,7 @@ fn test_mem_dealloc() {
 fn test_mem_change_alloc() {
     use virtual_exec_type::mem::Value::MemoryChunk;
     let alloc = MemoryAllocation::new(100);
-    let mut alloc = Arc::new(Mutex::new(alloc));
+    let alloc = Arc::new(Mutex::new(alloc));
     let mut obj_1 = alloc.alloc(MemoryChunk(50)).unwrap();
     let mut obj_2 = alloc.alloc(MemoryChunk(50)).unwrap();
     assert_eq!(alloc.lock().unwrap().curr(), 100);

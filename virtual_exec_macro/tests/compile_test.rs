@@ -1,16 +1,8 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
-use bumpalo::Bump;
+use std::sync::{Arc, RwLock};
 use virtual_exec_macro::compile;
-use virtual_exec_parser::sequential::exec::{FnStackFrame, InstStateMachine, State};
-use virtual_exec_parser::sequential::instructions::Instruction;
-use virtual_exec_type::alloc::{create_arena, Allocator};
-use virtual_exec_type::ast::core::ASTNode;
-use virtual_exec_type::base::ValueKind;
-use virtual_exec_type::builtin::Mapping;
-use virtual_exec_parser::sequential::exec::SandboxExecutionError;
-use virtual_exec_type::exec_ctx::ExecutionContext;
+use virtual_exec_parser::sequential::exec::{FnStackFrame, InstStateMachine, State, SandboxExecutionError};
+use virtual_exec_type::mem::{MemoryAllocator, MemoryAllocatorConstructor, Value, ValuePtr};
 
 #[test]
 fn test_simple_assignment_and_expr() {
@@ -19,10 +11,9 @@ fn test_simple_assignment_and_expr() {
         a = a + 5;
         a;
     );
-    let arena = create_arena(None);
-    let alloc = Allocator::new(&arena);
+    let alloc = MemoryAllocator::construct(100);
 
-    let global_mapping = Rc::new(RefCell::new(Mapping { mapping: HashMap::new() }));
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 1000,
@@ -50,10 +41,10 @@ fn test_simple_assignment_and_expr() {
     assert!(state_machine.state.is_ok(), "Evaluation failed: {:?}", state_machine.state.err());
 
 
-    let value = (&global_mapping).borrow().mapping.get("a").unwrap().borrow().kind.clone();
+    let value = global_mapping.read().unwrap().get("a").unwrap().lock().unwrap().inner.clone();
 
     match value {
-        ValueKind::Int(i) => assert_eq!(i.value, 15),
+        Value::Int(i) => assert_eq!(i, 15),
         _ => panic!("Expected an integer result, but got {:?}", value),
     }
 }
@@ -68,10 +59,9 @@ fn test_more() {
         }
         a;
     );
-    let arena = create_arena(None);
-    let alloc = Allocator::new(&arena);
+    let alloc = MemoryAllocator::construct(100);
 
-    let global_mapping = Rc::new(RefCell::new(Mapping { mapping: HashMap::new() }));
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 1000,
@@ -98,10 +88,10 @@ fn test_more() {
 
     assert!(state_machine.state.is_ok(), "Evaluation failed: {:?}", state_machine.state.err());
 
-    let value = (&global_mapping).borrow().mapping.get("a").unwrap().borrow().kind.clone();
+    let value = global_mapping.read().unwrap().get("a").unwrap().lock().unwrap().inner.clone();
 
     match value {
-        ValueKind::Int(i) => assert_eq!(i.value, 2),
+        Value::Int(i) => assert_eq!(i, 2),
         _ => panic!("Expected an integer result, but got {:?}", value),
     }
 }
@@ -116,10 +106,9 @@ fn test_timeout() {
         }
         a;
     );
-    let arena = create_arena(None);
-    let alloc = Allocator::new(&arena);
+    let alloc = MemoryAllocator::construct(100);
 
-    let global_mapping = Rc::new(RefCell::new(Mapping { mapping: HashMap::new() }));
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 15,
@@ -144,7 +133,6 @@ fn test_timeout() {
         let _ = state_machine.run_once();
     }
 
-    assert!(state_machine.state.is_err(), "Evaluation successful when TimeoutError is expected: {:?}", state_machine.state);
     assert!(match &state_machine.state {
         Ok(State::Timeout) => true,
         _ => false
@@ -161,10 +149,10 @@ fn test_if_fail_path() {
         }
         a;
     );
-    let arena = create_arena(None);
-    let alloc = Allocator::new(&arena);
+    let alloc = MemoryAllocator::construct(100);
 
-    let global_mapping = Rc::new(RefCell::new(Mapping { mapping: HashMap::new() }));
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
+
 
     let mut state_machine = InstStateMachine {
         lim: 1000,
@@ -191,10 +179,10 @@ fn test_if_fail_path() {
 
     assert!(state_machine.state.is_ok(), "Evaluation failed: {:?}", state_machine.state.err());
 
-    let value = (&global_mapping).borrow().mapping.get("a").unwrap().borrow().kind.clone();
+    let value = global_mapping.read().unwrap().get("a").unwrap().lock().unwrap().inner.clone();
 
     match value {
-        ValueKind::Int(i) => assert_eq!(i.value, 15),
+        Value::Int(i) => assert_eq!(i, 15),
         _ => panic!("Expected an integer result, but got {:?}", value),
     }
 }

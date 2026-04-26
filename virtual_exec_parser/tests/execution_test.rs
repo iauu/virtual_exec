@@ -1,12 +1,11 @@
 use virtual_exec_parser::parser::parse;
 use virtual_exec_parser::sequential::compile::compile;
-use virtual_exec_type::base::ValueKind;
-use virtual_exec_type::alloc::{create_arena, Allocator};
-use virtual_exec_type::builtin::Mapping;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex, RwLock};
 use virtual_exec_parser::sequential::exec::{InstStateMachine, FnStackFrame, State};
+use virtual_exec_type::mem::{MemoryAllocation, MemoryAllocator, MemoryAllocatorConstructor, Value, ValuePtr};
 
 #[test]
 fn test_execution_compiled_code() {
@@ -16,10 +15,9 @@ fn test_execution_compiled_code() {
     let parsed = parse(code).unwrap();
     let compiled = compile(&parsed);
 
-    let arena = create_arena(None);
-    let alloc = Allocator::new(&arena);
+    let alloc = MemoryAllocator::construct(100);
 
-    let global_mapping = Rc::new(RefCell::new(Mapping { mapping: HashMap::new() }));
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 1000,
@@ -44,10 +42,10 @@ fn test_execution_compiled_code() {
         let _ = state_machine.run_once();
     }
 
-    let d_value = global_mapping.borrow().mapping.get("d").unwrap().borrow().kind.clone();
+    let d_value = global_mapping.read().unwrap().get("d").unwrap().lock().unwrap().inner.clone();
 
     match d_value {
-        ValueKind::Int(i) => assert_eq!(i.value, 4),
+        Value::Int(i) => assert_eq!(i, 4),
         _ => panic!("Expected d to be Int(4) but got {:?}", d_value),
     }
 }
@@ -58,10 +56,9 @@ fn test_execution_compiled_code_if_false() {
     let parsed = parse(code).unwrap();
     let compiled = compile(&parsed);
 
-    let arena = create_arena(None);
-    let alloc = Allocator::new(&arena);
+    let alloc = MemoryAllocator::construct(100);
 
-    let global_mapping = Rc::new(RefCell::new(Mapping { mapping: HashMap::new() }));
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 1000,
@@ -86,10 +83,10 @@ fn test_execution_compiled_code_if_false() {
         let _ = state_machine.run_once();
     }
 
-    let d_value = global_mapping.borrow().mapping.get("d").unwrap().borrow().kind.clone();
+    let d_value = global_mapping.read().unwrap().get("d").unwrap().lock().unwrap().inner.clone();
 
     match d_value {
-        ValueKind::Int(i) => assert_eq!(i.value, 10),
+        Value::Int(i) => assert_eq!(i, 10),
         _ => panic!("Expected d to be Int(10) but got {:?}", d_value),
     }
 }
@@ -100,10 +97,9 @@ fn test_execution_compiled_code_math_operations() {
     let parsed = parse(code).unwrap();
     let compiled = compile(&parsed);
 
-    let arena = create_arena(None);
-    let alloc = Allocator::new(&arena);
+    let alloc = MemoryAllocator::construct(100);
 
-    let global_mapping = Rc::new(RefCell::new(Mapping { mapping: HashMap::new() }));
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 1000,
@@ -128,27 +124,27 @@ fn test_execution_compiled_code_math_operations() {
         let _ = state_machine.run_once();
     }
 
-    let c_value = global_mapping.borrow().mapping.get("c").unwrap().borrow().kind.clone();
+    let c_value = global_mapping.read().unwrap().get("c").unwrap().lock().unwrap().inner.clone();
     match c_value {
-        ValueKind::Int(i) => assert_eq!(i.value, 7),
+        Value::Int(i) => assert_eq!(i, 7),
         _ => panic!("Expected c to be Int(7) but got {:?}", c_value),
     }
 
-    let d_value = global_mapping.borrow().mapping.get("d").unwrap().borrow().kind.clone();
+    let d_value = global_mapping.read().unwrap().get("d").unwrap().lock().unwrap().inner.clone();
     match d_value {
-        ValueKind::Int(i) => assert_eq!(i.value, 30),
+        Value::Int(i) => assert_eq!(i, 30),
         _ => panic!("Expected d to be Int(30) but got {:?}", d_value),
     }
 
-    let e_value = global_mapping.borrow().mapping.get("e").unwrap().borrow().kind.clone();
+    let e_value = global_mapping.read().unwrap().get("e").unwrap().lock().unwrap().inner.clone();
     match e_value {
-        ValueKind::Float(f) => assert_eq!(f.value, 10.0 / 3.0),
+        Value::Float(f) => assert_eq!(f, 10.0 / 3.0),
         _ => panic!("Expected e to be Float but got {:?}", e_value),
     }
 
-    let f_value = global_mapping.borrow().mapping.get("f").unwrap().borrow().kind.clone();
+    let f_value = global_mapping.read().unwrap().get("f").unwrap().lock().unwrap().inner.clone();
     match f_value {
-        ValueKind::Int(i) => assert_eq!(i.value, 1),
+        Value::Int(i) => assert_eq!(i, 1),
         _ => panic!("Expected f to be Int(1) but got {:?}", f_value),
     }
 }
@@ -159,10 +155,9 @@ fn test_execution_compiled_code_bitwise_operations() {
     let parsed = parse(code).unwrap();
     let compiled = compile(&parsed);
 
-    let arena = create_arena(None);
-    let alloc = Allocator::new(&arena);
+    let alloc = MemoryAllocator::construct(100);
 
-    let global_mapping = Rc::new(RefCell::new(Mapping { mapping: HashMap::new() }));
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 1000,
@@ -187,26 +182,26 @@ fn test_execution_compiled_code_bitwise_operations() {
         let _ = state_machine.run_once();
     }
 
-    let c_value = global_mapping.borrow().mapping.get("c").unwrap().borrow().kind.clone();
+    let c_value = global_mapping.read().unwrap().get("c").unwrap().lock().unwrap().inner.clone();
     match c_value {
-        ValueKind::Int(i) => assert_eq!(i.value, 5 & 3),
+        Value::Int(i) => assert_eq!(i, 5 & 3),
         _ => panic!("Expected c to be Int(1) but got {:?}", c_value),
     }
 
-    let d_value = global_mapping.borrow().mapping.get("d").unwrap().borrow().kind.clone();
+    let d_value = global_mapping.read().unwrap().get("d").unwrap().lock().unwrap().inner.clone();
     match d_value {
-        ValueKind::Int(i) => assert_eq!(i.value, 5 | 3),
+        Value::Int(i) => assert_eq!(i, 5 | 3),
         _ => panic!("Expected d to be Int(7) but got {:?}", d_value),
     }
-    let f_value = global_mapping.borrow().mapping.get("f").unwrap().borrow().kind.clone();
+    let f_value = global_mapping.read().unwrap().get("f").unwrap().lock().unwrap().inner.clone();
     match f_value {
-        ValueKind::Int(i) => assert_eq!(i.value, 5 << 1),
+        Value::Int(i) => assert_eq!(i, 5 << 1),
         _ => panic!("Expected f to be Int(10) but got {:?}", f_value),
     }
 
-    let g_value = global_mapping.borrow().mapping.get("g").unwrap().borrow().kind.clone();
+    let g_value = global_mapping.read().unwrap().get("g").unwrap().lock().unwrap().inner.clone();
     match g_value {
-        ValueKind::Int(i) => assert_eq!(i.value, 5 >> 1),
+        Value::Int(i) => assert_eq!(i, 5 >> 1),
         _ => panic!("Expected g to be Int(2) but got {:?}", g_value),
     }
 }

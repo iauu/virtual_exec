@@ -1,5 +1,3 @@
-use virtual_exec_type::base::{ValueContainer, ValueKind};
-use virtual_exec_type::builtin::VirInt;
 use virtual_exec_parser::parser::parse;
 use virtual_exec_parser::sequential::compile::compile;
 use virtual_exec_parser::sequential::instructions::Instruction;

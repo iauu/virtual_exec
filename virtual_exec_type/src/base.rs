@@ -4,7 +4,35 @@ use std::sync::{Arc, Mutex, RwLock};
 use crate::mem::{Allocator, MemoryAllocator, Value, ValuePtr};
 use crate::error::{MemoryError, SandboxExecutionError};
 
-trait TypeCast<'a> {
+pub trait IsTruhy {
+    fn is_truthy(&self) -> bool;
+}
+
+impl IsTruhy for Value<'_> {
+    fn is_truthy(&self) -> bool {
+        match self {
+            Value::Int(i) => *i != 0,
+            Value::Float(f) => *f != 0.0,
+            Value::Bool(b) => *b,
+            Value::None => false,
+            Value::String(s) => s.len() > 0,
+            Value::Collection(v) => v.read().unwrap().len() > 0,
+            Value::Object(v) => v.read().unwrap().len() > 0,
+            Value::_Scope(_) => false,
+            Value::MemoryChunk(_) => false,
+            Value::Error(_) => false
+        }
+    }
+}
+
+impl IsTruhy for ValuePtr<'_> {
+    fn is_truthy(&self) -> bool {
+        self.lock().unwrap().is_truthy()
+    }
+}
+
+
+pub trait TypeCast<'a> {
     fn as_int(&self) -> Option<i64>;
     fn as_float(&self) -> Option<f64>;
 

@@ -1,16 +1,17 @@
-use bumpalo::Bump;
-use virtual_exec_type::base::{ValueContainer, ValueKind};
-use virtual_exec_type::builtin::VirInt;
+use std::sync::{Arc, Mutex};
+use virtual_exec_type::mem::{Value, ValuePtr, MemoryAllocator, MemoryAllocation, Allocator};
+use virtual_exec_type::base::TypeCast;
 
 #[test]
 fn test_value_creation_and_downcast() {
-    let arena = Bump::new();
-    let int_kind = ValueKind::Int(VirInt::new(42));
-    let value_handle = ValueContainer::new(int_kind, &arena);
-    let extracted_int = value_handle.as_int().expect("Downcast to Int failed");
-    assert_eq!(extracted_int.value, 42);
+    let alloc = MemoryAllocation::new(100);
+    let alloc = Arc::new(Mutex::new(alloc));
+    let int_v = Value::Int(42);
+    let int = alloc.alloc(int_v).unwrap();
+    let extracted_int = int.as_int().expect("Downcast to Int failed");
+    assert_eq!(extracted_int, 42);
     println!(
         "Successfully created and downcasted value: {:?}",
-        value_handle
+        int
     );
 }

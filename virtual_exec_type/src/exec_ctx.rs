@@ -1,12 +1,11 @@
-use crate::base::{Value, ValueContainer, ValueKind};
+use crate::mem::Value;
 use crate::builtin::Mapping;
 use crate::error::SandboxExecutionError;
-use bumpalo::Bump;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use crate::alloc::Allocator;
-use crate::exec_ctx::RsValue::Vector;
+use crate::mem::ValuePtr;
 
 pub type Result<T> = core::result::Result<T, SandboxExecutionError>;
 
@@ -21,30 +20,32 @@ pub enum RsValue {
     None,
 }
 
-fn value_kind_to_rs_value(kind: &ValueKind) -> RsValue {
+fn value_kind_to_rs_value(kind: &Value) -> RsValue {
     match kind {
-        ValueKind::Int(i) => RsValue::Int(i.value),
-        ValueKind::Float(f) => RsValue::Float(f.value),
-        ValueKind::Bool(b) => RsValue::Bool(*b),
-        ValueKind::String(s) => RsValue::String(s.clone()),
-        ValueKind::None => RsValue::None,
-        ValueKind::Object(o) => {
-            let mut map = HashMap::new();
-            for (key, value_rc) in o.mapping.borrow().mapping.iter() {
-                let value_ref = value_rc.borrow();
-                map.insert(key.clone(), value_kind_to_rs_value(&value_ref.kind));
+        Value::Int(i) => RsValue::Int(*i),
+        Value::Float(f) => RsValue::Float(*f),
+        Value::Bool(b) => RsValue::Bool(*b),
+        Value::String(s) => RsValue::String(s.to_string()),
+        Value::None => RsValue::None,
+        Value::Object(o) => {
+            let mut map: HashMap<String, RsValue> = HashMap::new();
+            for (key, ptr) in o.read().unwrap().iter() {
+                let key: &String = key;
+                let ptr: &ValuePtr = ptr;
+                map.insert(key.to_string(), value_kind_to_rs_value(&ptr.lock().unwrap().inner));
             }
             RsValue::Object(map)
         }
-        // Errors are not representable as a PyValue and are skipped.
-        ValueKind::ErrorWrapped(_) => RsValue::None,
-        ValueKind::Collection(v) => {
+        // Errors are not representable as a RsValue and are skipped.
+        Value::Error(_) => RsValue::None,
+        Value::Collection(v) => {
             let mut vec = Vec::new();
-            for value in v.borrow().clone() {
-                vec.push(value_kind_to_rs_value(&value.kind));
+            for value in v.read().unwrap().iter() {
+                vec.push(value_kind_to_rs_value(&value.lock().unwrap().inner));
             }
             RsValue::Vector(vec)
         }
+        _ => RsValue::None
     }
 }
 

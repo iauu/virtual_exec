@@ -6,7 +6,6 @@ use crate::sequential::instructions::{Instruction, SubscriptLoad};
 use virtual_exec_type::base::{IsTruhy, TypeCast};
 pub use virtual_exec_type::error::ExecutionError;
 
-
 type AttrReference<'ctx> = (Option<ValuePtr<'ctx>>, String);
 type IdxReference<'ctx> = (ValuePtr<'ctx>, i64);
 
@@ -90,6 +89,10 @@ impl<'ctx> InstStateMachine<'ctx> {
                 Err(ExecutionError::UndefinedVarError)
             }
         }
+    }
+
+    fn push(&mut self, value: StackItem<'ctx>) {
+        self.stack.push(value);
     }
 
     fn push_value(&mut self, value: ValuePtr<'ctx>) {
@@ -297,10 +300,26 @@ impl<'ctx> InstStateMachine<'ctx> {
                 stack.ptr = loc;
             }
             Instruction::Call => {
-                todo!("Function not exist yet")
+                let ptr = self.pop()?;
+                if let StackItem::Value(item) = ptr {
+                    if let Some(ptr) = item.as_dptr() {
+                        self.fn_stack_frame.push(
+                            FnStackFrame {
+                                ptr,
+                                mapping: Arc::new(Default::default()),
+                            }
+                        )
+                    } else {
+                        self.state = Err(ExecutionError::UnexpectedFunctionCall);
+                        return self.state.clone()
+                    }
+                } else {
+                    self.state = Err(ExecutionError::UnexpectedFunctionCall);
+                    return self.state.clone()
+                }
             }
             Instruction::Ret => {
-                todo!("Function not exist yet")
+                self.fn_stack_frame.pop().ok_or(ExecutionError::FnStackUnderflowError)?;
             }
             Instruction::LoadNone => {
                 self.push_value(self.alloc(Value::None)?);
@@ -382,6 +401,15 @@ impl<'ctx> InstStateMachine<'ctx> {
             }
             Instruction::Pop => {
                 self.pop()?;
+            },
+            Instruction::Swap => {
+                let a = self.pop()?;
+                let b = self.pop()?;
+                self.push(a);
+                self.push(b);
+            },
+            Instruction::LoadDPtr(u64) => {
+                self.push(StackItem::Value(self.alloc(Value::DPtr(u64))?))
             }
         }
         if self.fn_stack_frame.last().unwrap().ptr as usize == self.instructions.len()  {

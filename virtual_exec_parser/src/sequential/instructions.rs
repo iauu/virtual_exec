@@ -65,6 +65,7 @@ pub enum Instruction {
     JmpZ(u64), // Jump when zero
     /// Jump unconditionally to the specific location and run as the next instruction
     Jmp(u64),
+    /// Jump unconditionally to the DPtr at the top of the stack, create a new function stack frame
     Call,
     Ret,
 
@@ -79,13 +80,15 @@ pub enum Instruction {
     LoadName(Box<str>),
     LoadObjectAttr(Box<str>),
     LoadObjectIndex(SubscriptLoad),
+    LoadDPtr(u64),
 
     // External
     Terminate,
     Interrupt,
 
     // Stack
-    Pop
+    Pop,
+    Swap
 }
 
 impl Display for Instruction {
@@ -154,13 +157,15 @@ pub enum InstructionBuilder {
     LoadName(Box<str>),
     LoadObjectAttr(Box<str>),
     LoadObjectIndex(SubscriptLoad),
+    LoadDPtr(u64),
 
     // External
     Terminate,
     Interrupt,
 
     // Stack
-    Pop
+    Pop,
+    Swap
 }
 
 pub trait ConvertInstruction {
@@ -216,6 +221,8 @@ impl ConvertInstruction for InstructionBuilder {
             InstructionBuilder::Terminate => Instruction::Terminate,
             InstructionBuilder::Interrupt => Instruction::Interrupt,
             InstructionBuilder::Pop => Instruction::Pop,
+            InstructionBuilder::LoadDPtr(offset) => Instruction::LoadDPtr(offset),
+            InstructionBuilder::Swap => Instruction::Swap,
         }
     }
 }
@@ -262,6 +269,8 @@ impl Into<InstructionBuilder> for Instruction {
             Instruction::Terminate => InstructionBuilder::Terminate,
             Instruction::Interrupt => InstructionBuilder::Interrupt,
             Instruction::Pop => InstructionBuilder::Pop,
+            Instruction::LoadDPtr(offset) => InstructionBuilder::LoadDPtr(offset),
+            Instruction::Swap => InstructionBuilder::Swap,
         }
     }
 }

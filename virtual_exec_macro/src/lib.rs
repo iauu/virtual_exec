@@ -391,7 +391,9 @@ fn inst_to_token(inst: Instruction) -> impl ToTokens {
         },
         Instruction::Terminate => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Terminate },
         Instruction::Interrupt => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Interrupt },
-        Instruction::Pop => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Pop }
+        Instruction::Pop => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Pop },
+        Instruction::LoadDPtr(ptr) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadDPtr(#ptr) },
+        Instruction::Swap => { quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Swap } }
     }
 }
 

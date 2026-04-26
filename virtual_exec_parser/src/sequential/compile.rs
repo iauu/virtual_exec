@@ -129,9 +129,37 @@ impl GetInstruction for Stmt {
                 inst
             },
             Stmt::FunctionDef { name, args, body } => {
-                todo!()
+                let mut offset = offset;
+                let mut inst: Vec<Instruction> = Vec::new();
+                inst.push(Instruction::LoadName(name.clone().into_boxed_str()));
+                offset += 1;
+                inst.push(Instruction::LoadDPtr(offset + 2));
+                inst.push(Instruction::Assign);
+                offset += 2;
+                for arg in args {
+                    inst.push(Instruction::LoadName(arg.clone().into_boxed_str()));
+                    inst.push(Instruction::Swap);
+                    inst.push(Instruction::Assign);
+                    offset += 3;
+                }
+                let body_inst = body.inst(offset);
+                offset += body_inst.len() as u64;
+                inst.extend(body_inst);
+                inst.push(Instruction::LoadNone);
+                inst.push(Instruction::Ret);
+                inst
             },
-            Stmt::Return(_) => todo!()
+            Stmt::Return(expr) => {
+                if let Some(expr) = expr {
+                    let mut inst = Vec::new();
+                    let expr_inst = expr.kind.inst(offset);
+                    inst.extend(expr_inst);
+                    inst.push(Instruction::Ret);
+                    inst
+                } else {
+                    vec![Instruction::LoadNone, Instruction::Ret]
+                }
+            }
         }
     }
 }

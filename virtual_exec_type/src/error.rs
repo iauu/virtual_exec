@@ -31,7 +31,8 @@ pub enum ExecutionError {
     UnexpectedAttrError,
     UnexpectedIdxError,
     IndexOutOfRangeError,
-    MemoryError
+    MemoryError,
+    UnexpectedFunctionCall
 }
 
 impl From<MemoryError> for ExecutionError {

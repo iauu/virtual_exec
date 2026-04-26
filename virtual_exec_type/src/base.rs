@@ -19,7 +19,8 @@ impl IsTruhy for Value<'_> {
             Value::Object(v) => v.read().unwrap().len() > 0,
             Value::_Scope(_) => false,
             Value::MemoryChunk(_) => false,
-            Value::Error(_) => false
+            Value::Error(_) => false,
+            Value::DPtr(_) => true,
         }
     }
 }
@@ -46,7 +47,8 @@ pub trait TypeCast<'a> {
     fn as_none(&self) -> Option<()>;
 
     fn as_error(&self) -> Option<ExecutionError>;
-
+    
+    fn as_dptr(&self) -> Option<u64>;
 }
 
 impl<'a> TypeCast<'a> for ValuePtr<'a> {
@@ -115,6 +117,14 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     fn as_error(&self) -> Option<ExecutionError> {
         if let Value::Error(e) = &self.lock().unwrap().inner {
             Some(e.clone())
+        } else {
+            None
+        }
+    }
+
+    fn as_dptr(&self) -> Option<u64> {
+        if let Value::DPtr(d) = &self.clone().lock().unwrap().inner {
+            Some(*d)
         } else {
             None
         }

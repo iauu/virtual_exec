@@ -1,11 +1,11 @@
-use proc_macro2::{Span, TokenStream as TokenStream2};
+use proc_macro2::TokenStream as TokenStream2;
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
 use syn::parse_macro_input;
 use virtual_exec_parser::parser::convert_stmt;
 use virtual_exec_parser::sequential::instructions::Instruction;
-use virtual_exec_parser::tokenizer::{Block, Stmt, Expr, Atom, TopLevelBlock, AssignExpr};
-use virtual_exec_type::ast::core::{BinaryOperator, UnaryOperator, Literal, Module, Node};
+use virtual_exec_parser::tokenizer::{Stmt, Expr, Atom, TopLevelBlock, AssignExpr};
+use virtual_exec_type::ast::core::{BinaryOperator, UnaryOperator, Literal, Module};
 
 fn literal_to_token(lit: Literal) -> impl ToTokens {
     match lit {

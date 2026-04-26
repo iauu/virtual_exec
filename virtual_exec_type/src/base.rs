@@ -1,6 +1,5 @@
 use std::collections::HashMap;
-use std::fmt::Debug;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 use crate::mem::{Allocator, MemoryAllocator, Value, ValuePtr};
 use crate::error::{MemoryError, ExecutionError};
 

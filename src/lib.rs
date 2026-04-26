@@ -1,10 +1,4 @@
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::rc::Rc;
-use bumpalo::Bump;
 use virtual_exec_parser::error::ParseError;
-use virtual_exec_parser::parser;
-use virtual_exec_type::ast::core::ASTNode;
 use virtual_exec_type::error::ExecutionError as InterpretedSandboxExecutionError;
 
 /// The interpreted unified error type for the `virtual_exec` library.

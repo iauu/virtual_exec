@@ -1,5 +1,5 @@
-use virtual_exec_type::ast::core::{Module, Expr, ASTNode, Literal, Stmt, AssignExpr, Node, BinaryOperator, UnaryOperator};
-use crate::sequential::instructions::{Instruction, InstructionBuilder};
+use virtual_exec_type::ast::core::{Module, Expr, Literal, Stmt, AssignExpr, Node, BinaryOperator, UnaryOperator};
+use crate::sequential::instructions::Instruction;
 use crate::sequential::instructions::Instruction::{Jmp, JmpNz, JmpZ, LoadLitBool};
 
 pub fn compile(module: &Module) -> Vec<Instruction> {
@@ -27,7 +27,7 @@ impl GetInstruction for &Vec<Stmt> {
     fn inst(&self, offset: u64) -> Vec<Instruction> {
         let mut inst = Vec::new();
         let mut offset = offset;
-        for stmt in self.clone() {
+        for stmt in *self {
             let curr = stmt.inst(offset);
             offset += curr.len() as u64;
             inst.extend(curr);
@@ -40,7 +40,7 @@ impl GetInstruction for &Vec<Node<Stmt>> {
     fn inst(&self, offset: u64) -> Vec<Instruction> {
         let mut inst = Vec::new();
         let mut offset = offset;
-        for stmt in self.clone() {
+        for stmt in *self {
             let curr = stmt.kind.inst(offset);
             offset += curr.len() as u64;
             inst.extend(curr);
@@ -153,7 +153,7 @@ impl GetInstruction for Expr {
                         inst.extend(left_inst);
                         inst.extend(right_inst);
                         match op {
-                            (BinaryOperator::And | BinaryOperator::Or) => unreachable!(),
+                            BinaryOperator::And | BinaryOperator::Or  => unreachable!(),
                             BinaryOperator::Add => inst.push(Instruction::Add),
                             BinaryOperator::Subtract => inst.push(Instruction::Sub),
                             BinaryOperator::Multiply => inst.push(Instruction::Mul),
@@ -191,7 +191,7 @@ impl GetInstruction for Expr {
 }
 
 impl GetInstruction for Literal {
-    fn inst(&self, offset: u64) -> Vec<Instruction> {
+    fn inst(&self, _offset: u64) -> Vec<Instruction> {
         match self {
             Literal::Bool(v) => vec![LoadLitBool(v.clone())],
             Literal::Int(v) => vec![Instruction::LoadLitInt(v.clone())],

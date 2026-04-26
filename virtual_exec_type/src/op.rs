@@ -1,5 +1,4 @@
 use crate::mem::ValuePtr;
-use bumpalo::Bump;
 use crate::error::TypeConversionError;
 use crate::mem::MemoryAllocator;
 

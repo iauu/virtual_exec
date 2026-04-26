@@ -1,6 +1,4 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 use std::sync::{Arc, RwLock};
 use virtual_exec_type::mem::{Allocator, MemoryAllocator, Value, ValuePtr};
 use virtual_exec_type::op::*;
@@ -243,7 +241,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                 let value = self.pop_value()?;
                 let target = self.pop()?;
                 match target {
-                    StackItem::Value(value) => {
+                    StackItem::Value(_value) => {
                         self.state = Err(ExecutionError::UndefinedVarError);
                         return self.state.clone()
                     },

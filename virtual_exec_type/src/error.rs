@@ -1,5 +1,3 @@
-use crate::base::{Downcast};
-use crate::mem::ValuePtr;
 
 #[derive(Debug)]
 pub struct MemoryError;
@@ -37,13 +35,13 @@ pub enum ExecutionError {
 }
 
 impl From<MemoryError> for ExecutionError {
-    fn from(err: MemoryError) -> Self {
+    fn from(_err: MemoryError) -> Self {
         ExecutionError::MemoryError
     }
 }
 
 impl From<MemoryError> for TypeConversionError {
-    fn from(err: MemoryError) -> Self {
+    fn from(_err: MemoryError) -> Self {
         TypeConversionError::MemoryError
     }
 }

@@ -121,7 +121,7 @@ impl<'a> MemoryAllocation<'a> {
     }
 
     pub fn check_alloc(&self, size: usize) -> bool {
-        if (size > self.max) { return false };
+        if size > self.max  { return false };
         let req_curr = self.max - size;
         req_curr >= self.curr
     }
@@ -196,9 +196,9 @@ pub trait Allocator {
 impl<'a> GetSize for Value<'a> {
     fn get_size(&self) -> usize {
         match self {
-            Value::Int(i) => 8,
-            Value::Float(f) => 8,
-            Value::Bool(b) => 1,
+            Value::Int(_i) => 8,
+            Value::Float(_f) => 8,
+            Value::Bool(_b) => 1,
             Value::Collection(c) => c.read().unwrap().len() * 8,
             Value::Object(d) => {
                 let map = d.read().unwrap();

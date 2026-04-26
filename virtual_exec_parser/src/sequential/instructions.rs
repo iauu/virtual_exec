@@ -159,7 +159,7 @@ pub trait ConvertInstruction {
 impl ConvertInstruction for InstructionBuilder {
     type Output = Instruction;
 
-    fn convert(self, curr: &InstructionBuilder, relative: u64) -> Self::Output {
+    fn convert(self, _curr: &InstructionBuilder, relative: u64) -> Self::Output {
         match self {
             InstructionBuilder::Add => Instruction::Add,
             InstructionBuilder::Sub => Instruction::Sub,

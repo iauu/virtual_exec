@@ -1,6 +1,6 @@
 [package]
 name = "virtual_exec_parser"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 repository = "https://github.com/i-am-unknown-81514525/virtual_exec"
 authors = ["i-am-unknown-81514525" ]
@@ -11,7 +11,7 @@ readme = "README.md"
 
 [dependencies]
 syn = { version = "2.0.106", features = ["full"] }
-virtual_exec_type = { path = "../virtual_exec_type", version = "0.2.0" }
+virtual_exec_type = { path = "../virtual_exec_type", version = "0.3.0" }
 proc-macro2 = "1.0.103"
 serde = { version = "1.0.228", features = ["derive"] }
 

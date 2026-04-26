@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex, RwLock};
 use crate::mem::{Allocator, MemoryAllocator, Value, ValuePtr};
-use crate::error::{MemoryError, SandboxExecutionError};
+use crate::error::{MemoryError, ExecutionError};
 
 pub trait IsTruhy {
     fn is_truthy(&self) -> bool;
@@ -46,7 +46,7 @@ pub trait TypeCast<'a> {
 
     fn as_none(&self) -> Option<()>;
 
-    fn as_error(&self) -> Option<SandboxExecutionError>;
+    fn as_error(&self) -> Option<ExecutionError>;
 
 }
 
@@ -113,7 +113,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
         }
     }
 
-    fn as_error(&self) -> Option<SandboxExecutionError> {
+    fn as_error(&self) -> Option<ExecutionError> {
         if let Value::Error(e) = &self.lock().unwrap().inner {
             Some(e.clone())
         } else {
@@ -202,13 +202,13 @@ impl<'ctx> Upcast<'ctx> for () {
     }
 }
 
-impl<'ctx> Downcast<'ctx> for SandboxExecutionError {
+impl<'ctx> Downcast<'ctx> for ExecutionError {
     fn from_value(value: ValuePtr<'ctx>) -> Option<Self> {
         value.as_error()
     }
 }
 
-impl<'ctx> Upcast<'ctx> for SandboxExecutionError {
+impl<'ctx> Upcast<'ctx> for ExecutionError {
     fn from_value(&self, alloc: &MemoryAllocator<'ctx>) -> Result<ValuePtr<'ctx>, MemoryError> {
         alloc.alloc(Value::Error(self.clone()))
     }

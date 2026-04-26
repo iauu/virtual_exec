@@ -6,7 +6,8 @@ use virtual_exec_type::mem::{Allocator, MemoryAllocator, Value, ValuePtr};
 use virtual_exec_type::op::*;
 use crate::sequential::instructions::Instruction;
 use virtual_exec_type::base::{IsTruhy, TypeCast};
-use virtual_exec_type::error::MemoryError;
+pub use virtual_exec_type::error::ExecutionError;
+
 
 type AttrReference<'ctx> = (Option<ValuePtr<'ctx>>, String);
 type IdxReference<'ctx> = (ValuePtr<'ctx>, i64);
@@ -41,36 +42,12 @@ pub struct FnStackFrame<'ctx> {
     pub mapping: Arc<RwLock<HashMap<String, ValuePtr<'ctx>>>>,
 }
 
-impl From<MemoryError> for SandboxExecutionError {
-    fn from(value: MemoryError) -> Self {
-        SandboxExecutionError::MemoryError
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum SandboxExecutionError {
-    ReferenceNotExistError(String),
-    DivideByZeroError,
-    FnStackUnderflowError,
-    VStackUnderflowError,
-    UndefinedOperendError,
-    AttrNotStringError,
-    RefNameMissingError,
-    UndefinedVarError,
-    AttrMisuseError,
-    UnexpectedAttrError,
-    UnexpectedIdxError,
-    IndexOutOfRangeError,
-    MemoryError
-}
-
-
 pub struct InstStateMachine<'ctx> {
     pub lim: u64,
     pub fn_stack_frame: Vec<FnStackFrame<'ctx>>,
     pub alloc: MemoryAllocator<'ctx>,
     pub instructions: Vec<Instruction>,
-    pub state: Result<State, SandboxExecutionError>,
+    pub state: Result<State, ExecutionError>,
     pub stack: Vec<StackItem<'ctx>>,
 }
 
@@ -87,7 +64,7 @@ macro_rules! __binary_autogen {
         {
             let b = $ss.pop_get()?;
             let a = $ss.pop_get()?;
-            let result = $f(a, b, &$ss.alloc).map_err(|_| SandboxExecutionError::UndefinedOperendError)?;
+            let result = $f(a, b, &$ss.alloc).map_err(|_| ExecutionError::UndefinedOperendError)?;
             $ss.push_value(result);
         }
     };
@@ -98,19 +75,19 @@ macro_rules! __unary_autogen {
     ($f:ident, $ss:ident) => {
         {
             let a = $ss.pop_get()?;
-            let result = $f(a, &$ss.alloc).map_err(|_| SandboxExecutionError::UndefinedOperendError)?;
+            let result = $f(a, &$ss.alloc).map_err(|_| ExecutionError::UndefinedOperendError)?;
             $ss.push_value(result);
         }
     };
 }
 
 impl<'ctx> InstStateMachine<'ctx> {
-    fn pop_value(&mut self) -> Result<ValuePtr<'ctx>, SandboxExecutionError> {
-        let result = self.stack.pop().ok_or(SandboxExecutionError::VStackUnderflowError)?;
+    fn pop_value(&mut self) -> Result<ValuePtr<'ctx>, ExecutionError> {
+        let result = self.stack.pop().ok_or(ExecutionError::VStackUnderflowError)?;
         match result {
             StackItem::Value(value) => Ok(value),
             StackItem::AttrReference(_) | StackItem::IdxReference(_) => {
-                Err(SandboxExecutionError::UndefinedVarError)
+                Err(ExecutionError::UndefinedVarError)
             }
         }
     }
@@ -119,11 +96,11 @@ impl<'ctx> InstStateMachine<'ctx> {
         self.stack.push(value.into());
     }
 
-    fn pop_ref(&mut self) -> Result<AttrReference<'ctx>, SandboxExecutionError> {
-        let result = self.stack.pop().ok_or(SandboxExecutionError::VStackUnderflowError)?;
+    fn pop_ref(&mut self) -> Result<AttrReference<'ctx>, ExecutionError> {
+        let result = self.stack.pop().ok_or(ExecutionError::VStackUnderflowError)?;
         match result {
             StackItem::Value(_) | StackItem::IdxReference(_) => {
-                Err(SandboxExecutionError::AttrMisuseError)
+                Err(ExecutionError::AttrMisuseError)
             },
             StackItem::AttrReference(reference) => Ok(reference)
 
@@ -134,11 +111,11 @@ impl<'ctx> InstStateMachine<'ctx> {
         self.stack.push(reference.into());
     }
 
-    fn pop_idx_ref(&mut self) -> Result<IdxReference<'ctx>, SandboxExecutionError> {
-        let result = self.stack.pop().ok_or(SandboxExecutionError::VStackUnderflowError)?;
+    fn pop_idx_ref(&mut self) -> Result<IdxReference<'ctx>, ExecutionError> {
+        let result = self.stack.pop().ok_or(ExecutionError::VStackUnderflowError)?;
         match result {
             StackItem::Value(_) | StackItem::AttrReference(_) => {
-                Err(SandboxExecutionError::AttrMisuseError)
+                Err(ExecutionError::AttrMisuseError)
             },
             StackItem::IdxReference(reference) => Ok(reference)
         }
@@ -148,21 +125,21 @@ impl<'ctx> InstStateMachine<'ctx> {
         self.stack.push(reference.into());
     }
 
-    fn pop(&mut self) -> Result<StackItem<'ctx>, SandboxExecutionError> {
-        self.stack.pop().ok_or(SandboxExecutionError::VStackUnderflowError)
+    fn pop(&mut self) -> Result<StackItem<'ctx>, ExecutionError> {
+        self.stack.pop().ok_or(ExecutionError::VStackUnderflowError)
     }
 
-    fn resolve(&self, name: &str) -> Result<ValuePtr<'ctx>, SandboxExecutionError> {
+    fn resolve(&self, name: &str) -> Result<ValuePtr<'ctx>, ExecutionError> {
         for frame in self.fn_stack_frame.iter().rev() {
             if let Some(val) = frame.mapping.read().unwrap().get(name) {
                 return Ok(val.clone());
             }
         }
         
-        Err(SandboxExecutionError::ReferenceNotExistError(name.to_string()))
+        Err(ExecutionError::ReferenceNotExistError(name.to_string()))
     }
 
-    fn pop_get(&mut self) -> Result<ValuePtr<'ctx>, SandboxExecutionError> {
+    fn pop_get(&mut self) -> Result<ValuePtr<'ctx>, ExecutionError> {
         let result = {
             self.pop()?
         };
@@ -173,9 +150,9 @@ impl<'ctx> InstStateMachine<'ctx> {
                 match target.0 {
                     Some(obj) => {
                         if let Some(o) = obj.as_object() {
-                            Ok(o.read().unwrap().get(&target.1).ok_or_else(|| SandboxExecutionError::ReferenceNotExistError(target.1))?.clone())
+                            Ok(o.read().unwrap().get(&target.1).ok_or_else(|| ExecutionError::ReferenceNotExistError(target.1))?.clone())
                         } else {
-                            Err(SandboxExecutionError::UnexpectedAttrError)
+                            Err(ExecutionError::UnexpectedAttrError)
                         }
                     },
                     None => {
@@ -192,28 +169,28 @@ impl<'ctx> InstStateMachine<'ctx> {
                     if idx >= 0 && (idx as usize) < arr.read().unwrap().len() {
                         Ok(arr.read().unwrap()[idx as usize].clone())
                     } else {
-                        Err(SandboxExecutionError::IndexOutOfRangeError)
+                        Err(ExecutionError::IndexOutOfRangeError)
                     }
                 } else {
-                    Err(SandboxExecutionError::UnexpectedIdxError)
+                    Err(ExecutionError::UnexpectedIdxError)
                 }
             }
         }
     }
 
-    fn get_mut_stack_ref<'a>(&'a mut self) -> Result<&'a mut FnStackFrame<'ctx>, SandboxExecutionError> {
-        self.fn_stack_frame.last_mut().ok_or(SandboxExecutionError::FnStackUnderflowError)
+    fn get_mut_stack_ref<'a>(&'a mut self) -> Result<&'a mut FnStackFrame<'ctx>, ExecutionError> {
+        self.fn_stack_frame.last_mut().ok_or(ExecutionError::FnStackUnderflowError)
     }
 
-    fn get_stack_ref<'a>(&'a self) -> Result<&'a FnStackFrame<'ctx>, SandboxExecutionError> {
-        self.fn_stack_frame.last().ok_or(SandboxExecutionError::FnStackUnderflowError)
+    fn get_stack_ref<'a>(&'a self) -> Result<&'a FnStackFrame<'ctx>, ExecutionError> {
+        self.fn_stack_frame.last().ok_or(ExecutionError::FnStackUnderflowError)
     }
     
-    fn alloc(&self, data: Value<'ctx>) -> Result<ValuePtr<'ctx>, SandboxExecutionError> {
+    fn alloc(&self, data: Value<'ctx>) -> Result<ValuePtr<'ctx>, ExecutionError> {
         self.alloc.alloc(data).map_err(|e| e.into())
     }
 
-    pub fn run_once(&mut self) -> Result<State, SandboxExecutionError> {
+    pub fn run_once(&mut self) -> Result<State, ExecutionError> {
         match self.state.clone() {
             Ok(State::Terminated) => {
                 return Ok(State::Terminated)
@@ -267,7 +244,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                 let target = self.pop()?;
                 match target {
                     StackItem::Value(value) => {
-                        self.state = Err(SandboxExecutionError::UndefinedVarError);
+                        self.state = Err(ExecutionError::UndefinedVarError);
                         return self.state.clone()
                     },
                     StackItem::AttrReference((None, target)) => {
@@ -278,7 +255,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                         if let Some(obj) = value.as_object() {
                             obj.write().unwrap().insert(target, value.clone());
                         } else {
-                            self.state = Err(SandboxExecutionError::UnexpectedAttrError);
+                            self.state = Err(ExecutionError::UnexpectedAttrError);
                             return self.state.clone()
                         }
                     }
@@ -292,7 +269,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                                 arr.write().unwrap()[idx as usize] = value;
                             }
                             else {
-                                self.state = Err(SandboxExecutionError::IndexOutOfRangeError);
+                                self.state = Err(ExecutionError::IndexOutOfRangeError);
                                 return self.state.clone()
                             }
                         }
@@ -355,7 +332,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                         for _ in 0..remaining_stackdrop {
                             let _ = self.pop_value(); // Drop error since AttrNotStringError is the primary issue, although otherwise this would cause error as well for stack underflow
                         }
-                        self.state = Err(SandboxExecutionError::AttrNotStringError);
+                        self.state = Err(ExecutionError::AttrNotStringError);
                         return self.state.clone()
                     }
                     obj.insert(name.as_string().unwrap().clone(), value);
@@ -371,7 +348,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                     self.push_ref((Some(value), name.into_string()));
                 }
                 else {
-                    self.state = Err(SandboxExecutionError::UnexpectedAttrError);
+                    self.state = Err(ExecutionError::UnexpectedAttrError);
                     return self.state.clone()
                 }
 
@@ -382,7 +359,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                     self.push_idx_ref((value, idx));
                 }
                 else {
-                    self.state = Err(SandboxExecutionError::UnexpectedIdxError);
+                    self.state = Err(ExecutionError::UnexpectedIdxError);
                     return self.state.clone()
                 }
             }

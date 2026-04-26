@@ -13,7 +13,7 @@ pub enum TypeConversionError {
 }
 
 #[derive(Clone, Debug)]
-pub enum SandboxExecutionError {
+pub enum ExecutionError {
     TimeoutError,
     ReferenceNotExistError(String),
     DivideByZeroError,
@@ -23,12 +23,22 @@ pub enum SandboxExecutionError {
     InvalidSyntaxError,
     SubscriptKeyError,
     AttributeNotFoundError,
+    FnStackUnderflowError,
+    VStackUnderflowError,
+    UndefinedOperendError,
+    AttrNotStringError,
+    RefNameMissingError,
+    UndefinedVarError,
+    AttrMisuseError,
+    UnexpectedAttrError,
+    UnexpectedIdxError,
+    IndexOutOfRangeError,
     MemoryError
 }
 
-impl From<MemoryError> for SandboxExecutionError {
+impl From<MemoryError> for ExecutionError {
     fn from(err: MemoryError) -> Self {
-        SandboxExecutionError::MemoryError
+        ExecutionError::MemoryError
     }
 }
 
@@ -38,13 +48,13 @@ impl From<MemoryError> for TypeConversionError {
     }
 }
 
-impl From<TypeConversionError> for SandboxExecutionError {
+impl From<TypeConversionError> for ExecutionError {
     fn from(err: TypeConversionError) -> Self {
         match err {
-            TypeConversionError::DivideByZeroError => SandboxExecutionError::DivideByZeroError,
-            TypeConversionError::UndefinedOperatorMethodError => SandboxExecutionError::UndefinedOperatorMethodError,
-            TypeConversionError::InvalidTypeError => SandboxExecutionError::InvalidTypeError,
-            TypeConversionError::MemoryError => SandboxExecutionError::MemoryError
+            TypeConversionError::DivideByZeroError => ExecutionError::DivideByZeroError,
+            TypeConversionError::UndefinedOperatorMethodError => ExecutionError::UndefinedOperatorMethodError,
+            TypeConversionError::InvalidTypeError => ExecutionError::InvalidTypeError,
+            TypeConversionError::MemoryError => ExecutionError::MemoryError
         }
     }
 }

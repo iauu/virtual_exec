@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::sync::{Arc, Mutex, RwLock, Weak};
-use crate::error::{MemoryError, SandboxExecutionError};
+use crate::error::{MemoryError, ExecutionError};
 
 pub type MemoryAllocator<'a> = Arc<Mutex<MemoryAllocation<'a>>>;
 
@@ -25,7 +25,7 @@ pub enum Value<'a> {
     _Scope(PhantomData<&'a ()>),
     #[doc(hidden)]
     MemoryChunk(usize),
-    Error(SandboxExecutionError)
+    Error(ExecutionError)
 }
 
 impl ToOwned for Value<'_> {
@@ -60,7 +60,7 @@ pub enum OwnedValue {
     None,
     Collection(Vec<OwnedValue>),
     Object(HashMap<String, OwnedValue>),
-    Error(SandboxExecutionError)
+    Error(ExecutionError)
 }
 
 #[derive(Debug)]

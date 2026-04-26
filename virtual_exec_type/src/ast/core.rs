@@ -1,4 +1,4 @@
-use crate::error::SandboxExecutionError;
+use crate::error::ExecutionError;
 use crate::op::*;
 use std::cell::{Ref, RefCell};
 use std::panic::catch_unwind;

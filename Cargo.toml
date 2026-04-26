@@ -1,6 +1,6 @@
 [package]
 name = "virtual_exec"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2024"
 repository = "https://github.com/i-am-unknown-81514525/virtual_exec"
 authors = ["i-am-unknown-81514525" ]
@@ -9,8 +9,8 @@ description = "A sandbox execution environment which allowed limited execution o
 readme = "README.md"
 
 [dependencies]
-virtual_exec_type = { path = "virtual_exec_type", version = "0.3.0"}
-virtual_exec_parser = { path = "virtual_exec_parser", version = "0.3.0"}
+virtual_exec_type = { path = "virtual_exec_type", version = "0.4.0"}
+virtual_exec_parser = { path = "virtual_exec_parser", version = "0.4.0"}
 
 [workspace]
 members = [

@@ -191,6 +191,19 @@ fn stmt_to_token(stmt: Stmt) -> impl ToTokens {
                     span: None,
                 }
             }
+        },
+        Stmt::Loop { test, body } => {
+            let test_token = expr_to_token(test);
+            let body_token = stmts_to_token(body.stmts);
+            quote! {
+                ::virtual_exec_type::ast::core::Node {
+                    kind: ::virtual_exec_type::ast::core::Stmt::Loop {
+                        test: #test_token,
+                        body: #body_token,
+                    },
+                    span: None,
+                }
+            }
         }
     }
 }

@@ -270,7 +270,11 @@ pub enum Stmt {
         body: Vec<Node<Stmt>>,
         otherwise: Option<Vec<Node<Stmt>>>,
     },
-    Scoped(Vec<Node<Stmt>>)
+    Scoped(Vec<Node<Stmt>>),
+    Loop {
+        test: Node<Expr>,
+        body: Vec<Node<Stmt>>,
+    }
     // FunctionDef {
     //     name: String,
     //     args: Vec<String>,

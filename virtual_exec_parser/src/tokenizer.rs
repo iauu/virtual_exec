@@ -71,7 +71,11 @@ pub enum Stmt {
         body: Block,
         otherwise: Option<Block>,
     },
-    Scoped(Block)
+    Scoped(Block),
+    Loop {
+        test: Expr,
+        body: Block
+    },
 }
 
 #[derive(Clone)]
@@ -106,6 +110,9 @@ impl Parse for Stmt {
     fn parse(input: ParseStream) -> Result<Self> {
         if input.peek(Token![if]) {
             return parse_if_statement(input);
+        }
+        else if input.peek(Token![while]) {
+            return parse_while_statement(input);
         }
 
         let fork = input.fork();
@@ -161,6 +168,13 @@ fn parse_if_statement(input: ParseStream) -> Result<Stmt> {
     }
 
     Ok(Stmt::If { test, body, otherwise })
+}
+
+fn parse_while_statement(input: ParseStream) -> Result<Stmt> {
+    input.parse::<Token![while]>()?;
+    let test = input.parse::<Expr>()?;
+    let body = input.parse::<Block>()?;
+    Ok(Stmt::Loop { test, body })
 }
 
 impl Parse for Expr {

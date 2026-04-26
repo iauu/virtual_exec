@@ -109,6 +109,24 @@ impl GetInstruction for Stmt {
                         inst
                     }
                 }
+            },
+            Stmt::Loop { test, body} => {
+                let mut offset = offset;
+                let initial = offset;
+                let test_inst = test.kind.inst(offset);
+                offset += test_inst.len() as u64;
+                // JmpZ (non-hidden)
+                offset += 1;
+                let body_inst = body.inst(offset);
+                offset += body_inst.len() as u64;
+                // Jmp (non-hidden)
+                offset += 1;
+                let mut inst: Vec<Instruction> = Vec::new();
+                inst.extend(test_inst);
+                inst.push(JmpZ(offset));
+                inst.extend(body_inst);
+                inst.push(Jmp(initial));
+                inst
             }
         }
     }

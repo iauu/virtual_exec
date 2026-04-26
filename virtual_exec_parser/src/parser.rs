@@ -27,6 +27,14 @@ pub fn convert_stmt(stmt: tokenizer::Stmt) -> Result<final_ast::Node<final_ast::
                 body: final_body,
                 otherwise: final_otherwise,
             }
+        },
+        tokenizer::Stmt::Loop { test, body } => {
+            let final_test = convert_expr(test);
+            let final_body = body.stmts.into_iter().map(convert_stmt).collect::<Result<_, _>>()?;
+            final_ast::Stmt::Loop {
+                test: final_test,
+                body: final_body,
+            }
         }
     };
     Ok(final_ast::Node { kind, span: None })

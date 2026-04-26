@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use virtual_exec_macro::compile;
-use virtual_exec_parser::sequential::exec::{FnStackFrame, InstStateMachine, State, ExecutionError};
+use virtual_exec_parser::sequential::exec::{FnStackFrame, InstStateMachine, State};
 use virtual_exec_type::mem::{MemoryAllocator, MemoryAllocatorConstructor, Value, ValuePtr};
 
 #[test]
@@ -189,7 +189,7 @@ fn test_if_fail_path() {
 
 
 #[test]
-fn test_if_loop() {
+fn test_while_loop() {
     let insts = compile!(
         a = 10;
         while a > 0 {

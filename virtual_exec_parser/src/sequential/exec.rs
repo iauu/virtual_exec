@@ -377,7 +377,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                 self.pop()?;
             }
         }
-        if (self.fn_stack_frame.last().unwrap().ptr as usize == self.instructions.len()) {
+        if self.fn_stack_frame.last().unwrap().ptr as usize == self.instructions.len()  {
             self.state = Ok(State::Terminated);
             return self.state.clone()
         }

@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use virtual_exec_parser::error::ParseError;
 use virtual_exec_parser::sequential::exec::{FnStackFrame, InstStateMachine, State};
 use virtual_exec_parser::sequential::instructions::Instruction;
-use virtual_exec_type::error::{ExecutionError as InterpretedSandboxExecutionError, ExecutionError};
+use virtual_exec_type::error::ExecutionError;
 use virtual_exec_type::mem::{MemoryAllocator, MemoryAllocatorConstructor, OwnedValue, ToOwned};
 pub use virtual_exec_parser::{parser::parse, sequential::compile::compile};
 
@@ -58,6 +57,7 @@ pub use virtual_exec_parser::{parser::parse, sequential::compile::compile};
 
 #[derive(Debug)]
 pub struct Machine<'a> {
+    #[allow(unused)]
     alloc: MemoryAllocator<'a>,
     machine: InstStateMachine<'a>
 }

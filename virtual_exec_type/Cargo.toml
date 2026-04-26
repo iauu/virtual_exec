@@ -10,10 +10,6 @@ readme = "README.md"
 
 
 [dependencies]
-bumpalo = { version = "3.19.0", features = ["collections"] }
 inventory = "0.3.21"
-ordered-float = "5.1.0"
 paste = "1.0.15"
-proc-macro2 = "1.0.103"
-syn = "2.0.111"
 

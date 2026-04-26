@@ -141,6 +141,7 @@ impl<'a> MemoryAllocation<'a> {
         Err(MemoryError)
     }
 
+    #[allow(unreachable_code)]
     pub(self) fn _internal_dealloc(&mut self, size: usize) -> () {
         if size > self.curr {
             unreachable!();

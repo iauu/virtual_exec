@@ -94,6 +94,7 @@ impl<'ctx> InstStateMachine<'ctx> {
         self.stack.push(value.into());
     }
 
+    #[allow(unused)]
     fn pop_ref(&mut self) -> Result<AttrReference<'ctx>, ExecutionError> {
         let result = self.stack.pop().ok_or(ExecutionError::VStackUnderflowError)?;
         match result {
@@ -109,6 +110,7 @@ impl<'ctx> InstStateMachine<'ctx> {
         self.stack.push(reference.into());
     }
 
+    #[allow(unused)]
     fn pop_idx_ref(&mut self) -> Result<IdxReference<'ctx>, ExecutionError> {
         let result = self.stack.pop().ok_or(ExecutionError::VStackUnderflowError)?;
         match result {

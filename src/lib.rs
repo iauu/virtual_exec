@@ -6,7 +6,7 @@ use virtual_exec_type::error::ExecutionError;
 use virtual_exec_type::mem::{MemoryAllocator, MemoryAllocatorConstructor, OwnedValue, ToOwned};
 pub use virtual_exec_parser::{parser::parse, sequential::compile::compile};
 
-/// The interpreted unified error type for the `virtual_exec` library.
+// The interpreted unified error type for the `virtual_exec` library.
 // #[derive(Debug)]
 // pub enum InterpretedExecError {
 //     /// An error that occurred during the parsing phase.
@@ -55,14 +55,25 @@ pub use virtual_exec_parser::{parser::parse, sequential::compile::compile};
 //     Ok(final_state)
 // }
 
+/// The execution instance including the memory allocator and the instruction state machine
 #[derive(Debug)]
 pub struct Machine<'a> {
     #[allow(unused)]
+    /// The memory allocator for the machine
     pub alloc: MemoryAllocator<'a>,
+    /// The instruction execution machine for the instance
     pub machine: InstStateMachine<'a>
 }
 
 impl<'a> Machine<'a> {
+    /// Create a new execution instance with the given instructions, memory limit and instruction execution limit
+    /// # Arguments
+    /// * `instructions` - A vector for the sequential instructions
+    /// * `memory_lim` - The amount of memory (in virtual bytes) that can be used by the execution instance
+    /// * `inst_limit` - The amount of instruction it can run until it being paused by timeout
+    ///
+    /// # Returns
+    /// `Machine`
     pub fn new(instructions: Vec<Instruction>, memory_lim: usize, inst_limit: u64) -> Self {
         let alloc = MemoryAllocator::construct(memory_lim);
         let machine = InstStateMachine {

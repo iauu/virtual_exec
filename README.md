@@ -51,11 +51,8 @@ fn test_fn() {
 }
 
 ```
-An example if the execution. In particular, the `100` there defines the lifetime of the calculation, 
-which this allowed up to 100 operation, and would raise `TimeoutError` if it take longer than that 
-to execute.
-
-The current supported operation is expression calculation, assignment and if-statement.
+An example if the execution. In particular, the `100` and `1000` in the `test_fn` defines the memory and lifetime of the machine respectively, 
+which this allowed up to 1000 operation and 100 virtual byte allocation, and would raise stop with Ok(State::Timeout) if it take longer than that.
 
 Compile have also been added to convert code into a linear instruction
 

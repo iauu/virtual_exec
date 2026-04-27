@@ -80,7 +80,7 @@ pub enum Instruction {
     LoadName(Box<str>),
     LoadObjectAttr(Box<str>),
     LoadObjectIndex(SubscriptLoad),
-    LoadDPtr(u64),
+    LoadDPtr(u64, usize),
 
     // External
     Terminate,
@@ -157,7 +157,7 @@ pub enum InstructionBuilder {
     LoadName(Box<str>),
     LoadObjectAttr(Box<str>),
     LoadObjectIndex(SubscriptLoad),
-    LoadDPtr(u64),
+    LoadDPtr(u64, usize),
 
     // External
     Terminate,
@@ -221,7 +221,7 @@ impl ConvertInstruction for InstructionBuilder {
             InstructionBuilder::Terminate => Instruction::Terminate,
             InstructionBuilder::Interrupt => Instruction::Interrupt,
             InstructionBuilder::Pop => Instruction::Pop,
-            InstructionBuilder::LoadDPtr(offset) => Instruction::LoadDPtr(offset),
+            InstructionBuilder::LoadDPtr(offset, arg_count) => Instruction::LoadDPtr(offset, arg_count),
             InstructionBuilder::Swap => Instruction::Swap,
         }
     }
@@ -269,7 +269,7 @@ impl Into<InstructionBuilder> for Instruction {
             Instruction::Terminate => InstructionBuilder::Terminate,
             Instruction::Interrupt => InstructionBuilder::Interrupt,
             Instruction::Pop => InstructionBuilder::Pop,
-            Instruction::LoadDPtr(offset) => InstructionBuilder::LoadDPtr(offset),
+            Instruction::LoadDPtr(offset, arg_count) => InstructionBuilder::LoadDPtr(offset, arg_count),
             Instruction::Swap => InstructionBuilder::Swap,
         }
     }

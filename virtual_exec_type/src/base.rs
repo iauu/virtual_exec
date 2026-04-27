@@ -20,7 +20,7 @@ impl IsTruhy for Value<'_> {
             Value::_Scope(_) => false,
             Value::MemoryChunk(_) => false,
             Value::Error(_) => false,
-            Value::DPtr(_) => true,
+            Value::DPtr(_, _) => true,
         }
     }
 }
@@ -48,7 +48,7 @@ pub trait TypeCast<'a> {
 
     fn as_error(&self) -> Option<ExecutionError>;
     
-    fn as_dptr(&self) -> Option<u64>;
+    fn as_dptr(&self) -> Option<(u64, usize)>;
 }
 
 impl<'a> TypeCast<'a> for ValuePtr<'a> {
@@ -122,9 +122,9 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
         }
     }
 
-    fn as_dptr(&self) -> Option<u64> {
-        if let Value::DPtr(d) = &self.clone().lock().unwrap().inner {
-            Some(*d)
+    fn as_dptr(&self) -> Option<(u64, usize)> {
+        if let Value::DPtr(d, s) = &self.clone().lock().unwrap().inner {
+            Some((*d, *s))
         } else {
             None
         }

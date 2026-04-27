@@ -26,7 +26,7 @@ pub enum Value<'a> {
     #[doc(hidden)]
     MemoryChunk(usize),
     Error(ExecutionError),
-    DPtr(u64),
+    DPtr(u64, usize),
 }
 
 impl PartialEq for Value<'_> {
@@ -41,7 +41,7 @@ impl PartialEq for Value<'_> {
             (Value::Object(a), Value::Object(b)) => Arc::ptr_eq(a, b),
             (Value::MemoryChunk(a), Value::MemoryChunk(b)) => a == b,
             (Value::Error(a), Value::Error(b)) => a == b,
-            (Value::DPtr(a), Value::DPtr(b)) => a == b,
+            (Value::DPtr(a, c), Value::DPtr(b, d)) => a == b && c == d,
             _ => false
         }
     }
@@ -66,7 +66,7 @@ impl ToOwned for Value<'_> {
             Value::_Scope(_) => OwnedValue::None,
             Value::MemoryChunk(_) => OwnedValue::None,
             Value::Error(e) => OwnedValue::Error(e.clone()),
-            Value::DPtr(d) => OwnedValue::DPtr(*d),
+            Value::DPtr(d, s) => OwnedValue::DPtr(*d, *s),
         }
     }
 }
@@ -81,7 +81,7 @@ pub enum OwnedValue {
     Collection(Vec<OwnedValue>),
     Object(HashMap<String, OwnedValue>),
     Error(ExecutionError),
-    DPtr(u64),
+    DPtr(u64, usize),
 }
 
 #[derive(Debug)]
@@ -232,7 +232,7 @@ impl<'a> GetSize for Value<'a> {
             Value::_Scope(_) => 1,
             Value::MemoryChunk(size) => *size,
             Value::Error(_) => 1024,
-            Value::DPtr(_) => 8,
+            Value::DPtr(_, _) => 16,
         }
     }
 }

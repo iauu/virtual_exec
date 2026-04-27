@@ -133,7 +133,7 @@ impl GetInstruction for Stmt {
                 let mut inst: Vec<Instruction> = Vec::new();
                 inst.push(Instruction::LoadName(name.clone().into_boxed_str()));
                 offset += 1;
-                inst.push(Instruction::LoadDPtr(offset + 3));
+                inst.push(Instruction::LoadDPtr(offset + 3, args.len()));
                 inst.push(Instruction::Assign);
                 offset += 2;
                 // Jmp (non-hidden)
@@ -253,9 +253,10 @@ impl GetInstruction for Expr {
                 }
                 let function_inst = function.kind.inst(offset);
                 offset += function_inst.len() as u64;
+                inst.push(Instruction::LoadLitInt(args.len() as i64));
                 inst.extend(function_inst);
                 inst.push(Instruction::Call);
-                // [value1] [value0] ([func] [call]) |inst boundary| [var0] [var1]
+                // [value1] [value0] ([arg_size] [func] [call]) |inst boundary| [var0] [var1]
                 inst
             }
         }

@@ -58,8 +58,8 @@ pub use virtual_exec_parser::{parser::parse, sequential::compile::compile};
 #[derive(Debug)]
 pub struct Machine<'a> {
     #[allow(unused)]
-    alloc: MemoryAllocator<'a>,
-    machine: InstStateMachine<'a>
+    pub alloc: MemoryAllocator<'a>,
+    pub machine: InstStateMachine<'a>
 }
 
 impl<'a> Machine<'a> {

@@ -303,7 +303,21 @@ impl<'ctx> InstStateMachine<'ctx> {
             }
             Instruction::Call => {
                 let ptr = self.pop_get()?;
-                if let Some(ptr) = ptr.as_dptr() {
+                if let Some((ptr, fn_size)) = ptr.as_dptr() {
+                    let given_size = self.pop_get()?.as_int().ok_or(ExecutionError::UnexpectedFunctionCall);
+                    let given_size = match given_size {
+                        Ok(v) => v,
+                        Err(e) => {
+                            self.state = Err(e);
+                            return self.state.clone();
+                        }
+                    };
+                    
+                    if given_size as usize != fn_size {
+                        self.state = Err(ExecutionError::IncorrectArgumentCountError);
+                        return self.state.clone();
+                    }
+                    
                     self.fn_stack_frame.push(
                         FnStackFrame {
                             ptr,
@@ -405,8 +419,8 @@ impl<'ctx> InstStateMachine<'ctx> {
                 self.push(a);
                 self.push(b);
             },
-            Instruction::LoadDPtr(u64) => {
-                self.push(StackItem::Value(self.alloc(Value::DPtr(u64))?))
+            Instruction::LoadDPtr(ptr, arg_len) => {
+                self.push(StackItem::Value(self.alloc(Value::DPtr(ptr, arg_len))?))
             }
         }
         if self.fn_stack_frame.last().unwrap().ptr as usize == self.instructions.len()  {

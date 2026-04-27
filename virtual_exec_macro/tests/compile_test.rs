@@ -6,11 +6,11 @@ use virtual_exec_type::mem::{MemoryAllocator, MemoryAllocatorConstructor, Value,
 
 #[test]
 fn test_simple_assignment_and_expr() {
-    let insts = compile!(
+    let insts = compile! {
         a = 10;
         a = a + 5;
         a;
-    );
+    };
     let alloc = MemoryAllocator::construct(100);
 
     let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
@@ -51,14 +51,14 @@ fn test_simple_assignment_and_expr() {
 
 #[test]
 fn test_more() {
-    let insts = compile!(
+    let insts = compile! {
         a = 10;
         a = a + 5;
         if a == 15 {
             a = 2;
         }
         a;
-    );
+    };
     let alloc = MemoryAllocator::construct(100);
 
     let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
@@ -98,14 +98,14 @@ fn test_more() {
 
 #[test]
 fn test_timeout() {
-    let insts = compile!(
+    let insts = compile! {
         a = 10;
         a = a + 5;
         if a == 15 {
             a = 2;
         }
         a;
-    );
+    };
     let alloc = MemoryAllocator::construct(100);
 
     let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
@@ -141,14 +141,14 @@ fn test_timeout() {
 
 #[test]
 fn test_if_fail_path() {
-    let insts = compile!(
+    let insts = compile! {
         a = 10;
         a = a + 5;
         if a == 14 {
             a = 2;
         }
         a;
-    );
+    };
     let alloc = MemoryAllocator::construct(100);
 
     let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
@@ -190,12 +190,12 @@ fn test_if_fail_path() {
 
 #[test]
 fn test_while_loop() {
-    let insts = compile!(
+    let insts = compile! {
         a = 10;
         while a > 0 {
             a -= 1;
         }
-    );
+    };
     let alloc = MemoryAllocator::construct(100);
 
     let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
@@ -237,7 +237,7 @@ fn test_while_loop() {
 
 #[test]
 fn test_function() {
-    let insts = compile!(
+    let insts = compile! {
         a = 10;
         fn add(a, b) {
             return a + b;
@@ -245,7 +245,7 @@ fn test_function() {
         while a > 0 {
             a = add(a, -1);
         }
-    );
+    };
     let alloc = MemoryAllocator::construct(100);
 
     let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));

@@ -97,6 +97,17 @@ impl<'a> Machine<'a> {
         self.machine.run_once()
     }
 
+    pub fn run_for(&mut self, count: u64) -> Result<State<'a>, ExecutionError> {
+        for _ in 0..count {
+            if let Ok(State::Ok) = self.machine.state {
+                self.machine.run_once()?;
+            } else {
+                return self.machine.state.clone();
+            }
+        }
+        self.machine.state.clone()
+    }
+
     pub fn run_all(&mut self) -> Result<State<'a>, ExecutionError> {
         while let Ok(State::Ok) = self.machine.state {
             self.machine.run_once()?;

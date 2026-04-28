@@ -9,6 +9,8 @@ pub use virtual_exec_type::error::ExecutionError;
 type AttrReference<'ctx> = (Option<ValuePtr<'ctx>>, String);
 type IdxReference<'ctx> = (ValuePtr<'ctx>, i64);
 
+pub type ArgumentPackage<'ctx> = Vec<ValuePtr<'ctx>>;
+
 impl<'ctx> From<AttrReference<'ctx>> for StackItem<'ctx> {
     fn from(value: AttrReference<'ctx>) -> Self {
         StackItem::AttrReference(value)
@@ -57,7 +59,7 @@ pub enum State<'ctx> {
     Interrupt,
     Timeout,
     FnExternInput(String, usize),
-    FnExternOutput(String, Vec<ValuePtr<'ctx>>)
+    FnExternOutput(String, ArgumentPackage<'ctx>)
 }
 
 macro_rules! __binary_autogen {
@@ -455,7 +457,7 @@ impl<'ctx> InstStateMachine<'ctx> {
         Ok(State::Ok)
     }
     
-    pub fn retrieve_fn_input(&mut self) -> Result<Option<(String, Vec<ValuePtr<'ctx>>)>, ExecutionError> {
+    pub fn retrieve_fn_input(&mut self) -> Result<Option<(String, ArgumentPackage<'ctx>)>, ExecutionError> {
         if let Ok(State::FnExternInput(fn_name, b)) = self.state.clone() {
             let values = (0..b).map(|x| self.pop_get()).collect::<Result<Vec<_>, ExecutionError>>()?;
             self.state = Ok(State::FnExternOutput(fn_name.clone(), values.clone()));

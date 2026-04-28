@@ -93,11 +93,11 @@ impl<'a> Machine<'a> {
         }
     }
 
-    pub fn run_once(&mut self) -> Result<State, ExecutionError> {
+    pub fn run_once(&mut self) -> Result<State<'a>, ExecutionError> {
         self.machine.run_once()
     }
 
-    pub fn run_all(&mut self) -> Result<State, ExecutionError> {
+    pub fn run_all(&mut self) -> Result<State<'a>, ExecutionError> {
         while let Ok(State::Ok) = self.machine.state {
             self.machine.run_once()?;
         }

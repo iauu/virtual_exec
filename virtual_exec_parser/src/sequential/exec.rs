@@ -46,18 +46,18 @@ pub struct InstStateMachine<'ctx> {
     pub fn_stack_frame: Vec<FnStackFrame<'ctx>>,
     pub alloc: MemoryAllocator<'ctx>,
     pub instructions: Vec<Instruction>,
-    pub state: Result<State, ExecutionError>,
+    pub state: Result<State<'ctx>, ExecutionError>,
     pub stack: Vec<StackItem<'ctx>>,
 }
 
 #[derive(Debug, Clone)]
-pub enum State {
+pub enum State<'ctx> {
     Ok,
     Terminated,
     Interrupt,
     Timeout,
     FnExternInput(String, usize),
-    FnExternOutput
+    FnExternOutput(String, Vec<ValuePtr<'ctx>>)
 }
 
 macro_rules! __binary_autogen {
@@ -199,7 +199,7 @@ impl<'ctx> InstStateMachine<'ctx> {
         self.alloc.alloc(data).map_err(|e| e.into())
     }
 
-    pub fn run_once(&mut self) -> Result<State, ExecutionError> {
+    pub fn run_once(&mut self) -> Result<State<'ctx>, ExecutionError> {
         match self.state.clone() {
             Ok(State::Terminated) => {
                 return Ok(State::Terminated)
@@ -210,8 +210,8 @@ impl<'ctx> InstStateMachine<'ctx> {
             Ok(State::FnExternInput(a, b)) => {
               return Ok(State::FnExternInput(a, b))  
             },
-            Ok(State::FnExternOutput) => {
-                return Ok(State::FnExternOutput)
+            Ok(State::FnExternOutput(a, b)) => {
+                return Ok(State::FnExternOutput(a,b))
             }
             Err(err) => {
                 return Err(err)
@@ -458,7 +458,7 @@ impl<'ctx> InstStateMachine<'ctx> {
     pub fn retrieve_fn_input(&mut self) -> Result<Option<(String, Vec<ValuePtr<'ctx>>)>, ExecutionError> {
         if let Ok(State::FnExternInput(fn_name, b)) = self.state.clone() {
             let values = (0..b).map(|x| self.pop_get()).collect::<Result<Vec<_>, ExecutionError>>()?;
-            self.state = Ok(State::FnExternOutput);
+            self.state = Ok(State::FnExternOutput(fn_name.clone(), values.clone()));
             Ok(Some((fn_name, values)))
         } else {
             Ok(None)
@@ -466,7 +466,7 @@ impl<'ctx> InstStateMachine<'ctx> {
     }
     
     pub fn push_fn_output(&mut self, ptr: Result<ValuePtr<'ctx>, ExecutionError>) -> bool {
-        if let Ok(State::FnExternOutput) = self.state.clone() {
+        if let Ok(State::FnExternOutput(_, _)) = self.state.clone() {
             match ptr {
                 Ok(ptr) => {
                     self.push_value(ptr);

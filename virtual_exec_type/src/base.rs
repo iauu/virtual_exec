@@ -21,6 +21,7 @@ impl IsTruhy for Value<'_> {
             Value::MemoryChunk(_) => false,
             Value::Error(_) => false,
             Value::DPtr(_, _) => true,
+            Value::FnPtrExternal(_, _) => true,
         }
     }
 }
@@ -49,6 +50,8 @@ pub trait TypeCast<'a> {
     fn as_error(&self) -> Option<ExecutionError>;
     
     fn as_dptr(&self) -> Option<(u64, usize)>;
+    
+    fn as_fn_ptr_extern(&self) -> Option<(String, usize)>;
 }
 
 impl<'a> TypeCast<'a> for ValuePtr<'a> {
@@ -125,6 +128,14 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     fn as_dptr(&self) -> Option<(u64, usize)> {
         if let Value::DPtr(d, s) = &self.clone().lock().unwrap().inner {
             Some((*d, *s))
+        } else {
+            None
+        }
+    }
+    
+    fn as_fn_ptr_extern(&self) -> Option<(String, usize)> {
+        if let Value::FnPtrExternal(f, s) = &self.clone().lock().unwrap().inner {
+            Some((f.to_string(), *s))
         } else {
             None
         }

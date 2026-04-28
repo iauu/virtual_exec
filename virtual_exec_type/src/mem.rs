@@ -27,6 +27,7 @@ pub enum Value<'a> {
     MemoryChunk(usize),
     Error(ExecutionError),
     DPtr(u64, usize),
+    FnPtrExternal(Box<str>, usize)
 }
 
 impl PartialEq for Value<'_> {
@@ -67,6 +68,7 @@ impl ToOwned for Value<'_> {
             Value::MemoryChunk(_) => OwnedValue::None,
             Value::Error(e) => OwnedValue::Error(e.clone()),
             Value::DPtr(d, s) => OwnedValue::DPtr(*d, *s),
+            Value::FnPtrExternal(f, s) => OwnedValue::FnPtrExternal(f.clone(), *s),
         }
     }
 }
@@ -82,6 +84,7 @@ pub enum OwnedValue {
     Object(HashMap<String, OwnedValue>),
     Error(ExecutionError),
     DPtr(u64, usize),
+    FnPtrExternal(Box<str>, usize)
 }
 
 #[derive(Debug)]
@@ -233,6 +236,7 @@ impl<'a> GetSize for Value<'a> {
             Value::MemoryChunk(size) => *size,
             Value::Error(_) => 1024,
             Value::DPtr(_, _) => 16,
+            Value::FnPtrExternal(f, _) => f.len(),
         }
     }
 }

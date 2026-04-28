@@ -55,7 +55,9 @@ pub enum State {
     Ok,
     Terminated,
     Interrupt,
-    Timeout
+    Timeout,
+    FnExternInput(String, usize),
+    FnExternOutput
 }
 
 macro_rules! __binary_autogen {
@@ -205,6 +207,12 @@ impl<'ctx> InstStateMachine<'ctx> {
             Ok(State::Interrupt) => {
                 return Ok(State::Interrupt)
             },
+            Ok(State::FnExternInput(a, b)) => {
+              return Ok(State::FnExternInput(a, b))  
+            },
+            Ok(State::FnExternOutput) => {
+                return Ok(State::FnExternOutput)
+            }
             Err(err) => {
                 return Err(err)
             },
@@ -324,7 +332,24 @@ impl<'ctx> InstStateMachine<'ctx> {
                             mapping: Arc::new(Default::default()),
                         }
                     )
-                } else {
+                } else if let Some((name, fn_size)) = ptr.as_fn_ptr_extern() {
+                    let given_size = self.pop_get()?.as_int().ok_or(ExecutionError::UnexpectedFunctionCall);
+                    let given_size = match given_size {
+                        Ok(v) => v,
+                        Err(e) => {
+                            self.state = Err(e);
+                            return self.state.clone();
+                        }
+                    };
+
+                    if given_size as usize != fn_size {
+                        self.state = Err(ExecutionError::IncorrectArgumentCountError);
+                        return self.state.clone();
+                    }
+                    
+                    self.state = Ok(State::FnExternInput(name, fn_size))
+                }
+                else {
                     self.state = Err(ExecutionError::UnexpectedFunctionCall);
                     return self.state.clone()
                 }
@@ -428,5 +453,24 @@ impl<'ctx> InstStateMachine<'ctx> {
             return self.state.clone()
         }
         Ok(State::Ok)
+    }
+    
+    pub fn retrieve_fn_input(&mut self) -> Result<Option<(String, Vec<ValuePtr<'ctx>>)>, ExecutionError> {
+        if let Ok(State::FnExternInput(fn_name, b)) = self.state.clone() {
+            let values = (0..b).map(|x| self.pop_get()).collect::<Result<Vec<_>, ExecutionError>>()?;
+            self.state = Ok(State::FnExternOutput);
+            Ok(Some((fn_name, values)))
+        } else {
+            Ok(None)
+        }
+    }
+    
+    pub fn push_fn_output(&mut self, ptr: ValuePtr<'ctx>) -> bool {
+        if let Ok(State::FnExternOutput) = self.state.clone() {
+            self.push_value(ptr);
+            true
+        } else {
+            false
+        }
     }
 }

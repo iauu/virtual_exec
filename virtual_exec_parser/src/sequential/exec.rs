@@ -465,9 +465,16 @@ impl<'ctx> InstStateMachine<'ctx> {
         }
     }
     
-    pub fn push_fn_output(&mut self, ptr: ValuePtr<'ctx>) -> bool {
+    pub fn push_fn_output(&mut self, ptr: Result<ValuePtr<'ctx>, ExecutionError>) -> bool {
         if let Ok(State::FnExternOutput) = self.state.clone() {
-            self.push_value(ptr);
+            match ptr {
+                Ok(ptr) => {
+                    self.push_value(ptr);
+                },
+                Err(e) => {
+                    self.state = Err(e);
+                }
+            }
             true
         } else {
             false

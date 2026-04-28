@@ -4,13 +4,14 @@
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/vir_py_rs_exec/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/virtual_exec_macro/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/virtual_exec_macro/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/virtual_exec_parser/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/virtual_exec_type/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/virtual_exec_type/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/virtual_exec_parser/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/virtual_exec_core/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/virtual_exec_core/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

@@ -1,0 +1,8 @@
+[package]
+name = "virtual_exec_core"
+version = "0.4.0"
+edition = "2024"
+
+[dependencies]
+virtual_exec_type = { path = "../virtual_exec_type", version = "0.4.0"}
+virtual_exec_parser = { path = "../virtual_exec_parser", version = "0.4.0"}

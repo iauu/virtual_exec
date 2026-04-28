@@ -1,4 +1,4 @@
-use virtual_exec::{Machine, parse, compile};
+use virtual_exec_core::{Machine, parse, compile};
 use virtual_exec_parser::sequential::exec::State;
 use virtual_exec_type::error::ExecutionError;
 use virtual_exec_type::mem::OwnedValue;

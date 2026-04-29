@@ -1,6 +1,6 @@
 use virtual_exec_parser::parser::parse;
-use virtual_exec_parser::sequential::compile::compile;
-use virtual_exec_parser::sequential::instructions::Instruction;
+use virtual_exec_core::sequential::compile::compile;
+use virtual_exec_core::sequential::instructions::Instruction;
 
 #[test]
 fn test_value_creation_and_downcast() {

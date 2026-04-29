@@ -1,10 +1,10 @@
 use virtual_exec_parser::parser::parse;
-use virtual_exec_parser::sequential::compile::compile;
+use virtual_exec_core::sequential::compile::compile;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex, RwLock};
-use virtual_exec_parser::sequential::exec::{InstStateMachine, FnStackFrame, State};
+use virtual_exec_core::sequential::exec::{InstStateMachine, FnStackFrame, State};
 use virtual_exec_type::mem::{MemoryAllocation, MemoryAllocator, MemoryAllocatorConstructor, Value, ValuePtr};
 
 #[test]

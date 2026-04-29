@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 virtual_exec_type = { path = "../virtual_exec_type", version = "0.4.0"}
 virtual_exec_parser = { path = "../virtual_exec_parser", version = "0.4.0"}
+serde = { version = "1.0.228", features = ["derive"] }

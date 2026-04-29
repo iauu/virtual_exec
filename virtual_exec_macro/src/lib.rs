@@ -3,7 +3,7 @@ use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
 use syn::parse_macro_input;
 use virtual_exec_parser::parser::convert_stmt;
-use virtual_exec_parser::sequential::instructions::{Instruction, SubscriptLoad};
+use virtual_exec_core::sequential::instructions::{Instruction, SubscriptLoad};
 use virtual_exec_parser::tokenizer::{Stmt, Expr, Atom, TopLevelBlock, AssignExpr};
 use virtual_exec_type::ast::core::{BinaryOperator, UnaryOperator, Literal, Module};
 
@@ -350,60 +350,60 @@ pub fn parse(input: TokenStream) -> TokenStream {
 fn subscript_to_token(sub: &SubscriptLoad) -> impl ToTokens {
     match sub {
         SubscriptLoad::Idx(idx) => {
-            quote! { ::virtual_exec_parser::sequential::instruction::SubscriptLoad::Idx(#idx) }
+            quote! { ::virtual_exec_core::sequential::instruction::SubscriptLoad::Idx(#idx) }
         },
         SubscriptLoad::String(s) => {
-            quote! { ::virtual_exec_parser::sequential::instruction::SubscriptLoad::String(::std::boxed::Box::from(#s))}
+            quote! { ::virtual_exec_core::sequential::instruction::SubscriptLoad::String(::std::boxed::Box::from(#s))}
         }
     }
 }
 
 fn inst_to_token(inst: Instruction) -> impl ToTokens {
     match inst {
-        Instruction::Add => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Add },
-        Instruction::Sub => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Sub },
-        Instruction::Mul => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Mul },
-        Instruction::Div => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Div },
-        Instruction::Mod => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Mod },
-        Instruction::BitwiseAnd => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::BitwiseAnd },
-        Instruction::BitwiseOr => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::BitwiseOr },
-        Instruction::BitwiseXor => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::BitwiseXor },
-        Instruction::Shl => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Shl },
-        Instruction::Shr => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Shr },
-        Instruction::UnaryPlus => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::UnaryPlus },
-        Instruction::UnaryMinus => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::UnaryMinus },
-        Instruction::Not => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Not },
-        Instruction::BitwiseNot => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::BitwiseNot },
-        Instruction::Eq => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Eq },
-        Instruction::NotEq => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::NotEq },
-        Instruction::Lt => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Lt },
-        Instruction::Lte => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Lte },
-        Instruction::Gt => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Gt },
-        Instruction::Gte => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Gte },
-        Instruction::Assign => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Assign },
-        Instruction::JmpNz(loc) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::JmpNz(#loc) },
-        Instruction::JmpZ(loc) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::JmpZ(#loc) },
-        Instruction::Jmp(loc) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Jmp(#loc) },
-        Instruction::Call => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Call },
-        Instruction::Ret => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Ret },
-        Instruction::LoadNone => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadNone },
-        Instruction::LoadLitFloat(val) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadLitFloat(#val) },
-        Instruction::LoadLitInt(val) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadLitInt(#val) },
-        Instruction::LoadLitString(val) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadLitString(::std::boxed::Box::from(#val)) },
-        Instruction::LoadLitBool(val) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadLitBool(#val) },
-        Instruction::ConstructArr(len) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::ConstructArr(#len) },
-        Instruction::ConstructObj(len2) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::ConstructObj(#len2) },
-        Instruction::LoadName(name) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadName(::std::boxed::Box::from(#name)) },
-        Instruction::LoadObjectAttr(attr) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadObjectAttr(::std::boxed::Box::from(#attr)) },
+        Instruction::Add => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Add },
+        Instruction::Sub => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Sub },
+        Instruction::Mul => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Mul },
+        Instruction::Div => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Div },
+        Instruction::Mod => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Mod },
+        Instruction::BitwiseAnd => quote! { ::virtual_exec_core::sequential::instructions::Instruction::BitwiseAnd },
+        Instruction::BitwiseOr => quote! { ::virtual_exec_core::sequential::instructions::Instruction::BitwiseOr },
+        Instruction::BitwiseXor => quote! { ::virtual_exec_core::sequential::instructions::Instruction::BitwiseXor },
+        Instruction::Shl => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Shl },
+        Instruction::Shr => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Shr },
+        Instruction::UnaryPlus => quote! { ::virtual_exec_core::sequential::instructions::Instruction::UnaryPlus },
+        Instruction::UnaryMinus => quote! { ::virtual_exec_core::sequential::instructions::Instruction::UnaryMinus },
+        Instruction::Not => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Not },
+        Instruction::BitwiseNot => quote! { ::virtual_exec_core::sequential::instructions::Instruction::BitwiseNot },
+        Instruction::Eq => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Eq },
+        Instruction::NotEq => quote! { ::virtual_exec_core::sequential::instructions::Instruction::NotEq },
+        Instruction::Lt => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Lt },
+        Instruction::Lte => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Lte },
+        Instruction::Gt => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Gt },
+        Instruction::Gte => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Gte },
+        Instruction::Assign => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Assign },
+        Instruction::JmpNz(loc) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::JmpNz(#loc) },
+        Instruction::JmpZ(loc) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::JmpZ(#loc) },
+        Instruction::Jmp(loc) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Jmp(#loc) },
+        Instruction::Call => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Call },
+        Instruction::Ret => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Ret },
+        Instruction::LoadNone => quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadNone },
+        Instruction::LoadLitFloat(val) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadLitFloat(#val) },
+        Instruction::LoadLitInt(val) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadLitInt(#val) },
+        Instruction::LoadLitString(val) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadLitString(::std::boxed::Box::from(#val)) },
+        Instruction::LoadLitBool(val) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadLitBool(#val) },
+        Instruction::ConstructArr(len) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::ConstructArr(#len) },
+        Instruction::ConstructObj(len2) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::ConstructObj(#len2) },
+        Instruction::LoadName(name) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadName(::std::boxed::Box::from(#name)) },
+        Instruction::LoadObjectAttr(attr) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadObjectAttr(::std::boxed::Box::from(#attr)) },
         Instruction::LoadObjectIndex(idx) => {
             let decoded = subscript_to_token(&idx);
-            quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadObjectIndex(#decoded) }
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadObjectIndex(#decoded) }
         },
-        Instruction::Terminate => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Terminate },
-        Instruction::Interrupt => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Interrupt },
-        Instruction::Pop => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Pop },
-        Instruction::LoadDPtr(ptr, size) => quote! { ::virtual_exec_parser::sequential::instructions::Instruction::LoadDPtr(#ptr, #size) },
-        Instruction::Swap => { quote! { ::virtual_exec_parser::sequential::instructions::Instruction::Swap } }
+        Instruction::Terminate => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Terminate },
+        Instruction::Interrupt => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Interrupt },
+        Instruction::Pop => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Pop },
+        Instruction::LoadDPtr(ptr, size) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadDPtr(#ptr, #size) },
+        Instruction::Swap => { quote! { ::virtual_exec_core::sequential::instructions::Instruction::Swap } }
     }
 }
 
@@ -425,7 +425,7 @@ pub fn compile(input: TokenStream) -> TokenStream {
     let output = parse_macro_input!(input as TopLevelBlock);
     let body = output.stmts.into_iter().map(convert_stmt).collect::<Result<_, _>>().unwrap();
     let module = Module { body, span: None };
-    let compiled = virtual_exec_parser::sequential::compile::compile(&module);
+    let compiled = virtual_exec_core::compile(&module);
     let token_content = insts_to_token(compiled);
     quote! { #token_content }.into()
 }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use virtual_exec_macro::compile;
-use virtual_exec_parser::sequential::exec::{FnStackFrame, InstStateMachine, State};
+use virtual_exec_core::sequential::exec::{FnStackFrame, InstStateMachine, State};
 use virtual_exec_type::mem::{MemoryAllocator, MemoryAllocatorConstructor, Value, ValuePtr};
 
 #[test]

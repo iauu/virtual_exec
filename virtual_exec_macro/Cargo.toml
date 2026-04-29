@@ -16,6 +16,7 @@ proc-macro = true
 syn = { version = "2.0.106", features = ["full"] }
 virtual_exec_type = { path = "../virtual_exec_type", version = "0.4.0" }
 virtual_exec_parser = { path = "../virtual_exec_parser", version = "0.4.0" }
+virtual_exec_core = { path = "../virtual_exec_core", version = "0.4.0"}
 quote = "1.0"
 proc-macro2 = "1.0"
 

@@ -99,6 +99,7 @@ dependencies = [
 name = "virtual_exec_core"
 version = "0.4.0"
 dependencies = [
+ "serde",
  "virtual_exec_parser",
  "virtual_exec_type",
 ]
@@ -110,6 +111,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+ "virtual_exec_core",
  "virtual_exec_parser",
  "virtual_exec_type",
 ]

@@ -6,7 +6,7 @@ repository = "https://github.com/i-am-unknown-81514525/virtual_exec"
 authors = ["i-am-unknown-81514525" ]
 readme = "README.md"
 description = "Sub-crate of virtual_exec - provide standard library definition for the language"
-license = "GPL-3"
+license = "GPL-3.0"
 
 [dependencies]
 virtual_exec_extern = {path = "../virtual_exec_extern", version = "0.5.0-alpha.0"}

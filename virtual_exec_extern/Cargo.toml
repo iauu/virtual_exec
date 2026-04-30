@@ -4,7 +4,7 @@ version = "0.5.0-alpha.0"
 edition = "2024"
 repository = "https://github.com/i-am-unknown-81514525/virtual_exec"
 authors = ["i-am-unknown-81514525" ]
-license = "GPL-3"
+license = "GPL-3.0"
 readme = "README.md"
 description = "Sub-crate of virtual_exec - provide macro definition for building external function"
 

@@ -3,53 +3,54 @@
 A rust library to perform sandboxed safe expression evaluation, in a similar syntax to rust
 
 ```rust
-use virtual_exec::{Machine, parse, compile};
-use virtual_exec_parser::sequential::exec::State;
+use virtual_exec_core::{Machine, parse, compile};
+use virtual_exec_core::sequential::exec::State;
+use virtual_exec_type::error::ExecutionError;
 use virtual_exec_type::mem::OwnedValue;
 
 #[test]
 fn test_simple_assignment() {
-    let code = "a = 1; b = 2; c = 3; if a != b {d = 2;} d += d; d;";
-    let compiled = compile(&parse(code).unwrap());
-    println!("{:?}", compiled);
-    let mut machine = Machine::new(compiled, 100, 100);
-    match machine.run_all() {
-        Ok(State::Ok) => {},
-        Ok(reason) => {
-            println!("Machine: {:?}, state: {:?}", machine, reason);
-        },
-        Err(e) => {
-            println!("Machine: {:?}, err: {:?}", machine, e);
-        }
+  let code = "a = 1; b = 2; c = 3; if a != b {d = 2;} d += d; d;";
+  let compiled = compile(&parse(code).unwrap());
+  println!("{:?}", compiled);
+  let mut machine = Machine::new(compiled, 100, 100, vec![]).unwrap();
+  match machine.sync_run_all() {
+    Ok(State::Ok) => {},
+    Ok(reason) => {
+      println!("Machine: {:?}, state: {:?}", machine, reason);
+    },
+    Err(e) => {
+      println!("Machine: {:?}, err: {:?}", machine, e);
     }
-    assert_eq!(machine.get("a"), Some(OwnedValue::Int(1)));
-    assert_eq!(machine.get("d"), Some(OwnedValue::Int(4)));
+  }
+  assert_eq!(machine.get("a"), Some(OwnedValue::Int(1)));
+  assert_eq!(machine.get("d"), Some(OwnedValue::Int(4)));
 }
+
 
 #[test]
 fn test_fn() {
-    let code = "a = 10;
+  let code = "a = 10;
         fn add(a, b) {
             return a + b;
         }
         while a > 0 {
             a = add(a, -1);
         }";
-    let compiled = compile(&parse(code).unwrap());
-    println!("{:?}", compiled);
-    let mut machine = Machine::new(compiled, 100, 1000);
-    match machine.run_all() {
-        Ok(State::Ok) => {},
-        Ok(reason) => {
-            println!("Machine: {:?}, state: {:?}", machine, reason);
-        },
-        Err(e) => {
-            println!("Machine: {:?}, err: {:?}", machine, e);
-        }
+  let compiled = compile(&parse(code).unwrap());
+  println!("{:?}", compiled);
+  let mut machine = Machine::new(compiled, 100, 1000, vec![]).unwrap();
+  match machine.sync_run_all() {
+    Ok(State::Ok) => {},
+    Ok(reason) => {
+      println!("Machine: {:?}, state: {:?}", machine, reason);
+    },
+    Err(e) => {
+      println!("Machine: {:?}, err: {:?}", machine, e);
     }
-    assert_eq!(machine.get("a"), Some(OwnedValue::Int(0)));
+  }
+  assert_eq!(machine.get("a"), Some(OwnedValue::Int(0)));
 }
-
 ```
 An example if the execution. In particular, the `100` and `1000` in the `test_fn` defines the memory and lifetime of the machine respectively, 
 which this allowed up to 1000 operation and 100 virtual byte allocation, and would raise stop with Ok(State::Timeout) if it take longer than that.

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc};
 use crate::fn_extern::{FnExtern};
 
 #[derive(Clone)]

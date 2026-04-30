@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc};
+use async_lock::{RwLock};
 use crate::mem::{Allocator, MemoryAllocator, Value, ValuePtr};
 use crate::error::{MemoryError, ExecutionError};
 
@@ -15,8 +16,8 @@ impl IsTruhy for Value<'_> {
             Value::Bool(b) => *b,
             Value::None => false,
             Value::String(s) => s.len() > 0,
-            Value::Collection(v) => v.read().unwrap().len() > 0,
-            Value::Object(v) => v.read().unwrap().len() > 0,
+            Value::Collection(v) => v.read_arc_blocking().len() > 0,
+            Value::Object(v) => v.read_arc_blocking().len() > 0,
             Value::_Scope(_) => false,
             Value::MemoryChunk(_) => false,
             Value::Error(_) => false,
@@ -28,7 +29,7 @@ impl IsTruhy for Value<'_> {
 
 impl IsTruhy for ValuePtr<'_> {
     fn is_truthy(&self) -> bool {
-        self.lock().unwrap().is_truthy()
+        self.lock_arc_blocking().is_truthy()
     }
 }
 
@@ -56,7 +57,7 @@ pub trait TypeCast<'a> {
 
 impl<'a> TypeCast<'a> for ValuePtr<'a> {
     fn as_int(&self) -> Option<i64> {
-        if let Value::Int(v) = self.lock().unwrap().inner {
+        if let Value::Int(v) = self.lock_arc_blocking().inner {
             Some(v)
         } else {
             None
@@ -64,7 +65,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
 
     fn as_bool(&self) -> Option<bool> {
-        if let Value::Bool(b) = self.lock().unwrap().inner {
+        if let Value::Bool(b) = self.lock_arc_blocking().inner {
             Some(b)
         } else {
             None
@@ -72,7 +73,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
 
     fn as_float(&self) -> Option<f64> {
-        if let Value::Float(v) = self.lock().unwrap().inner {
+        if let Value::Float(v) = self.lock_arc_blocking().inner {
             Some(v)
         } else {
             None
@@ -80,7 +81,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
 
     fn as_object(&self) -> Option<Arc<RwLock<HashMap<String, ValuePtr<'a>>>>> {
-        if let Value::Object(o) = &self.clone().lock().unwrap().inner {
+        if let Value::Object(o) = &self.clone().lock_arc_blocking().inner {
             Some(o.clone())
         } else {
             None
@@ -88,7 +89,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
 
     fn as_collections(&self) -> Option<Arc<RwLock<Vec<ValuePtr<'a>>>>> {
-        if let Value::Collection(c) = &self.clone().lock().unwrap().inner {
+        if let Value::Collection(c) = &self.clone().lock_arc_blocking().inner {
             Some(c.clone())
         } else {
             None
@@ -96,7 +97,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
 
     fn as_string(&self) -> Option<String> {
-        if let Value::String(s) = &self.lock().unwrap().inner {
+        if let Value::String(s) = &self.lock_arc_blocking().inner {
             Some(s.to_string())
         } else {
             None
@@ -104,7 +105,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
 
     fn as_none(&self) -> Option<()> {
-        let item = &self.lock().unwrap().inner;
+        let item = &self.lock_arc_blocking().inner;
         if let Value::None = item {
             Some(())
         } else if let Value::MemoryChunk(_) = item  {
@@ -118,7 +119,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
 
     fn as_error(&self) -> Option<ExecutionError> {
-        if let Value::Error(e) = &self.lock().unwrap().inner {
+        if let Value::Error(e) = &self.lock_arc_blocking().inner {
             Some(e.clone())
         } else {
             None
@@ -126,7 +127,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
 
     fn as_dptr(&self) -> Option<(u64, usize)> {
-        if let Value::DPtr(d, s) = &self.clone().lock().unwrap().inner {
+        if let Value::DPtr(d, s) = &self.clone().lock_arc_blocking().inner {
             Some((*d, *s))
         } else {
             None
@@ -134,7 +135,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
     
     fn as_fn_ptr_extern(&self) -> Option<(String, usize)> {
-        if let Value::FnPtrExternal(f, s) = &self.clone().lock().unwrap().inner {
+        if let Value::FnPtrExternal(f, s) = &self.clone().lock_arc_blocking().inner {
             Some((f.to_string(), *s))
         } else {
             None

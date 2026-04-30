@@ -4,8 +4,8 @@ use virtual_exec_core::Machine;
 use virtual_exec_type::error::ExecutionError;
 
 #[fn_extern_wrap]
-fn arr_get_from_idx<'a>(machine: &mut Machine<'a>, array: Collection<'a>, idx: Integer) -> Result<Any<'a>, Error> {
-    array.write().unwrap().get(idx as usize).ok_or(ExecutionError::IndexOutOfRangeError).map(|x| x.clone())
+fn arr_get_from_idx<'a>(_: &mut Machine<'a>, array: Collection<'a>, idx: Integer) -> Result<Any<'a>, Error> {
+    array.write_arc_blocking().get(idx as usize).ok_or(ExecutionError::IndexOutOfRangeError).map(|x| x.clone())
 }
 
 extern_link!(ArrGetFromIdx, arr_get_from_idx, 2);

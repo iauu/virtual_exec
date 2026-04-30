@@ -1,6 +1,7 @@
 
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc};
+use async_lock::RwLock;
 use crate::sequential::exec::{FnStackFrame, InstStateMachine, State};
 use crate::sequential::instructions::Instruction;
 use virtual_exec_type::error::{ExecutionError, MemoryError};
@@ -97,8 +98,8 @@ impl<'a> Machine<'a> {
 
     pub fn get(&self, name: &str) -> Option<OwnedValue> {
         for fn_frame in self.machine.fn_stack_frame.iter().rev() {
-            if let Some(v) = fn_frame.mapping.read().unwrap().get(name).cloned() {
-                return Some(v.lock().unwrap().inner.to_owned_value());
+            if let Some(v) = fn_frame.mapping.read_arc_blocking().get(name).cloned() {
+                return Some(v.lock_arc_blocking().inner.to_owned_value());
             }
         }
         None

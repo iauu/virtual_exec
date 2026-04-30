@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::ops::Deref;
-use std::sync::{Arc, Mutex, RwLock, Weak};
+use std::sync::{Arc, Weak};
+use async_lock::{Mutex, RwLock};
 use crate::error::{MemoryError, ExecutionError};
 
 pub type MemoryAllocator<'a> = Arc<Mutex<MemoryAllocation<'a>>>;
@@ -59,10 +60,10 @@ impl ToOwned for Value<'_> {
             Value::None => OwnedValue::None,
             Value::String(s) => OwnedValue::String(s.to_owned()),
             Value::Collection(c) => {
-                OwnedValue::Collection(c.read().unwrap().iter().map(|v| v.lock().unwrap().to_owned_value()).collect::<Vec<_>>().into())
+                OwnedValue::Collection(c.read_arc_blocking().iter().map(|v| v.lock_arc_blocking().to_owned_value()).collect::<Vec<_>>().into())
             },
             Value::Object(d) => {
-                OwnedValue::Object(d.read().unwrap().iter().map(|(k, v)| (k.to_owned(), v.lock().unwrap().to_owned_value())).collect())
+                OwnedValue::Object(d.read_arc_blocking().iter().map(|(k, v)| (k.to_owned(), v.lock_arc_blocking().to_owned_value())).collect())
             },
             Value::_Scope(_) => OwnedValue::None,
             Value::MemoryChunk(_) => OwnedValue::None,
@@ -119,7 +120,7 @@ impl<'a> Drop for ValueInnerPtr<'a> {
     fn drop(&mut self) {
         let ptr = self.alloc.upgrade();
         if let Some(ptr) = ptr {
-            if let Ok(mut alloc) = ptr.lock() {
+            if let Some(mut alloc) = ptr.try_lock() {
                 alloc._internal_dealloc(self.size);
             }
         }
@@ -198,7 +199,7 @@ impl<'a> Drop for MemoryAllocation<'a> {
         self.gc_weak();
         self._obj.iter().for_each(|obj| {
             if let Some(ptr) = obj.upgrade() {
-                if let Ok(mut inner) = ptr.lock() {
+                if let Some(mut inner) = ptr.try_lock() {
                     inner.inner = Value::None;
                 }
             }
@@ -225,9 +226,9 @@ impl<'a> GetSize for Value<'a> {
             Value::Int(_i) => 8,
             Value::Float(_f) => 8,
             Value::Bool(_b) => 1,
-            Value::Collection(c) => c.read().unwrap().len() * 8,
+            Value::Collection(c) => c.read_arc_blocking().len() * 8,
             Value::Object(d) => {
-                let map = d.read().unwrap();
+                let map = d.read_arc_blocking();
                 map.len() * 8 + map.keys().map(|k| k.len()).sum::<usize>()
             },
             Value::String(s) => s.len(),
@@ -255,25 +256,25 @@ impl<'a> Allocator for MemoryAllocator<'a> {
 
     fn alloc(&self, input: Self::Input) -> Result<Self::Output, MemoryError> {
         let size = input.get_size();
-        self.lock().unwrap()._internal_alloc(size)?;
+        self.lock_arc_blocking()._internal_alloc(size)?;
         let obj = ValueInnerPtr::new(input, size, self);
         let ptr = Arc::new(Mutex::new(obj));
-        self.lock().unwrap()._index_obj(&ptr);
+        self.lock_arc_blocking()._index_obj(&ptr);
         Ok(ptr)
     }
 
     fn change_alloc(&self, data: &mut Self::Output) -> Result<(), MemoryError> {
-        let marked_size = data.lock().unwrap().marked_size();
-        let new_size = data.lock().unwrap().get_size();
+        let marked_size = data.lock_arc_blocking().marked_size();
+        let new_size = data.lock_arc_blocking().get_size();
         if marked_size == new_size {
             return Ok(());
         }
         if marked_size < new_size {
-            self.lock().unwrap()._internal_alloc(new_size - marked_size)?;
+            self.lock_arc_blocking()._internal_alloc(new_size - marked_size)?;
         } else if marked_size > new_size {
-            self.lock().unwrap()._internal_dealloc(marked_size - new_size);
+            self.lock_arc_blocking()._internal_dealloc(marked_size - new_size);
         }
-        data.lock().unwrap().size = new_size;
+        data.lock_arc_blocking().size = new_size;
         Ok(())
 
     }

@@ -1,4 +1,5 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
+use async_lock::Mutex;
 use virtual_exec_type::base::TypeCast;
 use virtual_exec_type::mem::{Allocator, MemoryAllocation, Value};
 use virtual_exec_type::op::err_op_add;

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc};
+use async_lock::RwLock;
 use virtual_exec_type::mem::{Allocator, MemoryAllocator, Value, ValuePtr};
 use virtual_exec_type::op::*;
 use crate::sequential::instructions::{Instruction, SubscriptLoad};
@@ -142,7 +143,7 @@ impl<'ctx> InstStateMachine<'ctx> {
 
     fn resolve(&self, name: &str) -> Result<ValuePtr<'ctx>, ExecutionError> {
         for frame in self.fn_stack_frame.iter().rev() {
-            if let Some(val) = frame.mapping.read().unwrap().get(name) {
+            if let Some(val) = frame.mapping.read_arc_blocking().get(name) {
                 return Ok(val.clone());
             }
         }
@@ -161,7 +162,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                 match target.0 {
                     Some(obj) => {
                         if let Some(o) = obj.as_object() {
-                            Ok(o.read().unwrap().get(&target.1).ok_or_else(|| ExecutionError::ReferenceNotExistError(target.1))?.clone())
+                            Ok(o.read_arc_blocking().get(&target.1).ok_or_else(|| ExecutionError::ReferenceNotExistError(target.1))?.clone())
                         } else {
                             Err(ExecutionError::UnexpectedAttrError)
                         }
@@ -175,10 +176,10 @@ impl<'ctx> InstStateMachine<'ctx> {
                 if let Some(arr)= target.0.as_collections() {
                     let mut idx = target.1;
                     if idx < 0 {
-                        idx += arr.read().unwrap().len() as i64;
+                        idx += arr.read_arc_blocking().len() as i64;
                     }
-                    if idx >= 0 && (idx as usize) < arr.read().unwrap().len() {
-                        Ok(arr.read().unwrap()[idx as usize].clone())
+                    if idx >= 0 && (idx as usize) < arr.read_arc_blocking().len() {
+                        Ok(arr.read_arc_blocking()[idx as usize].clone())
                     } else {
                         Err(ExecutionError::IndexOutOfRangeError)
                     }
@@ -266,11 +267,11 @@ impl<'ctx> InstStateMachine<'ctx> {
                     },
                     StackItem::AttrReference((None, target)) => {
                         let stack =  self.get_mut_stack_ref()?;
-                        stack.mapping.write().unwrap().insert(target, value.clone());
+                        stack.mapping.write_arc_blocking().insert(target, value.clone());
                     },
                     StackItem::AttrReference((Some(value), target)) => {
                         if let Some(obj) = value.as_object() {
-                            obj.write().unwrap().insert(target, value.clone());
+                            obj.write_arc_blocking().insert(target, value.clone());
                         } else {
                             self.state = Err(ExecutionError::UnexpectedAttrError);
                             return self.state.clone()
@@ -280,10 +281,10 @@ impl<'ctx> InstStateMachine<'ctx> {
                         if let Some(arr) = target.0.as_collections() {
                             let mut idx = target.1;
                             if idx < 0 {
-                                idx += arr.read().unwrap().len() as i64
+                                idx += arr.read_arc_blocking().len() as i64
                             }
-                            if idx >= 0 && (idx as usize) < arr.read().unwrap().len() {
-                                arr.write().unwrap()[idx as usize] = value;
+                            if idx >= 0 && (idx as usize) < arr.read_arc_blocking().len() {
+                                arr.write_arc_blocking()[idx as usize] = value;
                             }
                             else {
                                 self.state = Err(ExecutionError::IndexOutOfRangeError);
@@ -462,7 +463,7 @@ impl<'ctx> InstStateMachine<'ctx> {
             let values = (0..b)
                 .map(|_| self.pop_get())
                 .collect::<Result<Vec<_>, ExecutionError>>()
-                .inspect_err(|e| self.state = Err(e.clone()))?;;
+                .inspect_err(|e| self.state = Err(e.clone()))?;
             self.state = Ok(State::FnExternOutput(fn_name.clone(), values.clone()));
             Ok(Some((fn_name, values)))
         } else {

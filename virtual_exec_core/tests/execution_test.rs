@@ -1,11 +1,10 @@
 use virtual_exec_parser::parser::parse;
 use virtual_exec_core::sequential::compile::compile;
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc};
+use async_lock::{RwLock};
 use virtual_exec_core::sequential::exec::{InstStateMachine, FnStackFrame, State};
-use virtual_exec_type::mem::{MemoryAllocation, MemoryAllocator, MemoryAllocatorConstructor, Value, ValuePtr};
+use virtual_exec_type::mem::{MemoryAllocator, MemoryAllocatorConstructor, Value, ValuePtr};
 
 #[test]
 fn test_execution_compiled_code() {
@@ -42,7 +41,7 @@ fn test_execution_compiled_code() {
         let _ = state_machine.run_once();
     }
 
-    let d_value = global_mapping.read().unwrap().get("d").unwrap().lock().unwrap().inner.clone();
+    let d_value = global_mapping.read_arc_blocking().get("d").unwrap().lock_arc_blocking().inner.clone();
 
     match d_value {
         Value::Int(i) => assert_eq!(i, 4),
@@ -83,7 +82,7 @@ fn test_execution_compiled_code_if_false() {
         let _ = state_machine.run_once();
     }
 
-    let d_value = global_mapping.read().unwrap().get("d").unwrap().lock().unwrap().inner.clone();
+    let d_value = global_mapping.read_arc_blocking().get("d").unwrap().lock_arc_blocking().inner.clone();
 
     match d_value {
         Value::Int(i) => assert_eq!(i, 10),
@@ -124,25 +123,25 @@ fn test_execution_compiled_code_math_operations() {
         let _ = state_machine.run_once();
     }
 
-    let c_value = global_mapping.read().unwrap().get("c").unwrap().lock().unwrap().inner.clone();
+    let c_value = global_mapping.read_arc_blocking().get("c").unwrap().lock_arc_blocking().inner.clone();
     match c_value {
         Value::Int(i) => assert_eq!(i, 7),
         _ => panic!("Expected c to be Int(7) but got {:?}", c_value),
     }
 
-    let d_value = global_mapping.read().unwrap().get("d").unwrap().lock().unwrap().inner.clone();
+    let d_value = global_mapping.read_arc_blocking().get("d").unwrap().lock_arc_blocking().inner.clone();
     match d_value {
         Value::Int(i) => assert_eq!(i, 30),
         _ => panic!("Expected d to be Int(30) but got {:?}", d_value),
     }
 
-    let e_value = global_mapping.read().unwrap().get("e").unwrap().lock().unwrap().inner.clone();
+    let e_value = global_mapping.read_arc_blocking().get("e").unwrap().lock_arc_blocking().inner.clone();
     match e_value {
         Value::Float(f) => assert_eq!(f, 10.0 / 3.0),
         _ => panic!("Expected e to be Float but got {:?}", e_value),
     }
 
-    let f_value = global_mapping.read().unwrap().get("f").unwrap().lock().unwrap().inner.clone();
+    let f_value = global_mapping.read_arc_blocking().get("f").unwrap().lock_arc_blocking().inner.clone();
     match f_value {
         Value::Int(i) => assert_eq!(i, 1),
         _ => panic!("Expected f to be Int(1) but got {:?}", f_value),
@@ -182,24 +181,24 @@ fn test_execution_compiled_code_bitwise_operations() {
         let _ = state_machine.run_once();
     }
 
-    let c_value = global_mapping.read().unwrap().get("c").unwrap().lock().unwrap().inner.clone();
+    let c_value = global_mapping.read_arc_blocking().get("c").unwrap().lock_arc_blocking().inner.clone();
     match c_value {
         Value::Int(i) => assert_eq!(i, 5 & 3),
         _ => panic!("Expected c to be Int(1) but got {:?}", c_value),
     }
 
-    let d_value = global_mapping.read().unwrap().get("d").unwrap().lock().unwrap().inner.clone();
+    let d_value = global_mapping.read_arc_blocking().get("d").unwrap().lock_arc_blocking().inner.clone();
     match d_value {
         Value::Int(i) => assert_eq!(i, 5 | 3),
         _ => panic!("Expected d to be Int(7) but got {:?}", d_value),
     }
-    let f_value = global_mapping.read().unwrap().get("f").unwrap().lock().unwrap().inner.clone();
+    let f_value = global_mapping.read_arc_blocking().get("f").unwrap().lock_arc_blocking().inner.clone();
     match f_value {
         Value::Int(i) => assert_eq!(i, 5 << 1),
         _ => panic!("Expected f to be Int(10) but got {:?}", f_value),
     }
 
-    let g_value = global_mapping.read().unwrap().get("g").unwrap().lock().unwrap().inner.clone();
+    let g_value = global_mapping.read_arc_blocking().get("g").unwrap().lock_arc_blocking().inner.clone();
     match g_value {
         Value::Int(i) => assert_eq!(i, 5 >> 1),
         _ => panic!("Expected g to be Int(2) but got {:?}", g_value),

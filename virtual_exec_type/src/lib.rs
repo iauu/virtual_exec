@@ -9,7 +9,8 @@ pub mod mem;
 
 pub mod vm_type {
     use std::collections::HashMap;
-    use std::sync::{Arc, RwLock};
+    use std::sync::{Arc};
+    use async_lock::RwLock;
     use crate::error::ExecutionError;
     use crate::mem::ValuePtr;
 

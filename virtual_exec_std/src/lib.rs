@@ -1,7 +1,7 @@
 pub mod func;
 
 use std::collections::HashMap;
-use std::sync::{Arc, LazyLock, RwLock};
+use std::sync::{Arc, LazyLock};
 use virtual_exec_core::fn_extern::{FnExtern, FnExternConstruct, MethodResolver};
 use crate::func::*;
 

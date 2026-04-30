@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc};
+use async_lock::RwLock;
 use virtual_exec_macro::compile;
 use virtual_exec_core::sequential::exec::{FnStackFrame, InstStateMachine, State};
 use virtual_exec_type::mem::{MemoryAllocator, MemoryAllocatorConstructor, Value, ValuePtr};
@@ -41,7 +42,7 @@ fn test_simple_assignment_and_expr() {
     assert!(state_machine.state.is_ok(), "Evaluation failed: {:?}", state_machine.state.err());
 
 
-    let value = global_mapping.read().unwrap().get("a").unwrap().lock().unwrap().inner.clone();
+    let value = global_mapping.read_arc_blocking().get("a").unwrap().lock_arc_blocking().inner.clone();
 
     match value {
         Value::Int(i) => assert_eq!(i, 15),
@@ -88,7 +89,7 @@ fn test_more() {
 
     assert!(state_machine.state.is_ok(), "Evaluation failed: {:?}", state_machine.state.err());
 
-    let value = global_mapping.read().unwrap().get("a").unwrap().lock().unwrap().inner.clone();
+    let value = global_mapping.read_arc_blocking().get("a").unwrap().lock_arc_blocking().inner.clone();
 
     match value {
         Value::Int(i) => assert_eq!(i, 2),
@@ -179,7 +180,7 @@ fn test_if_fail_path() {
 
     assert!(state_machine.state.is_ok(), "Evaluation failed: {:?}", state_machine.state.err());
 
-    let value = global_mapping.read().unwrap().get("a").unwrap().lock().unwrap().inner.clone();
+    let value = global_mapping.read_arc_blocking().get("a").unwrap().lock_arc_blocking().inner.clone();
 
     match value {
         Value::Int(i) => assert_eq!(i, 15),
@@ -226,7 +227,7 @@ fn test_while_loop() {
 
     assert!(state_machine.state.is_ok(), "Evaluation failed: {:?}", state_machine.state.err());
 
-    let value = global_mapping.read().unwrap().get("a").unwrap().lock().unwrap().inner.clone();
+    let value = global_mapping.read_arc_blocking().get("a").unwrap().lock_arc_blocking().inner.clone();
 
     match value {
         Value::Int(i) => assert_eq!(i, 0),
@@ -277,7 +278,7 @@ fn test_function() {
 
     assert!(state_machine.state.is_ok(), "Evaluation failed: {:?}", state_machine.state.err());
 
-    let value = global_mapping.read().unwrap().get("a").unwrap().lock().unwrap().inner.clone();
+    let value = global_mapping.read_arc_blocking().get("a").unwrap().lock_arc_blocking().inner.clone();
 
     println!("{:?}", state_machine);
 

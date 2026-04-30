@@ -9,6 +9,7 @@ readme = "README.md"
 license = "GPL-3.0"
 
 [dependencies]
+async-lock = "3.4.2"
 inventory = "0.3.21"
 paste = "1.0.15"
 

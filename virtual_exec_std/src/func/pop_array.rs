@@ -5,8 +5,8 @@ use virtual_exec_type::base::Upcast;
 use virtual_exec_type::error::ExecutionError;
 
 #[fn_extern_wrap]
-fn pop_array_sync<'a>(machine: &mut Machine<'a>, array: Collection<'a>) -> Result<Any<'a>, Error> {
-    array.write().unwrap().pop().ok_or(ExecutionError::IndexOutOfRangeError)
+fn pop_array_sync<'a>(_: &mut Machine<'a>, array: Collection<'a>) -> Result<Any<'a>, Error> {
+    array.write_arc_blocking().pop().ok_or(ExecutionError::IndexOutOfRangeError)
 }
 
 extern_link!(PopArray, pop_array_sync, 1);

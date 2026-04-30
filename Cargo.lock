@@ -117,6 +117,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "virtual_exec_extern"
+version = "0.4.0"
+dependencies = [
+ "async-trait",
+ "virtual_exec_core",
+ "virtual_exec_macro",
+ "virtual_exec_type",
+]
+
+[[package]]
 name = "virtual_exec_macro"
 version = "0.4.0"
 dependencies = [

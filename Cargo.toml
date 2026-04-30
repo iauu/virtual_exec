@@ -16,5 +16,5 @@ members = [
     "virtual_exec_type",
     "virtual_exec_macro",
     "virtual_exec_parser",
-    "virtual_exec_core",
+    "virtual_exec_core", "virtual_exec_extern",
 ]

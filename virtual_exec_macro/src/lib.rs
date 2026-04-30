@@ -1,7 +1,7 @@
-use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::{Ident, TokenStream as TokenStream2};
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
-use syn::parse_macro_input;
+use syn::{parse_macro_input, FnArg, ItemFn};
 use virtual_exec_parser::parser::convert_stmt;
 use virtual_exec_core::sequential::instructions::{Instruction, SubscriptLoad};
 use virtual_exec_parser::tokenizer::{Stmt, Expr, Atom, TopLevelBlock, AssignExpr};
@@ -428,4 +428,60 @@ pub fn compile(input: TokenStream) -> TokenStream {
     let compiled = virtual_exec_core::compile(&module);
     let token_content = insts_to_token(compiled);
     quote! { #token_content }.into()
+}
+
+fn arg_to_token(_: FnArg, idx: usize) -> impl ToTokens {
+    quote! {
+        ::virtual_exec_type::base::Downcast::from_value(values[#idx].clone()).ok_or(::virtual_exec_type::error::ExecutionError::InvalidTypeError)?
+    }
+}
+
+#[proc_macro_attribute]
+pub fn fn_extern_wrap(_: TokenStream, input: TokenStream) -> TokenStream {
+    let mut input = parse_macro_input!(input as ItemFn);
+    let ident = input.sig.ident;
+    let tokens = input.sig.inputs.clone().into_iter().skip(1).enumerate().map(|(idx, arg)| arg_to_token(arg, idx)).collect::<Vec<_>>();
+    input.sig.ident = Ident::new("__fn_wrap", ident.span());
+    let expected_length = input.sig.inputs.len() - 1;
+    quote! {
+        fn #ident<'__wrap_internal>(
+            machine: &mut ::virtual_exec_core::Machine<'__wrap_internal>,
+            values: ::std::vec::Vec<::virtual_exec_type::mem::ValuePtr<'__wrap_internal>>
+        ) -> ::core::result::Result<::virtual_exec_type::mem::ValuePtr<'__wrap_internal>, ::virtual_exec_type::error::ExecutionError> {
+            if values.len() != #expected_length {
+                return Err(::virtual_exec_type::error::ExecutionError::IncorrectArgumentCountError)
+            }
+            #input
+            let result = __fn_wrap(machine, #(#tokens),*)?;
+            for mut item in values {
+                machine.alloc.change_alloc(&mut item)?;
+            }
+            Ok(result)
+        }
+    }.into()
+}
+
+#[proc_macro_attribute]
+pub fn fn_extern_wrap_async(_: TokenStream, input: TokenStream) -> TokenStream {
+    let mut input = parse_macro_input!(input as ItemFn);
+    let ident = input.sig.ident;
+    let tokens = input.sig.inputs.clone().into_iter().skip(1).enumerate().map(|(idx, arg)| arg_to_token(arg, idx)).collect::<Vec<_>>();
+    input.sig.ident = Ident::new("__fn_wrap", ident.span());
+    let expected_length = input.sig.inputs.len() - 1;
+    quote! {
+        async fn #ident<'__wrap_internal>(
+            machine: &mut ::virtual_exec_core::Machine<'__wrap_internal>,
+            values: ::std::vec::Vec<::virtual_exec_type::mem::ValuePtr<'__wrap_internal>>
+        ) -> ::core::result::Result<::virtual_exec_type::mem::ValuePtr<'__wrap_internal>, ::virtual_exec_type::error::ExecutionError> {
+            if values.len() != #expected_length {
+                return Err(::virtual_exec_type::error::ExecutionError::IncorrectArgumentCountError)
+            }
+            #input
+            let result = __fn_wrap(machine, #(#tokens),*).await?;
+            for mut item in values {
+                machine.alloc.change_alloc(&mut item)?;
+            }
+            Ok(result)
+        }
+    }.into()
 }

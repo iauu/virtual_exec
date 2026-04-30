@@ -475,6 +475,7 @@ impl<'ctx> InstStateMachine<'ctx> {
             match ptr {
                 Ok(ptr) => {
                     self.push_value(ptr);
+                    self.state = Ok(State::Ok);
                 },
                 Err(e) => {
                     self.state = Err(e);

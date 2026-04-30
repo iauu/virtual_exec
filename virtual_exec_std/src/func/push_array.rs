@@ -9,4 +9,4 @@ fn push_array_sync<'a>(machine: &mut Machine<'a>, array: Collection<'a>, item: A
     Ok(())
 }
 
-extern_link!(PushArray, push_array_sync);
+extern_link!(PushArray, push_array_sync, 2);

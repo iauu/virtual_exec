@@ -14,6 +14,7 @@
       <sourceFolder url="file://$MODULE_DIR$/virtual_exec_core/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/virtual_exec_extern/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/virtual_exec_std/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/virtual_exec_std/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

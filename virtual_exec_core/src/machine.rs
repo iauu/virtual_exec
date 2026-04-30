@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use crate::sequential::exec::{FnStackFrame, InstStateMachine, State};
 use crate::sequential::instructions::Instruction;
-use virtual_exec_type::error::ExecutionError;
-use virtual_exec_type::mem::{MemoryAllocator, MemoryAllocatorConstructor, OwnedValue, ToOwned};
+use virtual_exec_type::error::{ExecutionError, MemoryError};
+use virtual_exec_type::mem::{Allocator, MemoryAllocator, MemoryAllocatorConstructor, OwnedValue, ToOwned, Value};
 use crate::fn_extern::{FnExtern, MethodResolver};
 
 /// The execution instance including the memory allocator and the instruction state machine
@@ -26,54 +26,64 @@ impl<'a> Machine<'a> {
     /// * `inst_limit` - The amount of instruction it can run until it being paused by timeout
     ///
     /// # Returns
-    /// `Machine`
-    pub fn new(instructions: Vec<Instruction>, memory_lim: usize, inst_limit: u64, resolvers: Vec<MethodResolver>) -> Self {
+    /// `Result<Machine, MemoryError>`
+    pub fn new(instructions: Vec<Instruction>, memory_lim: usize, inst_limit: u64, resolvers: Vec<MethodResolver>) -> Result<Self, MemoryError> {
         let alloc = MemoryAllocator::construct(memory_lim);
+        let mut map = HashMap::new();
+        for resolver in resolvers.iter() {
+            for item in resolver.get_pair() {
+                let ptr = Value::FnPtrExternal(item.0.clone().into_boxed_str(), item.1);
+                let alloced = alloc.alloc(ptr)?;
+                map.insert(item.0, alloced);
+            }
+        }
         let machine = InstStateMachine {
             lim: inst_limit,
             fn_stack_frame: vec![FnStackFrame {
                 ptr: 0,
-                mapping: Arc::new(RwLock::new(HashMap::new()))
+                mapping: Arc::new(RwLock::new(map))
             }],
             alloc: alloc.clone(),
             instructions,
             state: Ok(State::Ok),
             stack: vec![],
         };
-        Self {
+        Ok(Self {
             alloc,
             machine,
             resolvers
+        })
+    }
+
+    pub fn sync_run_once(&mut self) -> Result<State<'a>, ExecutionError> {
+        if let Ok(State::Ok) = self.machine.state {
+            self.machine.run_once()
+        }
+        else {
+            if let Ok(State::FnExternInput(func, size)) = &self.machine.state {
+                let fns: Vec<Arc<dyn FnExtern + Send + Sync>> = self.resolvers.iter().filter_map(|x| x.get(func)).collect();
+                if fns.len() > 0 {
+                    let inputs = self.machine.retrieve_fn_input()?.unwrap();
+                    let result = fns[0].fn_extern_sync(self, inputs.1);
+                    self.machine.push_fn_output(result);
+                }
+            }
+            self.machine.state.clone()
         }
     }
 
-    pub fn run_once(&mut self) -> Result<State<'a>, ExecutionError> {
-        self.machine.run_once()
-    }
-
-    pub fn run_for(&mut self, count: u64) -> Result<State<'a>, ExecutionError> {
+    pub fn sync_run_for(&mut self, count: u64) -> Result<State<'a>, ExecutionError> {
         for _ in 0..count {
-            if let Ok(State::Ok) = self.machine.state {
-                self.machine.run_once()?;
-            }
-            else {
-                if let Ok(State::FnExternInput(func, size)) = &self.machine.state {
-                    let fns: Vec<Arc<RwLock<dyn FnExtern + Send + Sync>>> = self.resolvers.iter().filter_map(|x| x.get(func)).collect();
-                    if fns.len() > 0 {
-                        let inputs = self.machine.retrieve_fn_input()?.unwrap();
-                        let result = fns[0].read().unwrap().fn_extern_sync(self, inputs.1);
-                        self.machine.push_fn_output(result);
-                    }
-                }
-                return self.machine.state.clone();
+            if let Ok(State::Ok) | Ok(State::FnExternInput(_, _)) = self.machine.state {
+                self.sync_run_once()?;
             }
         }
         self.machine.state.clone()
     }
 
-    pub fn run_all(&mut self) -> Result<State<'a>, ExecutionError> {
-        while let Ok(State::Ok) = self.machine.state {
-            self.machine.run_once()?;
+    pub fn sync_run_all(&mut self) -> Result<State<'a>, ExecutionError> {
+        while let Ok(State::Ok) | Ok(State::FnExternInput(_, _)) = self.machine.state {
+            self.sync_run_once()?;
         }
         self.machine.state.clone()
     }

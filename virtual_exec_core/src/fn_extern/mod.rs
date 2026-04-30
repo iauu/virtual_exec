@@ -18,4 +18,6 @@ pub trait FnExtern : FnExternConstruct {
     'a : 'async_trait {
         self.fn_extern_sync(machine, values)
     }
+    
+    fn get_size(&self) -> usize;
 }

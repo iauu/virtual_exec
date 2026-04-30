@@ -2,7 +2,7 @@ pub use virtual_exec_macro::{fn_extern_wrap, fn_extern_wrap_async};
 
 #[macro_export]
 macro_rules! extern_link {
-    ($name:ident, $sync_fn:expr) => {
+    ($name:ident, $sync_fn:expr, $size:expr) => {
         pub struct $name {
         }
 
@@ -21,9 +21,13 @@ macro_rules! extern_link {
             ) -> Result<::virtual_exec_type::mem::ValuePtr<'a>, ::virtual_exec_type::error::ExecutionError> {
                 $sync_fn(machine, values)
             }
+            
+            fn get_size(&self) -> usize {
+                $size
+            }
         }
     };
-    ($name:ident, $sync_fn:expr, $async_fn:expr) => {
+    ($name:ident, $sync_fn:expr, $async_fn:expr, $size:expr) => {
         struct $name {
         }
 
@@ -51,6 +55,10 @@ macro_rules! extern_link {
             ) -> Result<::virtual_exec_type::mem::ValuePtr<'a>, ::virtual_exec_type::error::ExecutionError> where
     'a : 'async_trait {
                 $async_fn(machine, values).await
+            }
+            
+            fn get_size(&self) -> usize {
+                $size
             }
         }
     };

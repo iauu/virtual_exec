@@ -9,4 +9,4 @@ fn pop_array_sync<'a>(machine: &mut Machine<'a>, array: Collection<'a>) -> Resul
     array.write().unwrap().pop().ok_or(ExecutionError::IndexOutOfRangeError)
 }
 
-extern_link!(PopArray, pop_array_sync);
+extern_link!(PopArray, pop_array_sync, 1);

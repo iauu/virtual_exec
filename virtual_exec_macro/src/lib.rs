@@ -439,7 +439,9 @@ fn arg_to_token(_: FnArg, idx: usize) -> impl ToTokens {
 pub fn fn_extern_wrap(_: TokenStream, input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as ItemFn);
     let ident = input.sig.ident;
-    let tokens = input.sig.inputs.clone().into_iter().skip(1).enumerate().map(|(idx, arg)| arg_to_token(arg, idx)).collect::<Vec<_>>();
+    let tokens = input.sig.inputs.clone()
+        .into_iter().skip(1)
+        .enumerate().map(|(idx, arg)| arg_to_token(arg, idx)).collect::<Vec<_>>();
     input.sig.ident = Ident::new("__fn_wrap", ident.span());
     let expected_length = input.sig.inputs.len() - 1;
     quote! {
@@ -465,7 +467,9 @@ pub fn fn_extern_wrap(_: TokenStream, input: TokenStream) -> TokenStream {
 pub fn fn_extern_wrap_async(_: TokenStream, input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as ItemFn);
     let ident = input.sig.ident;
-    let tokens = input.sig.inputs.clone().into_iter().skip(1).enumerate().map(|(idx, arg)| arg_to_token(arg, idx)).collect::<Vec<_>>();
+    let tokens = input.sig.inputs.clone()
+        .into_iter().skip(1)
+        .enumerate().map(|(idx, arg)| arg_to_token(arg, idx)).collect::<Vec<_>>();
     input.sig.ident = Ident::new("__fn_wrap", ident.span());
     let expected_length = input.sig.inputs.len() - 1;
     quote! {

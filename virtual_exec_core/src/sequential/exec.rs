@@ -459,7 +459,10 @@ impl<'ctx> InstStateMachine<'ctx> {
     
     pub fn retrieve_fn_input(&mut self) -> Result<Option<(String, ArgumentPackage<'ctx>)>, ExecutionError> {
         if let Ok(State::FnExternInput(fn_name, b)) = self.state.clone() {
-            let values = (0..b).map(|_| self.pop_get()).collect::<Result<Vec<_>, ExecutionError>>()?;
+            let values = (0..b)
+                .map(|_| self.pop_get())
+                .collect::<Result<Vec<_>, ExecutionError>>()
+                .inspect_err(|e| self.state = Err(e.clone()))?;;
             self.state = Ok(State::FnExternOutput(fn_name.clone(), values.clone()));
             Ok(Some((fn_name, values)))
         } else {

@@ -1,11 +1,11 @@
 
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use crate::sequential::exec::{FnStackFrame, InstStateMachine, State};
 use crate::sequential::instructions::Instruction;
 use virtual_exec_type::error::ExecutionError;
 use virtual_exec_type::mem::{MemoryAllocator, MemoryAllocatorConstructor, OwnedValue, ToOwned};
-use crate::fn_extern::MethodResolver;
+use crate::fn_extern::{FnExtern, MethodResolver};
 
 /// The execution instance including the memory allocator and the instruction state machine
 #[derive(Debug)]
@@ -55,7 +55,16 @@ impl<'a> Machine<'a> {
         for _ in 0..count {
             if let Ok(State::Ok) = self.machine.state {
                 self.machine.run_once()?;
-            } else {
+            }
+            else {
+                if let Ok(State::FnExternInput(func, size)) = &self.machine.state {
+                    let fns: Vec<Arc<RwLock<dyn FnExtern + Send + Sync>>> = self.resolvers.iter().filter_map(|x| x.get(func)).collect();
+                    if fns.len() > 0 {
+                        let inputs = self.machine.retrieve_fn_input()?.unwrap();
+                        let result = fns[0].read().unwrap().fn_extern_sync(self, inputs.1);
+                        self.machine.push_fn_output(result);
+                    }
+                }
                 return self.machine.state.clone();
             }
         }

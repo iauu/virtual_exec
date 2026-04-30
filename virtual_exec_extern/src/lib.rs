@@ -3,20 +3,18 @@ pub use virtual_exec_macro::{fn_extern_wrap, fn_extern_wrap_async};
 #[macro_export]
 macro_rules! extern_link {
     ($name:ident, $sync_fn:expr) => {
-        struct $name<'a> {
-            _scoped: ::std::marker::PhantomData<&'a ()>
+        pub struct $name {
         }
 
-        impl<'a> ::virtual_exec_core::fn_extern::FnExternConstruct for $name<'a> {
+        impl ::virtual_exec_core::fn_extern::FnExternConstruct for $name {
             fn new() -> Self {
                 Self {
-                    _scoped: ::std::marker::PhantomData,
                 }
             }
         }
-        impl<'a> ::virtual_exec_core::fn_extern::FnExtern<'a> for $name<'a> {
+        impl ::virtual_exec_core::fn_extern::FnExtern for $name {
 
-            fn fn_extern_sync(
+            fn fn_extern_sync<'a>(
                 &self,
                 machine: &mut ::virtual_exec_core::Machine<'a>,
                 values: ::std::vec::Vec<::virtual_exec_type::mem::ValuePtr<'a>>
@@ -26,21 +24,19 @@ macro_rules! extern_link {
         }
     };
     ($name:ident, $sync_fn:expr, $async_fn:expr) => {
-        struct $name<'a> {
-            _scoped: ::std::marker::PhantomData<&'a ()>
+        struct $name {
         }
 
-        impl<'a> ::virtual_exec_core::fn_extern::FnExternConstruct for $name<'a> {
+        impl ::virtual_exec_core::fn_extern::FnExternConstruct for $name {
             fn new() -> Self {
                 Self {
-                    _scope: ::std::marker::PhantomData,
                 }
             }
         }
         #[::async_trait::async_trait]
-        impl<'a> ::virtual_exec_core::fn_extern::FnExtern<'a> for $name<'a> {
+        impl ::virtual_exec_core::fn_extern::FnExtern for $name {
 
-            fn fn_extern_sync(
+            fn fn_extern_sync<'a>(
                 &self,
                 machine: &mut ::virtual_exec_core::Machine<'a>,
                 values: ::std::vec::Vec<::virtual_exec_type::mem::ValuePtr<'a>>
@@ -48,11 +44,12 @@ macro_rules! extern_link {
                 $sync_fn(machine, values)
             }
 
-            async fn fn_extern_async(
+            async fn fn_extern_async<'a>(
                 &self,
                 machine: &mut ::virtual_exec_core::Machine<'a>,
                 values: ::std::vec::Vec<::virtual_exec_type::mem::ValuePtr<'a>>
-            ) -> Result<::virtual_exec_type::mem::ValuePtr<'a>, ::virtual_exec_type::error::ExecutionError> {
+            ) -> Result<::virtual_exec_type::mem::ValuePtr<'a>, ::virtual_exec_type::error::ExecutionError> where
+    'a : 'async_trait {
                 $async_fn(machine, values).await
             }
         }

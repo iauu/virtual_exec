@@ -435,7 +435,6 @@ fn arg_to_token(_: FnArg, idx: usize) -> impl ToTokens {
         ::virtual_exec_type::base::Downcast::from_value(values[#idx].clone()).ok_or(::virtual_exec_type::error::ExecutionError::InvalidTypeError)?
     }
 }
-
 #[proc_macro_attribute]
 pub fn fn_extern_wrap(_: TokenStream, input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as ItemFn);
@@ -448,11 +447,12 @@ pub fn fn_extern_wrap(_: TokenStream, input: TokenStream) -> TokenStream {
             machine: &mut ::virtual_exec_core::Machine<'__wrap_internal>,
             values: ::std::vec::Vec<::virtual_exec_type::mem::ValuePtr<'__wrap_internal>>
         ) -> ::core::result::Result<::virtual_exec_type::mem::ValuePtr<'__wrap_internal>, ::virtual_exec_type::error::ExecutionError> {
+            use virtual_exec_type::mem::Allocator;
             if values.len() != #expected_length {
                 return Err(::virtual_exec_type::error::ExecutionError::IncorrectArgumentCountError)
             }
             #input
-            let result = __fn_wrap(machine, #(#tokens),*)?;
+            let result = __fn_wrap(machine, #(#tokens),*).map(|x| ::virtual_exec_type::base::Upcast::from_value(&x, &machine.alloc))??;
             for mut item in values {
                 machine.alloc.change_alloc(&mut item)?;
             }
@@ -473,11 +473,12 @@ pub fn fn_extern_wrap_async(_: TokenStream, input: TokenStream) -> TokenStream {
             machine: &mut ::virtual_exec_core::Machine<'__wrap_internal>,
             values: ::std::vec::Vec<::virtual_exec_type::mem::ValuePtr<'__wrap_internal>>
         ) -> ::core::result::Result<::virtual_exec_type::mem::ValuePtr<'__wrap_internal>, ::virtual_exec_type::error::ExecutionError> {
+            use virtual_exec_type::mem::Allocator;
             if values.len() != #expected_length {
                 return Err(::virtual_exec_type::error::ExecutionError::IncorrectArgumentCountError)
             }
             #input
-            let result = __fn_wrap(machine, #(#tokens),*).await?;
+            let result = __fn_wrap(machine, #(#tokens),*).await.map(|x| ::virtual_exec_type::base::Upcast::from_value(&x, &machine.alloc))??;
             for mut item in values {
                 machine.alloc.change_alloc(&mut item)?;
             }

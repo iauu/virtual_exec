@@ -241,7 +241,7 @@ impl<'ctx> Downcast<'ctx> for ValuePtr<'ctx> {
 }
 
 impl<'ctx> Upcast<'ctx> for ValuePtr<'ctx> {
-    fn from_value(&self, alloc: &MemoryAllocator<'ctx>) -> Result<ValuePtr<'ctx>, MemoryError> {
+    fn from_value(&self, _alloc: &MemoryAllocator<'ctx>) -> Result<ValuePtr<'ctx>, MemoryError> {
         Ok(self.clone())
     }
 }

@@ -1,5 +1,3 @@
-mod example;
-
 pub use virtual_exec_macro::{fn_extern_wrap, fn_extern_wrap_async};
 
 #[macro_export]

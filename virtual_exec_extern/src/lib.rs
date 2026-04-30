@@ -12,7 +12,7 @@ macro_rules! extern_link {
                 }
             }
         }
-        impl ::virtual_exec_core::fn_extern::FnExtern for $name {
+        impl<'async_trait> ::virtual_exec_core::fn_extern::FnExtern for $name {
 
             fn fn_extern_sync<'a>(
                 &self,
@@ -28,7 +28,7 @@ macro_rules! extern_link {
         }
     };
     ($name:ident, $sync_fn:expr, $async_fn:expr, $size:expr) => {
-        struct $name {
+        pub struct $name {
         }
 
         impl ::virtual_exec_core::fn_extern::FnExternConstruct for $name {

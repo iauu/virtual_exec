@@ -16,9 +16,9 @@ pub mod vm_type {
 
     pub type Integer = i64;
     pub type Float = f64;
-    pub type Object<'a> = Arc<RwLock<HashMap<std::string::String, ValuePtr<'a>>>>;
+    pub type Object<'a> = Arc<RwLock<HashMap<String, ValuePtr<'a>>>>;
     pub type Collection<'a> = Arc<RwLock<Vec<ValuePtr<'a>>>>;
-    pub type String = std::string::String;
+    pub type Str = String;
     pub type Boolean = bool;
     pub type None = ();
 

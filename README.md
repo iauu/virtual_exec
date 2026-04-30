@@ -109,8 +109,8 @@ WIP Feature list:
 - [x] Function definition
 - [x] `if` statement
 - [ ] Custom object definition
-- [ ] Use `await` in rust to allow context switching to other part of program to make it not blocking
-  - [ ] Switch to async-agnostic `Arc`, `Mutex`, `RwLock`
+- [x] Use `await` in rust to allow context switching to other part of program to make it not blocking
+  - [x] Switch to async-agnostic `Arc`, `Mutex`, `RwLock`
 - [x] Linear instruction system (this allows `await` system later)
 - [ ] `try` `catch` with stack unwinding and memory allocation recalculation
 

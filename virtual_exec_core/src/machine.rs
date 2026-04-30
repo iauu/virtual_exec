@@ -96,6 +96,46 @@ impl<'a> Machine<'a> {
         self.machine.state.clone()
     }
 
+    pub async fn async_run_once(&mut self) -> Result<(State<'a>, bool), ExecutionError> {
+        if let Ok(State::Ok) = self.machine.state {
+            self.machine.run_once().map(|x| (x, true))
+        }
+        else {
+            if let Ok(State::FnExternInput(func, _)) = &self.machine.state {
+                let fns: Vec<Arc<dyn FnExtern + Send + Sync>> = self.resolvers.iter().filter_map(|x| x.get(func)).collect();
+                if fns.len() > 0 {
+                    let inputs = self.machine.retrieve_fn_input()?.unwrap();
+                    let result = fns[0].fn_extern_async(self, inputs.1).await;
+                    self.machine.push_fn_output(result);
+                    return self.machine.state.clone().map(|x| (x, true))
+                }
+            }
+            self.machine.state.clone().map(|x| (x, false))
+        }
+    }
+
+    pub async fn async_run_for(&mut self, count: u64) -> Result<State<'a>, ExecutionError> {
+        for _ in 0..count {
+            if let Ok(State::Ok) | Ok(State::FnExternInput(_, _)) = self.machine.state {
+                let result = self.async_run_once().await?;
+                if !result.1 {
+                    return Ok(result.0)
+                }
+            }
+        }
+        self.machine.state.clone()
+    }
+
+    pub async fn async_run_all(&mut self) -> Result<State<'a>, ExecutionError> {
+        while let Ok(State::Ok) | Ok(State::FnExternInput(_, _)) = self.machine.state {
+            let result = self.async_run_once().await?;
+            if !result.1 {
+                return Ok(result.0)
+            }
+        }
+        self.machine.state.clone()
+    }
+
     pub fn get(&self, name: &str) -> Option<OwnedValue> {
         for fn_frame in self.machine.fn_stack_frame.iter().rev() {
             if let Some(v) = fn_frame.mapping.read_arc_blocking().get(name).cloned() {

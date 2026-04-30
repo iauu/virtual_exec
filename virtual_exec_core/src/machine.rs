@@ -1,6 +1,6 @@
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 use crate::sequential::exec::{FnStackFrame, InstStateMachine, State};
 use crate::sequential::instructions::Instruction;
 use virtual_exec_type::error::{ExecutionError, MemoryError};
@@ -55,27 +55,31 @@ impl<'a> Machine<'a> {
         })
     }
 
-    pub fn sync_run_once(&mut self) -> Result<State<'a>, ExecutionError> {
+    pub fn sync_run_once(&mut self) -> Result<(State<'a>, bool), ExecutionError> {
         if let Ok(State::Ok) = self.machine.state {
-            self.machine.run_once()
+            self.machine.run_once().map(|x| (x, true))
         }
         else {
-            if let Ok(State::FnExternInput(func, size)) = &self.machine.state {
+            if let Ok(State::FnExternInput(func, _)) = &self.machine.state {
                 let fns: Vec<Arc<dyn FnExtern + Send + Sync>> = self.resolvers.iter().filter_map(|x| x.get(func)).collect();
                 if fns.len() > 0 {
                     let inputs = self.machine.retrieve_fn_input()?.unwrap();
                     let result = fns[0].fn_extern_sync(self, inputs.1);
                     self.machine.push_fn_output(result);
+                    return self.machine.state.clone().map(|x| (x, true))
                 }
             }
-            self.machine.state.clone()
+            self.machine.state.clone().map(|x| (x, false))
         }
     }
 
     pub fn sync_run_for(&mut self, count: u64) -> Result<State<'a>, ExecutionError> {
         for _ in 0..count {
             if let Ok(State::Ok) | Ok(State::FnExternInput(_, _)) = self.machine.state {
-                self.sync_run_once()?;
+                let result = self.sync_run_once()?;
+                if !result.1 {
+                    return Ok(result.0)
+                }
             }
         }
         self.machine.state.clone()
@@ -83,7 +87,10 @@ impl<'a> Machine<'a> {
 
     pub fn sync_run_all(&mut self) -> Result<State<'a>, ExecutionError> {
         while let Ok(State::Ok) | Ok(State::FnExternInput(_, _)) = self.machine.state {
-            self.sync_run_once()?;
+            let result = self.sync_run_once()?;
+            if !result.1 {
+                return Ok(result.0)
+            }
         }
         self.machine.state.clone()
     }

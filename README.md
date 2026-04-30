@@ -105,12 +105,14 @@ WIP Feature list:
 - [x] Function call
 - [x] `while` loop
 - [ ] `for` loop
-- [ ] FFI function (Calling rust function from sandbox code with custom lifetime consumption)
+- [x] FFI function (Calling rust function from sandbox code with custom lifetime consumption)
 - [x] Function definition
 - [x] `if` statement
 - [ ] Custom object definition
 - [ ] Use `await` in rust to allow context switching to other part of program to make it not blocking
+  - [ ] Switch to async-agnostic `Arc`, `Mutex`, `RwLock`
 - [x] Linear instruction system (this allows `await` system later)
+- [ ] `try` `catch` with stack unwinding and memory allocation recalculation
 
 ### Sub-crate List:
 - [virtual_exec_type](https://crates.io/crates/virtual_exec_type)

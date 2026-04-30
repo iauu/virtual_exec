@@ -1,6 +1,6 @@
 [package]
 name = "virtual_exec_core"
-version = "0.4.0"
+version = "0.5.0-alpha.0"
 edition = "2024"
 repository = "https://github.com/i-am-unknown-81514525/virtual_exec"
 authors = ["i-am-unknown-81514525" ]
@@ -9,7 +9,7 @@ readme = "README.md"
 description = "Sub-crate of virtual_exec - provide definition for external function trait, and compile code AST to instructions"
 
 [dependencies]
-virtual_exec_type = { path = "../virtual_exec_type", version = "0.4.0"}
-virtual_exec_parser = { path = "../virtual_exec_parser", version = "0.4.0"}
+virtual_exec_type = { path = "../virtual_exec_type", version = "0.5.0-alpha.0"}
+virtual_exec_parser = { path = "../virtual_exec_parser", version = "0.5.0-alpha.0"}
 serde = { version = "1.0.228", features = ["derive"] }
 async-trait = "0.1.89"

@@ -101,14 +101,14 @@ checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
 
 [[package]]
 name = "virtual_exec"
-version = "0.4.0"
+version = "0.5.0-alpha.0"
 dependencies = [
  "virtual_exec_core",
 ]
 
 [[package]]
 name = "virtual_exec_core"
-version = "0.4.0"
+version = "0.5.0-alpha.0"
 dependencies = [
  "async-trait",
  "serde",
@@ -118,7 +118,7 @@ dependencies = [
 
 [[package]]
 name = "virtual_exec_extern"
-version = "0.4.0"
+version = "0.5.0-alpha.0"
 dependencies = [
  "async-trait",
  "virtual_exec_core",
@@ -128,7 +128,7 @@ dependencies = [
 
 [[package]]
 name = "virtual_exec_macro"
-version = "0.4.0"
+version = "0.5.0-alpha.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -140,7 +140,7 @@ dependencies = [
 
 [[package]]
 name = "virtual_exec_parser"
-version = "0.4.0"
+version = "0.5.0-alpha.0"
 dependencies = [
  "syn",
  "virtual_exec_type",
@@ -148,7 +148,7 @@ dependencies = [
 
 [[package]]
 name = "virtual_exec_std"
-version = "0.4.0"
+version = "0.5.0-alpha.0"
 dependencies = [
  "virtual_exec_core",
  "virtual_exec_extern",
@@ -157,7 +157,7 @@ dependencies = [
 
 [[package]]
 name = "virtual_exec_type"
-version = "0.4.0"
+version = "0.5.0-alpha.0"
 dependencies = [
  "inventory",
  "paste",

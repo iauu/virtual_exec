@@ -1,6 +1,6 @@
 [package]
 name = "virtual_exec"
-version = "0.4.0"
+version = "0.5.0-alpha.0"
 edition = "2024"
 repository = "https://github.com/i-am-unknown-81514525/virtual_exec"
 authors = ["i-am-unknown-81514525" ]
@@ -9,7 +9,7 @@ description = "A sandbox execution environment which allowed limited execution o
 license = "GPL-3"
 
 [dependencies]
-virtual_exec_core = {path = "virtual_exec_core", version = "0.4.0"}
+virtual_exec_core = {path = "virtual_exec_core", version = "0.5.0-alpha.0"}
 
 [workspace]
 members = [

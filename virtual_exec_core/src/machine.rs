@@ -5,6 +5,7 @@ use crate::sequential::exec::{FnStackFrame, InstStateMachine, State};
 use crate::sequential::instructions::Instruction;
 use virtual_exec_type::error::ExecutionError;
 use virtual_exec_type::mem::{MemoryAllocator, MemoryAllocatorConstructor, OwnedValue, ToOwned};
+use crate::fn_extern::MethodResolver;
 
 /// The execution instance including the memory allocator and the instruction state machine
 #[derive(Debug)]
@@ -13,7 +14,8 @@ pub struct Machine<'a> {
     /// The memory allocator for the machine
     pub alloc: MemoryAllocator<'a>,
     /// The instruction execution machine for the instance
-    pub machine: InstStateMachine<'a>
+    pub machine: InstStateMachine<'a>,
+    pub resolvers: Vec<MethodResolver>,
 }
 
 impl<'a> Machine<'a> {
@@ -25,7 +27,7 @@ impl<'a> Machine<'a> {
     ///
     /// # Returns
     /// `Machine`
-    pub fn new(instructions: Vec<Instruction>, memory_lim: usize, inst_limit: u64) -> Self {
+    pub fn new(instructions: Vec<Instruction>, memory_lim: usize, inst_limit: u64, resolvers: Vec<MethodResolver>) -> Self {
         let alloc = MemoryAllocator::construct(memory_lim);
         let machine = InstStateMachine {
             lim: inst_limit,
@@ -40,7 +42,8 @@ impl<'a> Machine<'a> {
         };
         Self {
             alloc,
-            machine
+            machine,
+            resolvers
         }
     }
 

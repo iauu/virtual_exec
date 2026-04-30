@@ -8,7 +8,7 @@ fn test_simple_assignment() {
     let code = "a = 1; b = 2; c = 3; if a != b {d = 2;} d += d; d;";
     let compiled = compile(&parse(code).unwrap());
     println!("{:?}", compiled);
-    let mut machine = Machine::new(compiled, 100, 100);
+    let mut machine = Machine::new(compiled, 100, 100, vec![]);
     match machine.run_all() {
         Ok(State::Ok) => {},
         Ok(reason) => {
@@ -34,7 +34,7 @@ fn test_fn() {
         }";
     let compiled = compile(&parse(code).unwrap());
     println!("{:?}", compiled);
-    let mut machine = Machine::new(compiled, 100, 1000);
+    let mut machine = Machine::new(compiled, 100, 1000, vec![]);
     match machine.run_all() {
         Ok(State::Ok) => {},
         Ok(reason) => {
@@ -59,7 +59,7 @@ fn test_incorrect_argument_count() {
         }";
     let compiled = compile(&parse(code).unwrap());
     println!("{:?}", compiled);
-    let mut machine = Machine::new(compiled, 100, 1000);
+    let mut machine = Machine::new(compiled, 100, 1000, vec![]);
     match machine.run_all() {
         Ok(State::Ok) => {},
         Ok(reason) => {

@@ -142,7 +142,6 @@ dependencies = [
 name = "virtual_exec_parser"
 version = "0.4.0"
 dependencies = [
- "serde",
  "syn",
  "virtual_exec_type",
 ]

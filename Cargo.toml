@@ -5,8 +5,8 @@ edition = "2024"
 repository = "https://github.com/i-am-unknown-81514525/virtual_exec"
 authors = ["i-am-unknown-81514525" ]
 license-file = "LICENSE"
-description = "A sandbox execution environment which allowed limited execution of expression safely (WIP)"
 readme = "README.md"
+description = "A sandbox execution environment which allowed limited execution of expression safely (WIP)"
 
 [dependencies]
 virtual_exec_core = {path = "virtual_exec_core", version = "0.4.0"}
@@ -16,5 +16,7 @@ members = [
     "virtual_exec_type",
     "virtual_exec_macro",
     "virtual_exec_parser",
-    "virtual_exec_core", "virtual_exec_extern", "virtual_exec_std",
+    "virtual_exec_core",
+    "virtual_exec_extern",
+    "virtual_exec_std",
 ]

@@ -5,14 +5,13 @@ edition = "2024"
 repository = "https://github.com/i-am-unknown-81514525/virtual_exec"
 authors = ["i-am-unknown-81514525" ]
 license-file = "LICENSE"
-description = "Parser definition sub-crate for virtual_exec - A sandbox execution environment which allowed limited execution of expression safely (WIP)"
+description = "Sub-crate for virtual_exec - provide the parsing logic for the language"
 readme = "README.md"
 
 
 [dependencies]
 syn = { version = "2.0.106", features = ["full"] }
 virtual_exec_type = { path = "../virtual_exec_type", version = "0.4.0" }
-serde = { version = "1.0.228", features = ["derive"] }
 
 [dev-dependencies]
 syn = { version = "2.0.106", features = ["full", "extra-traits"] }

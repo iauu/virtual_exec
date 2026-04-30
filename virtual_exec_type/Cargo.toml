@@ -5,7 +5,7 @@ edition = "2024"
 repository = "https://github.com/i-am-unknown-81514525/virtual_exec"
 authors = ["i-am-unknown-81514525" ]
 license-file = "LICENSE"
-description = "Type definition sub-crate for virtual_exec - A sandbox execution environment which allowed limited execution of expression safely (WIP)"
+description = "Sub-crate for virtual_exec - Provide memory allocation, type and error definition for the language"
 readme = "README.md"
 
 

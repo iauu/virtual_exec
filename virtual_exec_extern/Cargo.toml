@@ -2,6 +2,11 @@
 name = "virtual_exec_extern"
 version = "0.4.0"
 edition = "2024"
+repository = "https://github.com/i-am-unknown-81514525/virtual_exec"
+authors = ["i-am-unknown-81514525" ]
+license-file = "LICENSE"
+readme = "README.md"
+description = "Sub-crate of virtual_exec - provide macro definition for building external function"
 
 [dependencies]
 virtual_exec_macro = {path = "../virtual_exec_macro", version = "0.4.0"}

@@ -32,6 +32,7 @@ pub static BASIC: LazyLock<MethodResolver> = LazyLock::new(||{
 pub static SYS: LazyLock<MethodResolver> = LazyLock::new(||{
     let mut map: HashMap<String, Arc<dyn FnExtern + Send + Sync>> = HashMap::new();
     add_item!(map, "print", Print);
+    add_item!(map, "println", PrintLn);
     MethodResolver::new(
         map
     )

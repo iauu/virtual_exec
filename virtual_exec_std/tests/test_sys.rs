@@ -4,7 +4,7 @@ use virtual_exec_std::{BASIC, SYS};
 
 #[test]
 fn test_print() {
-    let code = "a = \"test\n\"; print(a);";
+    let code = "a = \"test\n\"; print(a);b = None; println(b);";
     let compiled = compile(&parse(code).unwrap());
     println!("{:?}", compiled);
     let mut machine = Machine::new(compiled, 200, 200, vec![BASIC.clone(), SYS.clone()]).unwrap();

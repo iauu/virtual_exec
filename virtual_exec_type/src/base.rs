@@ -33,6 +33,39 @@ impl IsTruhy for ValuePtr<'_> {
     }
 }
 
+trait ToStringInternal {
+    fn to_string(&self) -> String;
+}
+
+
+impl ToString for Value<'_> {
+    fn to_string(&self) -> String {
+        match self {
+            Value::Int(i) => format!("{}", i),
+            Value::Float(f) => format!("{}", f),
+            Value::Bool(b) => format!("{}", b),
+            Value::String(s) => format!("\"{}\"", s),
+            Value::Collection(v) => {
+                v.read_arc_blocking().iter().map(|v| v.to_string()).collect()
+            },
+            Value::Object(v) => {
+                v.read_arc_blocking().iter().map(|v| format!("\"{}\": {}", v.0, v.1.to_string())).collect()
+            }
+            Value::None => "None".to_string(),
+            Value::_Scope(_) => "_Scoped".to_string(),
+            Value::MemoryChunk(size) => format!("_MemChunk(size: {})", size),
+            Value::Error(e) => format!("_Error({:?})", e),
+            Value::DPtr(ptr, size) => format!("DynFuncPtr(loc: {}, arg_len: {})", ptr, size),
+            Value::FnPtrExternal(name, size) => format!("DynExternFuncPtr(loc: {}, arg_len: {})", name, size)
+        }
+    }
+}
+
+impl ToStringInternal for ValuePtr<'_> {
+    fn to_string(&self) -> String {
+        self.lock_arc_blocking().to_string()
+    }
+}
 
 pub trait TypeCast<'a> {
     fn as_int(&self) -> Option<i64>;

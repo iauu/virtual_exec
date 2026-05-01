@@ -114,6 +114,7 @@ WIP Feature list:
   - [x] Switch to async-agnostic `Arc`, `Mutex`, `RwLock`
 - [x] Linear instruction system (this allows `await` system later)
 - [ ] `try` `catch` with stack unwinding and memory allocation recalculation
+- [ ] literal Collections and object creation
 
 ### Sub-crate List:
 - [virtual_exec_type](https://crates.io/crates/virtual_exec_type)

@@ -3,7 +3,7 @@ use virtual_exec_extern::*;
 use virtual_exec_type::vm_type::*;
 use virtual_exec_core::Machine;
 use virtual_exec_type::base::TypeCast;
-use virtual_exec_type::error::ExecutionError;
+use virtual_exec_type::error::{ExecutionError, NonRecoverableError};
 
 #[fn_extern_wrap]
 fn print<'a>(_: &mut Machine<'a>, str: Any<'a>) -> Result<None, Error> {
@@ -27,9 +27,9 @@ cfg_if!(
         async fn print_async<'a>(_: &mut Machine<'a>, str: Any<'a>) -> Result<None, Error> {
             let mut stdout = io::stdout();
             if let Some(s) = str.as_string() {
-                stdout.write_all(s.as_bytes()).await.map_err(|_| ExecutionError::GenericError)
+                stdout.write_all(s.as_bytes()).await.map_err(|_| ExecutionError::NonRecoverable(NonRecoverableError::GenericError))
             } else {
-                stdout.write_all(str.lock_arc_blocking().to_string().as_bytes()).await.map_err(|_| ExecutionError::GenericError)
+                stdout.write_all(str.lock_arc_blocking().to_string().as_bytes()).await.map_err(|_| ExecutionError::NonRecoverable(NonRecoverableError::GenericError))
             }
         }
         
@@ -56,9 +56,9 @@ cfg_if!(
         async fn println_async<'a>(_: &mut Machine<'a>, str: Any<'a>) -> Result<None, Error> {
             let mut stdout = io::stdout();
             if let Some(s) = str.as_string() {
-                stdout.write_all((s + "\n").as_bytes()).await.map_err(|_| ExecutionError::GenericError)
+                stdout.write_all((s + "\n").as_bytes()).await.map_err(|_| ExecutionError::NonRecoverable(NonRecoverableError::GenericError))
             } else {
-                stdout.write_all((str.lock_arc_blocking().to_string() + "\n").as_bytes()).await.map_err(|_| ExecutionError::GenericError)
+                stdout.write_all((str.lock_arc_blocking().to_string() + "\n").as_bytes()).await.map_err(|_| ExecutionError::NonRecoverable(NonRecoverableError::GenericError))
             }
         }
         

@@ -432,7 +432,7 @@ pub fn compile(input: TokenStream) -> TokenStream {
 
 fn arg_to_token(_: FnArg, idx: usize) -> impl ToTokens {
     quote! {
-        ::virtual_exec_type::base::Downcast::from_value(values[#idx].clone()).ok_or(::virtual_exec_type::error::ExecutionError::InvalidTypeError)?
+        ::virtual_exec_type::base::Downcast::from_value(values[#idx].clone()).ok_or(::virtual_exec_type::error::ExecutionError::NonRecoverable(::virtual_exec_type::error::NonRecoverableError::InvalidTypeError))?
     }
 }
 #[proc_macro_attribute]
@@ -451,7 +451,7 @@ pub fn fn_extern_wrap(_: TokenStream, input: TokenStream) -> TokenStream {
         ) -> ::core::result::Result<::virtual_exec_type::mem::ValuePtr<'__wrap_internal>, ::virtual_exec_type::error::ExecutionError> {
             use virtual_exec_type::mem::Allocator;
             if values.len() != #expected_length {
-                return Err(::virtual_exec_type::error::ExecutionError::IncorrectArgumentCountError)
+                return Err(::virtual_exec_type::error::ExecutionError::NonRecoverable(::virtual_exec_type::error::NonRecoverableError::IncorrectArgumentCountError))
             }
             #input
             let result = __fn_wrap(machine, #(#tokens),*).map(|x| ::virtual_exec_type::base::Upcast::from_value(&x, &machine.alloc))??;
@@ -479,7 +479,7 @@ pub fn fn_extern_wrap_async(_: TokenStream, input: TokenStream) -> TokenStream {
         ) -> ::core::result::Result<::virtual_exec_type::mem::ValuePtr<'__wrap_internal>, ::virtual_exec_type::error::ExecutionError> {
             use virtual_exec_type::mem::Allocator;
             if values.len() != #expected_length {
-                return Err(::virtual_exec_type::error::ExecutionError::IncorrectArgumentCountError)
+                return Err(::virtual_exec_type::error::ExecutionError::NonRecoverable(::virtual_exec_type::error::NonRecoverableError::IncorrectArgumentCountError))
             }
             #input
             let result = __fn_wrap(machine, #(#tokens),*).await.map(|x| ::virtual_exec_type::base::Upcast::from_value(&x, &machine.alloc))??;

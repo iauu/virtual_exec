@@ -5,6 +5,7 @@ use virtual_exec_type::mem::{Allocator, MemoryAllocator, Value, ValuePtr};
 use virtual_exec_type::op::*;
 use crate::sequential::instructions::{Instruction, SubscriptLoad};
 use virtual_exec_type::base::{IsTruhy, TypeCast};
+use virtual_exec_type::error::{NonRecoverableError, CriticalError};
 pub use virtual_exec_type::error::ExecutionError;
 
 type AttrReference<'ctx> = (Option<ValuePtr<'ctx>>, String);
@@ -68,7 +69,7 @@ macro_rules! __binary_autogen {
         {
             let b = $ss.pop_get()?;
             let a = $ss.pop_get()?;
-            let result = $f(a, b, &$ss.alloc).map_err(|_| ExecutionError::UndefinedOperendError)?;
+            let result = $f(a, b, &$ss.alloc).map_err(|_| ExecutionError::NonRecoverable(NonRecoverableError::UndefinedOperendError))?;
             $ss.push_value(result);
         }
     };
@@ -79,7 +80,7 @@ macro_rules! __unary_autogen {
     ($f:ident, $ss:ident) => {
         {
             let a = $ss.pop_get()?;
-            let result = $f(a, &$ss.alloc).map_err(|_| ExecutionError::UndefinedOperendError)?;
+            let result = $f(a, &$ss.alloc).map_err(|_| ExecutionError::NonRecoverable(NonRecoverableError::UndefinedOperendError))?;
             $ss.push_value(result);
         }
     };
@@ -89,11 +90,11 @@ impl<'ctx> InstStateMachine<'ctx> {
 
     #[allow(unused)]
     fn pop_value(&mut self) -> Result<ValuePtr<'ctx>, ExecutionError> {
-        let result = self.stack.pop().ok_or(ExecutionError::VStackUnderflowError)?;
+        let result = self.stack.pop().ok_or(ExecutionError::Critical(CriticalError::VStackUnderflowError))?;
         match result {
             StackItem::Value(value) => Ok(value),
             StackItem::AttrReference(_) | StackItem::IdxReference(_) => {
-                Err(ExecutionError::UndefinedVarError)
+                Err(ExecutionError::NonRecoverable(NonRecoverableError::UndefinedVarError))
             }
         }
     }
@@ -108,10 +109,10 @@ impl<'ctx> InstStateMachine<'ctx> {
 
     #[allow(unused)]
     fn pop_ref(&mut self) -> Result<AttrReference<'ctx>, ExecutionError> {
-        let result = self.stack.pop().ok_or(ExecutionError::VStackUnderflowError)?;
+        let result = self.stack.pop().ok_or(ExecutionError::Critical(CriticalError::VStackUnderflowError))?;
         match result {
             StackItem::Value(_) | StackItem::IdxReference(_) => {
-                Err(ExecutionError::AttrMisuseError)
+                Err(ExecutionError::NonRecoverable(NonRecoverableError::AttrMisuseError))
             },
             StackItem::AttrReference(reference) => Ok(reference)
 
@@ -124,10 +125,10 @@ impl<'ctx> InstStateMachine<'ctx> {
 
     #[allow(unused)]
     fn pop_idx_ref(&mut self) -> Result<IdxReference<'ctx>, ExecutionError> {
-        let result = self.stack.pop().ok_or(ExecutionError::VStackUnderflowError)?;
+        let result = self.stack.pop().ok_or(ExecutionError::Critical(CriticalError::VStackUnderflowError))?;
         match result {
             StackItem::Value(_) | StackItem::AttrReference(_) => {
-                Err(ExecutionError::AttrMisuseError)
+                Err(ExecutionError::NonRecoverable(NonRecoverableError::AttrMisuseError))
             },
             StackItem::IdxReference(reference) => Ok(reference)
         }
@@ -138,7 +139,7 @@ impl<'ctx> InstStateMachine<'ctx> {
     }
 
     fn pop(&mut self) -> Result<StackItem<'ctx>, ExecutionError> {
-        self.stack.pop().ok_or(ExecutionError::VStackUnderflowError)
+        self.stack.pop().ok_or(ExecutionError::Critical(CriticalError::VStackUnderflowError))
     }
 
     fn resolve(&self, name: &str) -> Result<ValuePtr<'ctx>, ExecutionError> {
@@ -148,7 +149,7 @@ impl<'ctx> InstStateMachine<'ctx> {
             }
         }
         
-        Err(ExecutionError::ReferenceNotExistError(name.to_string()))
+        Err(ExecutionError::NonRecoverable(NonRecoverableError::ReferenceNotExistError(name.to_string())))
     }
 
     fn pop_get(&mut self) -> Result<ValuePtr<'ctx>, ExecutionError> {
@@ -162,9 +163,9 @@ impl<'ctx> InstStateMachine<'ctx> {
                 match target.0 {
                     Some(obj) => {
                         if let Some(o) = obj.as_object() {
-                            Ok(o.read_arc_blocking().get(&target.1).ok_or_else(|| ExecutionError::ReferenceNotExistError(target.1))?.clone())
+                            Ok(o.read_arc_blocking().get(&target.1).ok_or_else(|| ExecutionError::NonRecoverable(NonRecoverableError::ReferenceNotExistError(target.1.clone())))?.clone())
                         } else {
-                            Err(ExecutionError::UnexpectedAttrError)
+                            Err(ExecutionError::NonRecoverable(NonRecoverableError::UnexpectedAttrError))
                         }
                     },
                     None => {
@@ -181,21 +182,21 @@ impl<'ctx> InstStateMachine<'ctx> {
                     if idx >= 0 && (idx as usize) < arr.read_arc_blocking().len() {
                         Ok(arr.read_arc_blocking()[idx as usize].clone())
                     } else {
-                        Err(ExecutionError::IndexOutOfRangeError)
+                        Err(ExecutionError::NonRecoverable(NonRecoverableError::IndexOutOfRangeError))
                     }
                 } else {
-                    Err(ExecutionError::UnexpectedIdxError)
+                    Err(ExecutionError::NonRecoverable(NonRecoverableError::UnexpectedIdxError))
                 }
             }
         }
     }
 
     fn get_mut_stack_ref<'a>(&'a mut self) -> Result<&'a mut FnStackFrame<'ctx>, ExecutionError> {
-        self.fn_stack_frame.last_mut().ok_or(ExecutionError::FnStackUnderflowError)
+        self.fn_stack_frame.last_mut().ok_or(ExecutionError::Critical(CriticalError::FnStackUnderflowError))
     }
 
     fn get_stack_ref<'a>(&'a self) -> Result<&'a FnStackFrame<'ctx>, ExecutionError> {
-        self.fn_stack_frame.last().ok_or(ExecutionError::FnStackUnderflowError)
+        self.fn_stack_frame.last().ok_or(ExecutionError::Critical(CriticalError::FnStackUnderflowError))
     }
     
     fn alloc(&self, data: Value<'ctx>) -> Result<ValuePtr<'ctx>, ExecutionError> {
@@ -262,7 +263,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                 let target = self.pop()?;
                 match target {
                     StackItem::Value(_value) => {
-                        self.state = Err(ExecutionError::UndefinedVarError);
+                        self.state = Err(ExecutionError::NonRecoverable(NonRecoverableError::UndefinedVarError));
                         return self.state.clone()
                     },
                     StackItem::AttrReference((None, target)) => {
@@ -273,7 +274,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                         if let Some(obj) = value.as_object() {
                             obj.write_arc_blocking().insert(target, value.clone());
                         } else {
-                            self.state = Err(ExecutionError::UnexpectedAttrError);
+                            self.state = Err(ExecutionError::NonRecoverable(NonRecoverableError::UnexpectedAttrError));
                             return self.state.clone()
                         }
                     }
@@ -287,7 +288,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                                 arr.write_arc_blocking()[idx as usize] = value;
                             }
                             else {
-                                self.state = Err(ExecutionError::IndexOutOfRangeError);
+                                self.state = Err(ExecutionError::NonRecoverable(NonRecoverableError::IndexOutOfRangeError));
                                 return self.state.clone()
                             }
                         }
@@ -315,7 +316,7 @@ impl<'ctx> InstStateMachine<'ctx> {
             Instruction::Call => {
                 let ptr = self.pop_get()?;
                 if let Some((ptr, fn_size)) = ptr.as_dptr() {
-                    let given_size = self.pop_get()?.as_int().ok_or(ExecutionError::UnexpectedFunctionCall);
+                    let given_size = self.pop_get()?.as_int().ok_or(ExecutionError::NonRecoverable(NonRecoverableError::UnexpectedFunctionCall));
                     let given_size = match given_size {
                         Ok(v) => v,
                         Err(e) => {
@@ -325,7 +326,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                     };
                     
                     if given_size as usize != fn_size {
-                        self.state = Err(ExecutionError::IncorrectArgumentCountError);
+                        self.state = Err(ExecutionError::NonRecoverable(NonRecoverableError::IncorrectArgumentCountError));
                         return self.state.clone();
                     }
                     
@@ -336,7 +337,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                         }
                     )
                 } else if let Some((name, fn_size)) = ptr.as_fn_ptr_extern() {
-                    let given_size = self.pop_get()?.as_int().ok_or(ExecutionError::UnexpectedFunctionCall);
+                    let given_size = self.pop_get()?.as_int().ok_or(ExecutionError::NonRecoverable(NonRecoverableError::UnexpectedFunctionCall));
                     let given_size = match given_size {
                         Ok(v) => v,
                         Err(e) => {
@@ -346,19 +347,19 @@ impl<'ctx> InstStateMachine<'ctx> {
                     };
 
                     if given_size as usize != fn_size {
-                        self.state = Err(ExecutionError::IncorrectArgumentCountError);
+                        self.state = Err(ExecutionError::NonRecoverable(NonRecoverableError::IncorrectArgumentCountError));
                         return self.state.clone();
                     }
                     
                     self.state = Ok(State::FnExternInput(name, fn_size))
                 }
                 else {
-                    self.state = Err(ExecutionError::UnexpectedFunctionCall);
+                    self.state = Err(ExecutionError::NonRecoverable(NonRecoverableError::UnexpectedFunctionCall));
                     return self.state.clone()
                 }
             }
             Instruction::Ret => {
-                self.fn_stack_frame.pop().ok_or(ExecutionError::FnStackUnderflowError)?;
+                self.fn_stack_frame.pop().ok_or(ExecutionError::Critical(CriticalError::FnStackUnderflowError))?;
             }
             Instruction::LoadNone => {
                 self.push_value(self.alloc(Value::None)?);
@@ -392,7 +393,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                         for _ in 0..remaining_stackdrop {
                             let _ = self.pop_get(); // Drop error since AttrNotStringError is the primary issue, although otherwise this would cause error as well for stack underflow
                         }
-                        self.state = Err(ExecutionError::AttrNotStringError);
+                        self.state = Err(ExecutionError::NonRecoverable(NonRecoverableError::AttrNotStringError));
                         return self.state.clone()
                     }
                     obj.insert(name.as_string().unwrap().clone(), value);
@@ -408,7 +409,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                     self.push_ref((Some(value), name.into_string()));
                 }
                 else {
-                    self.state = Err(ExecutionError::UnexpectedAttrError);
+                    self.state = Err(ExecutionError::NonRecoverable(NonRecoverableError::UnexpectedAttrError));
                     return self.state.clone()
                 }
 
@@ -426,7 +427,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                     }
                 }
                 else {
-                    self.state = Err(ExecutionError::UnexpectedIdxError);
+                    self.state = Err(ExecutionError::NonRecoverable(NonRecoverableError::UnexpectedIdxError));
                     return self.state.clone()
                 }
             }

@@ -11,18 +11,18 @@ pub enum TypeConversionError {
 }
 
 #[derive(Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
-pub enum ExecutionError {
-    TimeoutError,
+pub enum RecoverableError {
+    TimeoutError(u64),
+}
+
+#[derive(Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
+pub enum NonRecoverableError {
     ReferenceNotExistError(String),
     DivideByZeroError,
-    GenericPanicRewindError,
     UndefinedOperatorMethodError,
     InvalidTypeError,
-    InvalidSyntaxError,
     SubscriptKeyError,
     AttributeNotFoundError,
-    FnStackUnderflowError,
-    VStackUnderflowError,
     UndefinedOperendError,
     AttrNotStringError,
     RefNameMissingError,
@@ -37,9 +37,42 @@ pub enum ExecutionError {
     GenericError
 }
 
+#[derive(Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
+pub enum CriticalError {
+    GenericPanicRewindError,
+    InvalidSyntaxError,
+    FnStackUnderflowError,
+    VStackUnderflowError,
+}
+
+#[derive(Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
+pub enum ExecutionError {
+    Recoverable(RecoverableError),
+    NonRecoverable(NonRecoverableError),
+    Critical(CriticalError)
+}
+
+impl From<RecoverableError> for ExecutionError {
+    fn from(err: RecoverableError) -> Self {
+        ExecutionError::Recoverable(err)
+    }
+}
+
+impl From<NonRecoverableError> for ExecutionError {
+    fn from(err: NonRecoverableError) -> Self {
+        ExecutionError::NonRecoverable(err)
+    }
+}
+
+impl From<CriticalError> for ExecutionError {
+    fn from(err: CriticalError) -> Self {
+        ExecutionError::Critical(err)
+    }
+}
+
 impl From<MemoryError> for ExecutionError {
     fn from(_err: MemoryError) -> Self {
-        ExecutionError::MemoryError
+        ExecutionError::NonRecoverable(NonRecoverableError::MemoryError)
     }
 }
 
@@ -52,19 +85,10 @@ impl From<MemoryError> for TypeConversionError {
 impl From<TypeConversionError> for ExecutionError {
     fn from(err: TypeConversionError) -> Self {
         match err {
-            TypeConversionError::DivideByZeroError => ExecutionError::DivideByZeroError,
-            TypeConversionError::UndefinedOperatorMethodError => ExecutionError::UndefinedOperatorMethodError,
-            TypeConversionError::InvalidTypeError => ExecutionError::InvalidTypeError,
-            TypeConversionError::MemoryError => ExecutionError::MemoryError
+            TypeConversionError::DivideByZeroError => ExecutionError::NonRecoverable(NonRecoverableError::DivideByZeroError),
+            TypeConversionError::UndefinedOperatorMethodError => ExecutionError::NonRecoverable(NonRecoverableError::UndefinedOperatorMethodError),
+            TypeConversionError::InvalidTypeError => ExecutionError::NonRecoverable(NonRecoverableError::InvalidTypeError),
+            TypeConversionError::MemoryError => ExecutionError::NonRecoverable(NonRecoverableError::MemoryError)
         }
     }
 }
-
-//
-// pub type Result<T> = ::core::result::Result<T, SandboxExecutionError>;
-//
-// impl<'ctx> Downcast<'ctx> for SandboxExecutionError {
-//     fn from_value(value: ValuePtr<'ctx>) -> Option<&'ctx Self> {
-//         value.as_error()
-//     }
-// }

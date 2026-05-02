@@ -1,6 +1,7 @@
 use virtual_exec_core::{Machine, parse, compile};
 use virtual_exec_core::sequential::exec::State;
 use virtual_exec_type::error::ExecutionError;
+use virtual_exec_type::error::NonRecoverableError;
 use virtual_exec_type::mem::OwnedValue;
 
 #[test]
@@ -70,5 +71,5 @@ fn test_incorrect_argument_count() {
         }
     }
     assert_eq!(machine.machine.state.is_err(), true, "Should be error with incorrect argument count");
-    assert_eq!(machine.machine.state.err(), Some(ExecutionError::IncorrectArgumentCountError), "Should be incorrect amount of argument");
+    assert_eq!(machine.machine.state.err(), Some(ExecutionError::NonRecoverable(NonRecoverableError::IncorrectArgumentCountError)), "Should be incorrect amount of argument");
 }

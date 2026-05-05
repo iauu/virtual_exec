@@ -9,7 +9,7 @@ readme = "README.md"
 description = "Sub-crate of virtual_exec - provide macro definition for building external function"
 
 [dependencies]
-virtual_exec_macro = {path = "../virtual_exec_macro", version = "0.5.0-alpha.0"}
-virtual_exec_core = {path = "../virtual_exec_core", version = "0.5.0-alpha.0"}
-virtual_exec_type = {path = "../virtual_exec_type", version = "0.5.0-alpha.0"}
+virtual_exec_macro = {path = "../virtual_exec_macro", version = "0.5.0-alpha.1"}
+virtual_exec_core = {path = "../virtual_exec_core", version = "0.5.0-alpha.1"}
+virtual_exec_type = {path = "../virtual_exec_type", version = "0.5.0-alpha.1"}
 async-trait = "0.1.89"

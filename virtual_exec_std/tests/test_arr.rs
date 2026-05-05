@@ -1,4 +1,5 @@
 mod test_sys;
+mod test_mem;
 
 use virtual_exec_core::{Machine, parse, compile};
 use virtual_exec_core::sequential::exec::State;

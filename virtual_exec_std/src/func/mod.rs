@@ -1,4 +1,3 @@
-
 macro_rules! func {
     ($name: ident) => {
         pub mod $name;
@@ -12,3 +11,4 @@ func!(pop_array);
 func!(arr_get_from_idx);
 func!(create_array);
 func!(arr_get_len);
+func!(concat);

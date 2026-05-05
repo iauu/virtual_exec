@@ -23,6 +23,7 @@ pub static BASIC: LazyLock<MethodResolver> = LazyLock::new(||{
     add_item!(map, "arr_get_from_idx", ArrGetFromIdx);
     add_item!(map, "create_array", CreateArray);
     add_item!(map, "arr_get_len", ArrGetLen);
+    add_item!(map, "concat", Concat);
     MethodResolver::new(
         map
     )

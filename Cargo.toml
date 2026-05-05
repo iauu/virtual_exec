@@ -9,7 +9,7 @@ description = "A sandbox execution environment which allowed limited execution o
 license = "GPL-3.0"
 
 [dependencies]
-virtual_exec_core = {path = "virtual_exec_core", version = "0.5.0-alpha.0"}
+virtual_exec_core = {path = "virtual_exec_core", version = "0.5.0-alpha.1"}
 
 [workspace]
 members = [

@@ -5,7 +5,7 @@ use virtual_exec_type::mem::{Allocator, MemoryAllocator, Value, ValuePtr};
 use virtual_exec_type::op::*;
 use crate::sequential::instructions::{Instruction, SubscriptLoad};
 use virtual_exec_type::base::{IsTruhy, TypeCast};
-use virtual_exec_type::error::{NonRecoverableError, CriticalError};
+use virtual_exec_type::error::{NonRecoverableError, CriticalError, RecoverableError};
 pub use virtual_exec_type::error::ExecutionError;
 
 type AttrReference<'ctx> = (Option<ValuePtr<'ctx>>, String);
@@ -59,7 +59,7 @@ pub enum State<'ctx> {
     Ok,
     Terminated,
     Interrupt,
-    Timeout,
+    Timeout(u64),
     FnExternInput(String, usize),
     FnExternOutput(String, ArgumentPackage<'ctx>)
 }
@@ -216,11 +216,15 @@ impl<'ctx> InstStateMachine<'ctx> {
             },
             Ok(State::FnExternOutput(a, b)) => {
                 return Ok(State::FnExternOutput(a,b))
-            }
+            },
+            Err(ExecutionError::Recoverable(rec)) => {
+                self.state = Err(ExecutionError::NonRecoverable(NonRecoverableError::NonRecoveredRecoverableError(rec)));
+                return self.state.clone();
+            },
             Err(err) => {
                 return Err(err)
             },
-            Ok(State::Ok) | Ok(State::Timeout) => {}
+            Ok(State::Ok) | Ok(State::Timeout(_)) => {}
         };
         let instruction;
         {
@@ -230,8 +234,11 @@ impl<'ctx> InstStateMachine<'ctx> {
             let stack =  self.get_mut_stack_ref()?;
             stack.ptr += 1;
         }
+        if let Ok(State::Timeout(req)) = self.state && req > self.lim {
+            return self.state.clone();
+        }
         if self.lim == 0 {
-            self.state = Ok(State::Timeout);
+            self.state = Ok(State::Timeout(1));
             return self.state.clone()
         } else {
             self.state = Ok(State::Ok)
@@ -473,14 +480,31 @@ impl<'ctx> InstStateMachine<'ctx> {
     }
     
     pub fn push_fn_output(&mut self, ptr: Result<ValuePtr<'ctx>, ExecutionError>) -> bool {
-        if let Ok(State::FnExternOutput(_, _)) = self.state.clone() {
+        if let Ok(State::FnExternOutput(_, values)) = self.state.clone() {
             match ptr {
                 Ok(ptr) => {
                     self.push_value(ptr);
                     self.state = Ok(State::Ok);
                 },
                 Err(e) => {
-                    self.state = Err(e);
+                    if let ExecutionError::Recoverable(rec) = e {
+                        match rec {
+                            RecoverableError::TimeoutError(amount) => {
+                                self.state = Err(ExecutionError::Recoverable(RecoverableError::TimeoutError(amount)));
+                                let _ = values.iter().rev().map(|v| self.push_value(v.clone())).collect::<Vec<_>>();
+                                match self.get_mut_stack_ref() {
+                                    Ok(stack_ref) => {
+                                        stack_ref.ptr -= 1
+                                    }
+                                    Err(e) => {
+                                        self.state = Err(e.clone());
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        self.state = Err(e);
+                    }
                 }
             }
             true

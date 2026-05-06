@@ -135,7 +135,7 @@ fn test_timeout() {
     }
 
     assert!(match &state_machine.state {
-        Ok(State::Timeout) => true,
+        Ok(State::Timeout(_)) => true,
         _ => false
     }, "Expected TimeoutError, but got {:?}", state_machine.state);
 }

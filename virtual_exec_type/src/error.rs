@@ -34,7 +34,8 @@ pub enum NonRecoverableError {
     MemoryError,
     UnexpectedFunctionCall,
     IncorrectArgumentCountError,
-    GenericError
+    GenericError,
+    NonRecoveredRecoverableError(RecoverableError)
 }
 
 #[derive(Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]

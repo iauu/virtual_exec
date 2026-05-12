@@ -512,4 +512,21 @@ impl<'ctx> InstStateMachine<'ctx> {
             false
         }
     }
+
+    pub fn check_use(&self, size: u64) -> bool {
+        size > self.lim
+    }
+
+    pub fn check_use_err(&self, size: u64) -> Result<(), RecoverableError> {
+        if self.check_use(size) {
+            return Ok(());
+        }
+        Err(RecoverableError::TimeoutError(size))
+    }
+
+    pub fn reduce_lim(&mut self, size: u64) -> Result<(), RecoverableError> {
+        self.check_use_err(size)?;
+        self.lim -= size;
+        Ok(())
+    }
 }

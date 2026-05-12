@@ -16,6 +16,7 @@ async-lock = "3.4.2"
 tokio = {version = "1.52.1", optional = true}
 cfg-if = "1.0.4"
 async-trait = { version = "0.1.89", optional = true }
+getrandom = {version = "0.4.2", optional = true}
 
 [features]
 sys = []
@@ -25,5 +26,8 @@ tokio-net = ["tokio", "tokio/net"]
 tokio-fs  = ["tokio", "tokio/fs"]
 tokio-io = ["tokio", "tokio/io-std", "tokio/io-util"]
 tokio-full = ["sys", "tokio-net", "tokio-fs", "tokio/process", "tokio-io"]
-full = ["tokio-full"]
+rand-std = ["dep:getrandom", "getrandom/std"]
+rand-js = ["dep:getrandom", "getrandom/wasm_js"]
+rand = ["rand-std"]
+full = ["tokio-full", "rand"]
 default = ["full"]

@@ -7,6 +7,8 @@ edition = "2024"
 ratatui = "0.30.0"
 color-eyre = "0.6.5"
 ratatui-interact = "0.5.3"
+virtual_exec_type = {path = "../virtual_exec_type", version = "0.5.0-alpha.1"}
+virtual_exec_core = {path = "../virtual_exec_core", version = "0.5.0-alpha.1"}
 
 [profile.release]
 codegen-units = 1 # Allows compiler to perform better optimization.

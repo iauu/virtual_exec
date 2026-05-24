@@ -1804,6 +1804,8 @@ dependencies = [
  "color-eyre",
  "ratatui",
  "ratatui-interact",
+ "virtual_exec_core",
+ "virtual_exec_type",
 ]
 
 [[package]]

@@ -1,40 +1,5 @@
 // source: https://github.com/Brainwires/ratatui-interact/blob/main/src/components/tree_view.rs
 
-//! Tree view widget
-//!
-//! A collapsible tree view with selection, status icons, and customizable rendering.
-//!
-//! # Example
-//!
-//! ```rust
-//! use ratatui_interact::components::{TreeView, TreeViewState, TreeNode, TreeStyle};
-//! use ratatui::layout::Rect;
-//!
-//! // Define your tree node type
-//! #[derive(Clone, Debug)]
-//! struct Task {
-//!     id: String,
-//!     name: String,
-//!     status: &'static str,
-//! }
-//!
-//! // Create nodes
-//! let nodes = vec![
-//!     TreeNode::new("1", Task { id: "1".into(), name: "Root".into(), status: "pending" })
-//!         .with_children(vec![
-//!             TreeNode::new("1.1", Task { id: "1.1".into(), name: "Child 1".into(), status: "done" }),
-//!             TreeNode::new("1.2", Task { id: "1.2".into(), name: "Child 2".into(), status: "running" }),
-//!         ]),
-//! ];
-//!
-//! // Create state and view
-//! let mut state = TreeViewState::new();
-//! let tree = TreeView::new(&nodes, &state)
-//!     .render_item(|node, is_selected| {
-//!         format!("{} [{}]", node.data.name, node.data.status)
-//!     });
-//! ```
-
 use std::collections::HashSet;
 
 use ratatui::{
@@ -44,42 +9,52 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Paragraph, Widget, Wrap},
 };
+use virtual_exec_type::base::TypeCast;
+use virtual_exec_type::vm_type::Any;
 
 /// A node in the tree
 #[derive(Debug, Clone)]
-pub struct TreeNode<T> {
+pub struct TreeNode<'b> {
     /// Unique identifier for this node
     pub id: String,
+    pub name: String,
     /// The data associated with this node
-    pub data: T,
-    /// Child nodes
-    pub children: Vec<TreeNode<T>>,
+    pub data: Any<'b>,
 }
 
-impl<T> TreeNode<T> {
+impl<'b> TreeNode<'b> {
     /// Create a new tree node
-    pub fn new(id: impl Into<String>, data: T) -> Self {
+    pub fn new(id: impl Into<String>, name: String, data: Any<'b>) -> Self {
         Self {
             id: id.into(),
+            name,
             data,
-            children: Vec::new(),
         }
     }
 
-    /// Add children to this node
-    pub fn with_children(mut self, children: Vec<TreeNode<T>>) -> Self {
-        self.children = children;
-        self
-    }
-
-    /// Add a single child to this node
-    pub fn add_child(&mut self, child: TreeNode<T>) {
-        self.children.push(child);
-    }
 
     /// Check if this node has children
     pub fn has_children(&self) -> bool {
-        !self.children.is_empty()
+        if let Some(obj) = self.data.as_object() {
+            obj.read_arc_blocking().len() > 0
+        } else if let Some(arr) = self.data.as_collections() {
+            arr.read_arc_blocking().len() > 0
+        } else {
+            false
+        }
+    }
+
+    pub fn get_children(&self) -> Vec<TreeNode<'b>> {
+        if let Some(obj) = self.data.as_object() {
+            let pre_id = format!("{}.", self.id);
+            obj.read_arc_blocking().iter().map(|x| TreeNode::new(pre_id.clone() + x.0, x.0.clone(), x.1.clone())).collect()
+        } else if let Some(arr) = self.data.as_collections() {
+            let pre_id = format!("{}.", self.id);
+            arr.read_arc_blocking().iter().enumerate().map(|(i, x)| TreeNode::new(pre_id.clone() + &i.to_string(), format!("[{}]", &i), x.clone())).collect()
+        }
+        else {
+            vec![]
+        }
     }
 }
 
@@ -231,9 +206,9 @@ impl TreeStyle {
 
 /// Flattened node info for rendering
 #[derive(Debug, Clone)]
-pub struct FlatNode<'a, T> {
+pub struct FlatNode<'b> {
     /// Reference to the original node
-    pub node: &'a TreeNode<T>,
+    pub node: TreeNode<'b>,
     /// Depth in the tree (0 = root)
     pub depth: usize,
     /// Whether this is the last sibling at its level
@@ -243,21 +218,19 @@ pub struct FlatNode<'a, T> {
 }
 
 /// Tree view widget
-pub struct TreeView<'a, T, F>
+pub struct TreeView<'a, 'b, F>
 where
-    F: Fn(&TreeNode<T>, bool) -> String,
+    F: Fn(&TreeNode<'b>, bool) -> String,
 {
-    nodes: &'a [TreeNode<T>],
+    nodes: Vec<TreeNode<'b>>,
     state: &'a TreeViewState,
     style: TreeStyle,
     render_fn: F,
 }
 
-impl<'a, T> TreeView<'a, T, fn(&TreeNode<T>, bool) -> String> {
+impl<'a, 'b> TreeView<'a, 'b, fn(&TreeNode<'b>, bool) -> String> {
     /// Create a new tree view with default rendering
-    pub fn new(nodes: &'a [TreeNode<T>], state: &'a TreeViewState) -> Self
-    where
-        T: std::fmt::Debug,
+    pub fn new(nodes: Vec<TreeNode<'b>>, state: &'a TreeViewState) -> Self
     {
         Self {
             nodes,
@@ -268,14 +241,14 @@ impl<'a, T> TreeView<'a, T, fn(&TreeNode<T>, bool) -> String> {
     }
 }
 
-impl<'a, T, F> TreeView<'a, T, F>
+impl<'a, 'b, F> TreeView<'a, 'b, F>
 where
-    F: Fn(&TreeNode<T>, bool) -> String,
+    F: Fn(&TreeNode<'b>, bool) -> String,
 {
     /// Set the render function for items
-    pub fn render_item<G>(self, render_fn: G) -> TreeView<'a, T, G>
+    pub fn render_item<G>(self, render_fn: G) -> TreeView<'a, 'b, G>
     where
-        G: Fn(&TreeNode<T>, bool) -> String,
+        G: Fn(&TreeNode<'b>, bool) -> String,
     {
         TreeView {
             nodes: self.nodes,
@@ -297,24 +270,24 @@ where
     }
 
     /// Flatten the tree into a list of visible nodes
-    fn flatten_visible(&self) -> Vec<FlatNode<'a, T>> {
+    fn flatten_visible(&self) -> Vec<FlatNode<'b>> {
         let mut result = Vec::new();
-        self.flatten_nodes(self.nodes, 0, &mut result, &[]);
+        self.flatten_nodes(self.nodes.clone(), 0, &mut result, &[]);
         result
     }
 
     fn flatten_nodes(
         &self,
-        nodes: &'a [TreeNode<T>],
+        nodes: Vec<TreeNode<'b>>,
         depth: usize,
-        result: &mut Vec<FlatNode<'a, T>>,
+        result: &mut Vec<FlatNode<'b>>,
         parent_is_last: &[bool],
     ) {
         let count = nodes.len();
         for (idx, node) in nodes.iter().enumerate() {
             let is_last = idx == count - 1;
             result.push(FlatNode {
-                node,
+                node: node.clone(),
                 depth,
                 is_last,
                 parent_is_last: parent_is_last.to_vec(),
@@ -324,7 +297,7 @@ where
             if node.has_children() && !self.state.is_collapsed(&node.id) {
                 let mut new_parent_is_last = parent_is_last.to_vec();
                 new_parent_is_last.push(is_last);
-                self.flatten_nodes(&node.children, depth + 1, result, &new_parent_is_last);
+                self.flatten_nodes(node.get_children(), depth + 1, result, &new_parent_is_last);
             }
         }
     }
@@ -403,7 +376,7 @@ where
             }
 
             // Node content
-            let content = (self.render_fn)(flat_node.node, is_selected);
+            let content = (self.render_fn)(&flat_node.node, is_selected);
             spans.push(Span::styled(
                 content,
                 if is_selected {
@@ -420,9 +393,9 @@ where
     }
 }
 
-impl<'a, T, F> Widget for TreeView<'a, T, F>
+impl<'a, 'b, F> Widget for TreeView<'a, 'b, F>
 where
-    F: Fn(&TreeNode<T>, bool) -> String,
+    F: Fn(&TreeNode<'b>, bool) -> String,
 {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let lines = self.build_lines(area);
@@ -432,377 +405,11 @@ where
 }
 
 /// Get the selected node ID from a tree view state and nodes
-pub fn get_selected_id<T: std::fmt::Debug>(
-    nodes: &[TreeNode<T>],
+pub fn get_selected_id(
+    nodes: Vec<TreeNode>,
     state: &TreeViewState,
 ) -> Option<String> {
     let tree = TreeView::new(nodes, state);
     let visible = tree.flatten_visible();
     visible.get(state.selected_index).map(|f| f.node.id.clone())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[derive(Debug, Clone)]
-    struct TestItem {
-        name: String,
-    }
-
-    fn create_test_tree() -> Vec<TreeNode<TestItem>> {
-        vec![
-            TreeNode::new(
-                "1",
-                TestItem {
-                    name: "Root 1".into(),
-                },
-            )
-                .with_children(vec![
-                    TreeNode::new(
-                        "1.1",
-                        TestItem {
-                            name: "Child 1.1".into(),
-                        },
-                    ),
-                    TreeNode::new(
-                        "1.2",
-                        TestItem {
-                            name: "Child 1.2".into(),
-                        },
-                    ),
-                ]),
-            TreeNode::new(
-                "2",
-                TestItem {
-                    name: "Root 2".into(),
-                },
-            ),
-        ]
-    }
-
-    fn create_deep_tree() -> Vec<TreeNode<TestItem>> {
-        vec![
-            TreeNode::new(
-                "root",
-                TestItem {
-                    name: "Root".into(),
-                },
-            )
-                .with_children(vec![
-                    TreeNode::new(
-                        "level1",
-                        TestItem {
-                            name: "Level 1".into(),
-                        },
-                    )
-                        .with_children(vec![
-                            TreeNode::new(
-                                "level2",
-                                TestItem {
-                                    name: "Level 2".into(),
-                                },
-                            )
-                                .with_children(vec![TreeNode::new(
-                                    "level3",
-                                    TestItem {
-                                        name: "Level 3".into(),
-                                    },
-                                )]),
-                        ]),
-                ]),
-        ]
-    }
-
-    #[test]
-    fn test_tree_node_new() {
-        let node: TreeNode<TestItem> = TreeNode::new(
-            "test-id",
-            TestItem {
-                name: "Test".into(),
-            },
-        );
-        assert_eq!(node.id, "test-id");
-        assert_eq!(node.data.name, "Test");
-        assert!(node.children.is_empty());
-    }
-
-    #[test]
-    fn test_tree_node_with_children() {
-        let node: TreeNode<TestItem> = TreeNode::new(
-            "parent",
-            TestItem {
-                name: "Parent".into(),
-            },
-        )
-            .with_children(vec![
-                TreeNode::new(
-                    "child1",
-                    TestItem {
-                        name: "Child 1".into(),
-                    },
-                ),
-                TreeNode::new(
-                    "child2",
-                    TestItem {
-                        name: "Child 2".into(),
-                    },
-                ),
-            ]);
-        assert_eq!(node.children.len(), 2);
-    }
-
-    #[test]
-    fn test_tree_node_has_children() {
-        let leaf: TreeNode<TestItem> = TreeNode::new(
-            "leaf",
-            TestItem {
-                name: "Leaf".into(),
-            },
-        );
-        assert!(!leaf.has_children());
-
-        let parent: TreeNode<TestItem> = TreeNode::new(
-            "parent",
-            TestItem {
-                name: "Parent".into(),
-            },
-        )
-            .with_children(vec![leaf.clone()]);
-        assert!(parent.has_children());
-    }
-
-    #[test]
-    fn test_tree_state_new() {
-        let state = TreeViewState::new();
-        assert_eq!(state.selected_index, 0);
-        assert!(state.collapsed.is_empty());
-    }
-
-    #[test]
-    fn test_tree_state() {
-        let mut state = TreeViewState::new();
-        assert!(!state.is_collapsed("1"));
-
-        state.collapse("1");
-        assert!(state.is_collapsed("1"));
-
-        state.toggle_collapsed("1");
-        assert!(!state.is_collapsed("1"));
-    }
-
-    #[test]
-    fn test_tree_state_expand() {
-        let mut state = TreeViewState::new();
-        state.collapse("node1");
-        state.collapse("node2");
-
-        assert!(state.is_collapsed("node1"));
-        state.expand("node1");
-        assert!(!state.is_collapsed("node1"));
-        assert!(state.is_collapsed("node2"));
-    }
-
-    #[test]
-    fn test_tree_state_collapse_multiple() {
-        let mut state = TreeViewState::new();
-
-        state.collapse("1");
-        state.collapse("2");
-        assert!(state.is_collapsed("1"));
-        assert!(state.is_collapsed("2"));
-
-        state.expand("1");
-        state.expand("2");
-        assert!(!state.is_collapsed("1"));
-        assert!(!state.is_collapsed("2"));
-    }
-
-    #[test]
-    fn test_tree_state_navigation() {
-        let mut state = TreeViewState::new();
-        assert_eq!(state.selected_index, 0);
-
-        state.select_next(5);
-        assert_eq!(state.selected_index, 1);
-
-        state.select_next(5);
-        state.select_next(5);
-        state.select_next(5);
-        assert_eq!(state.selected_index, 4);
-
-        state.select_next(5); // At max, should not increase
-        assert_eq!(state.selected_index, 4);
-
-        state.select_prev();
-        assert_eq!(state.selected_index, 3);
-
-        state.select_prev();
-        state.select_prev();
-        state.select_prev();
-        state.select_prev(); // At min, should not decrease
-        assert_eq!(state.selected_index, 0);
-    }
-
-    #[test]
-    fn test_tree_state_ensure_visible() {
-        let mut state = TreeViewState::new();
-        state.selected_index = 15;
-        state.scroll = 5;
-        state.ensure_visible(10);
-        assert!(state.scroll >= 6); // 15 - 10 + 1 = 6
-
-        state.selected_index = 2;
-        state.scroll = 10;
-        state.ensure_visible(10);
-        assert_eq!(state.scroll, 2);
-    }
-
-    #[test]
-    fn test_tree_state_ensure_visible_zero_viewport() {
-        let mut state = TreeViewState::new();
-        state.scroll = 5;
-        state.selected_index = 10;
-        state.ensure_visible(0);
-        // With viewport 0, condition (10 >= 5 + 0) is true, so scroll updates
-        assert_eq!(state.scroll, 11); // selected_index - 0 + 1
-    }
-
-    #[test]
-    fn test_flatten_visible() {
-        let nodes = create_test_tree();
-        let state = TreeViewState::new();
-        let tree = TreeView::new(&nodes, &state);
-
-        let visible = tree.flatten_visible();
-        assert_eq!(visible.len(), 4); // Root1, Child1.1, Child1.2, Root2
-    }
-
-    #[test]
-    fn test_flatten_with_collapsed() {
-        let nodes = create_test_tree();
-        let mut state = TreeViewState::new();
-        state.collapse("1");
-
-        let tree = TreeView::new(&nodes, &state);
-        let visible = tree.flatten_visible();
-        assert_eq!(visible.len(), 2); // Root1 (collapsed), Root2
-    }
-
-    #[test]
-    fn test_flatten_deep_tree() {
-        let nodes = create_deep_tree();
-        let state = TreeViewState::new();
-        let tree = TreeView::new(&nodes, &state);
-
-        let visible = tree.flatten_visible();
-        assert_eq!(visible.len(), 4); // root, level1, level2, level3
-
-        // Check depth levels
-        assert_eq!(visible[0].depth, 0);
-        assert_eq!(visible[1].depth, 1);
-        assert_eq!(visible[2].depth, 2);
-        assert_eq!(visible[3].depth, 3);
-    }
-
-    #[test]
-    fn test_visible_count() {
-        let nodes = create_test_tree();
-        let state = TreeViewState::new();
-        let tree = TreeView::new(&nodes, &state);
-        assert_eq!(tree.visible_count(), 4);
-
-        let mut collapsed_state = TreeViewState::new();
-        collapsed_state.collapse("1");
-        let collapsed_tree = TreeView::new(&nodes, &collapsed_state);
-        assert_eq!(collapsed_tree.visible_count(), 2);
-    }
-
-    #[test]
-    fn test_selection_navigation() {
-        let nodes = create_test_tree();
-        let mut state = TreeViewState::new();
-        let tree = TreeView::new(&nodes, &state);
-        let count = tree.visible_count();
-
-        assert_eq!(state.selected_index, 0);
-        state.select_next(count);
-        assert_eq!(state.selected_index, 1);
-        state.select_prev();
-        assert_eq!(state.selected_index, 0);
-    }
-
-    #[test]
-    fn test_get_selected_id() {
-        let nodes = create_test_tree();
-        let mut state = TreeViewState::new();
-
-        let id = get_selected_id(&nodes, &state);
-        assert_eq!(id, Some("1".to_string()));
-
-        state.selected_index = 2;
-        let id = get_selected_id(&nodes, &state);
-        assert_eq!(id, Some("1.2".to_string()));
-
-        state.selected_index = 3;
-        let id = get_selected_id(&nodes, &state);
-        assert_eq!(id, Some("2".to_string()));
-    }
-
-    #[test]
-    fn test_get_selected_id_with_collapsed() {
-        let nodes = create_test_tree();
-        let mut state = TreeViewState::new();
-        state.collapse("1");
-        state.selected_index = 1;
-
-        let id = get_selected_id(&nodes, &state);
-        assert_eq!(id, Some("2".to_string()));
-    }
-
-    #[test]
-    fn test_tree_style_default() {
-        let style = TreeStyle::default();
-        assert_eq!(style.collapsed_icon, "▶ ");
-        assert_eq!(style.expanded_icon, "▼ ");
-        assert_eq!(style.connector_branch, "├── ");
-        assert_eq!(style.connector_last, "└── ");
-    }
-
-    #[test]
-    fn test_tree_view_render() {
-        let nodes = create_test_tree();
-        let state = TreeViewState::new();
-        let tree = TreeView::new(&nodes, &state)
-            .render_item(|node, _| format!("Item: {}", node.data.name));
-
-        let mut buf = Buffer::empty(Rect::new(0, 0, 40, 10));
-        tree.render(Rect::new(0, 0, 40, 10), &mut buf);
-        // Should not panic
-    }
-
-    #[test]
-    fn test_tree_view_with_style() {
-        let nodes = create_test_tree();
-        let state = TreeViewState::new();
-        let custom_style = TreeStyle {
-            collapsed_icon: "+",
-            expanded_icon: "-",
-            ..TreeStyle::default()
-        };
-        let tree = TreeView::new(&nodes, &state).style(custom_style);
-
-        let mut buf = Buffer::empty(Rect::new(0, 0, 40, 10));
-        tree.render(Rect::new(0, 0, 40, 10), &mut buf);
-    }
-
-    #[test]
-    fn test_empty_tree() {
-        let nodes: Vec<TreeNode<TestItem>> = vec![];
-        let state = TreeViewState::new();
-        let tree = TreeView::new(&nodes, &state);
-
-        assert_eq!(tree.visible_count(), 0);
-        assert!(tree.flatten_visible().is_empty());
-    }
 }

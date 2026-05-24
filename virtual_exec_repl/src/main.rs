@@ -1,3 +1,4 @@
+mod component;
 
 use ratatui::{crossterm, DefaultTerminal, Frame};
 

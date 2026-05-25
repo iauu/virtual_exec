@@ -67,7 +67,15 @@ fn main() -> io::Result<()> {
         match event::read()? {
             Event::Key(key) => {
                 if is_enter(&key) {
-                    app_obj.repl_input.insert_newline();
+                    if
+                        app_obj.can_compile &&
+                        app_obj.repl_input.cursor_line + 1 == app_obj.repl_input.line_count() &&
+                        app_obj.repl_input.cursor_col == app_obj.repl_input.current_line().len()
+                     {
+                        is_exec = ExecState::Exec;
+                    } else {
+                        app_obj.repl_input.insert_newline();
+                    }
                 } else if is_tab(&key) {
                     app_obj.repl_input.insert_tab();
                 } else if is_backspace(&key) {
@@ -110,7 +118,7 @@ fn main() -> io::Result<()> {
                         app_obj.repl_input.move_up();
                     }
                 } else if key.code == KeyCode::Down {
-                    if app_obj.repl_input.is_empty() || app_obj.switch_mode  && app_obj.repl_buffer.len() > 0 {
+                    if (app_obj.repl_input.is_empty() || app_obj.switch_mode)  && app_obj.repl_buffer.len() > 0 {
                         app_obj.switch_mode = true;
                         if app_obj.idx < app_obj.repl_buffer.len() - 1 {
                             app_obj.idx += 1;
@@ -133,8 +141,7 @@ fn main() -> io::Result<()> {
             }
             Event::Mouse(mouse) => {
                 if is_left_click(&mouse) {
-                    if let Some(area) = app
-                        .lock().unwrap().click_region_registry
+                    if let Some(area) = app_obj.click_region_registry
                         .handle_click(mouse.column, mouse.row)
                     {
                         match area {
@@ -146,8 +153,7 @@ fn main() -> io::Result<()> {
                     }
                 }
                 if let Some(v) = get_scroll(&mouse) {
-                    if let Some(area) = app
-                        .lock().unwrap().click_region_registry
+                    if let Some(area) = app_obj.click_region_registry
                         .handle_click(mouse.column, mouse.row)
                     {
                         match area {

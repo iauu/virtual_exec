@@ -14,7 +14,8 @@ use virtual_exec_core::parse;
 
 pub(crate) fn ui(f: &mut Frame, app: &mut App) {
     // Clear click regions
-    app.lock().unwrap().click_region_registry.clear();
+    let mut app = app.lock().unwrap();
+    app.click_region_registry.clear();
 
     let area = f.area();
 
@@ -30,10 +31,10 @@ pub(crate) fn ui(f: &mut Frame, app: &mut App) {
         .split(area);
 
     // Repl buffer
-    let content = app.lock().unwrap().repl_buffer.iter()
+    let content = app.repl_buffer.iter()
         .map(
-            |(k, v)| 
-                if v.is_empty() {format!(">>> {}", k)} 
+            |(k, v)|
+                if v.is_empty() {format!(">>> {}", k)}
                 else {format!(">>> {}\n{}", k, v)}
         )
         .collect::<Vec<String>>()
@@ -41,13 +42,13 @@ pub(crate) fn ui(f: &mut Frame, app: &mut App) {
         .split("\n")
         .map(|x| x.to_string())
         .collect::<Vec<String>>();
-    if app.lock().unwrap().repl_buffer_state.is_at_bottom(chunks[0].height as usize) {
-        app.lock().unwrap().repl_buffer_state.set_lines(content.iter().map(|s| s.to_string()).collect());
-        app.lock().unwrap().repl_buffer_state.scroll_to_bottom(chunks[0].height as usize);
+    if app.repl_buffer_state.is_at_bottom(chunks[0].height as usize) {
+        app.repl_buffer_state.set_lines(content.iter().map(|s| s.to_string()).collect());
+        app.repl_buffer_state.scroll_to_bottom(chunks[0].height as usize);
     } else {
-        app.lock().unwrap().repl_buffer_state.set_lines(content.iter().map(|s| s.to_string()).collect());
+        app.repl_buffer_state.set_lines(content.iter().map(|s| s.to_string()).collect());
     }
-    let state = app.lock().unwrap().repl_buffer_state.clone();
+    let state = app.repl_buffer_state.clone();
     let title = ScrollableContent::new(&state)
         .style(
             ScrollableContentStyle::default()
@@ -57,9 +58,9 @@ pub(crate) fn ui(f: &mut Frame, app: &mut App) {
 
         );
     f.render_widget(title, chunks[0]);
-    app.lock().unwrap().click_region_registry
+    app.click_region_registry
         .register(chunks[0], InteractArea::ReplBufferArea);
-    app.lock().unwrap().repl_buffer_height = chunks[0].height as usize;
+    app.repl_buffer_height = chunks[0].height as usize;
 
     // TextArea
     let textarea_area = chunks[1];
@@ -76,20 +77,20 @@ pub(crate) fn ui(f: &mut Frame, app: &mut App) {
         .placeholder("")
         .style(style);
 
-    let render_result = textarea.render_stateful(f, textarea_area, &mut app.lock().unwrap().repl_input);
-    app.lock().unwrap().click_region_registry
+    let render_result = textarea.render_stateful(f, textarea_area, &mut app.repl_input);
+    app.click_region_registry
         .register(render_result.click_region.area, InteractArea::Textarea);
 
     // Status bar
     let status_text = format!(
         "{}:{} ({}) | ",
-        app.lock().unwrap().repl_input.cursor_line + 1,
-        app.lock().unwrap().repl_input.cursor_col + 1,
-        app.lock().unwrap().repl_input.line_count(),
+        app.repl_input.cursor_line + 1,
+        app.repl_input.cursor_col + 1,
+        app.repl_input.line_count(),
 
     );
-    let can_compile = parse(&app.lock().unwrap().repl_input.text()).is_ok();
-    app.lock().unwrap().can_compile = can_compile;
+    let can_compile = parse(&app.repl_input.text()).is_ok();
+    app.can_compile = can_compile;
     let status = Paragraph::new(Line::from(
         vec![status_text.into(),
              if can_compile { Span::styled("✔ Valid", Style::default().green()) } else {

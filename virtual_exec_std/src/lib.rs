@@ -5,36 +5,54 @@ pub mod sys;
 
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
-use virtual_exec_core::fn_extern::{FnExtern, FnExternConstruct, MethodResolver};
+use virtual_exec_core::fn_extern::{FnExternConstruct, MethodResolver};
 use crate::func::*;
 #[cfg(feature = "sys")]
 use crate::sys::*;
 
+#[macro_export]
 macro_rules! add_item {
     ($map:expr, $name:expr, $item:ident) => {
-        $map.insert($name.to_string(), ::std::sync::Arc::new($item::new()));
+        {
+            use ::virtual_exec_core::fn_extern::FnExternConstruct;
+            $map.insert($name.to_string(), ::std::sync::Arc::new($item::new()));
+        };
     };
 }
 
-pub static BASIC: LazyLock<MethodResolver> = LazyLock::new(||{ 
-    let mut map: HashMap<String, Arc<dyn FnExtern + Send + Sync>> = HashMap::new();
-    add_item!(map, "push_array", PushArray);
-    add_item!(map, "pop_array", PopArray);
-    add_item!(map, "arr_get_from_idx", ArrGetFromIdx);
-    add_item!(map, "create_array", CreateArray);
-    add_item!(map, "arr_get_len", ArrGetLen);
-    add_item!(map, "concat", Concat);
-    MethodResolver::new(
-        map
+#[macro_export]
+macro_rules! resolve {
+    ($(($name:expr, $item:ident)),*) => {
+
+        {
+            let mut map: ::std::collections::HashMap<::std::string::String, Arc<dyn ::virtual_exec_core::fn_extern::FnExtern + ::core::marker::Send + ::core::marker::Sync>> = ::std::collections::HashMap::new();
+            $($crate::add_item!(map, $name, $item);)*
+            ::virtual_exec_core::fn_extern::MethodResolver::new(
+                map
+            )
+        }
+    };
+}
+
+pub static BASIC: LazyLock<MethodResolver> = LazyLock::new(||
+    resolve!(
+        ("push_array", PushArray),
+        ("pop_array", PopArray),
+        ("arr_get_from_idx", ArrGetFromIdx),
+        ("create_array", CreateArray),
+        ("arr_get_len", ArrGetLen),
+        ("concat", Concat)
     )
-});
+);
 
 #[cfg(feature = "sys")]
-pub static SYS: LazyLock<MethodResolver> = LazyLock::new(||{
-    let mut map: HashMap<String, Arc<dyn FnExtern + Send + Sync>> = HashMap::new();
-    add_item!(map, "print", Print);
-    add_item!(map, "println", PrintLn);
-    MethodResolver::new(
-        map
+pub static SYS: LazyLock<MethodResolver> = LazyLock::new(||
+    resolve!(
+        ("print", Print),
+        ("println", PrintLn),
+        ("arr_get_from_idx", ArrGetFromIdx),
+        ("create_array", CreateArray),
+        ("arr_get_len", ArrGetLen),
+        ("concat", Concat)
     )
-});
+);

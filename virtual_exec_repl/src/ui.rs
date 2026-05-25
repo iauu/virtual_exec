@@ -30,7 +30,12 @@ pub(crate) fn ui(f: &mut Frame, app: &mut App) {
         .split(area);
 
     // Repl buffer
-    let content = app.lock().unwrap().repl_buffer.iter().map(|(k, v)| format!(">>> {}\n{}", k, v))
+    let content = app.lock().unwrap().repl_buffer.iter()
+        .map(
+            |(k, v)| 
+                if v.is_empty() {format!(">>> {}", k)} 
+                else {format!(">>> {}\n{}", k, v)}
+        )
         .collect::<Vec<String>>()
         .join("\n")
         .split("\n")
@@ -83,9 +88,11 @@ pub(crate) fn ui(f: &mut Frame, app: &mut App) {
         app.lock().unwrap().repl_input.line_count(),
 
     );
+    let can_compile = parse(&app.lock().unwrap().repl_input.text()).is_ok();
+    app.lock().unwrap().can_compile = can_compile;
     let status = Paragraph::new(Line::from(
         vec![status_text.into(),
-             if parse(&app.lock().unwrap().repl_input.text()).is_ok() { Span::styled("✔ Valid", Style::default().green()) } else {
+             if can_compile { Span::styled("✔ Valid", Style::default().green()) } else {
                  Span::styled("✖ Syntax Error", Style::default().red()) }
         ]))
         .style(Style::default().fg(Color::White).bg(Color::DarkGray))

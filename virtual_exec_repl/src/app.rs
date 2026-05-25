@@ -40,7 +40,10 @@ pub struct AppState {
     pub click_region_registry: ClickRegionRegistry<InteractArea>,
     pub first_ctrl_c: bool,
     pub focus: FocusArea,
-    pub repl_buffer_height: usize
+    pub repl_buffer_height: usize,
+    pub can_compile: bool,
+    pub idx: usize,
+    pub switch_mode: bool
 }
 
 impl AppState {
@@ -56,6 +59,9 @@ impl AppState {
             first_ctrl_c: false,
             focus: FocusArea::TextArea,
             repl_buffer_height: 1,
+            can_compile: false,
+            idx: 0,
+            switch_mode: true
         }
     }
 }

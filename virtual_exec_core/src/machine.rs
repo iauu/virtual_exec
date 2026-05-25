@@ -9,7 +9,7 @@ use virtual_exec_type::mem::{Allocator, MemoryAllocator, MemoryAllocatorConstruc
 use crate::fn_extern::{FnExtern, MethodResolver};
 
 /// The execution instance including the memory allocator and the instruction state machine
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Machine<'a> {
     #[allow(unused)]
     /// The memory allocator for the machine

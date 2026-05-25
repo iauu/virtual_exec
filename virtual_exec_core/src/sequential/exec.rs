@@ -38,13 +38,13 @@ impl<'ctx> From<ValuePtr<'ctx>> for StackItem<'ctx> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FnStackFrame<'ctx> {
     pub ptr: u64,
     pub mapping: Arc<RwLock<HashMap<String, ValuePtr<'ctx>>>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InstStateMachine<'ctx> {
     pub lim: u64,
     pub fn_stack_frame: Vec<FnStackFrame<'ctx>>,

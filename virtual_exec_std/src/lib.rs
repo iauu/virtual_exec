@@ -10,29 +10,7 @@ use crate::func::*;
 #[cfg(feature = "sys")]
 use crate::sys::*;
 
-#[macro_export]
-macro_rules! add_item {
-    ($map:expr, $name:expr, $item:ident) => {
-        {
-            use ::virtual_exec_core::fn_extern::FnExternConstruct;
-            $map.insert($name.to_string(), ::std::sync::Arc::new($item::new()));
-        };
-    };
-}
-
-#[macro_export]
-macro_rules! resolve {
-    ($(($name:expr, $item:ident)),*) => {
-
-        {
-            let mut map: ::std::collections::HashMap<::std::string::String, Arc<dyn ::virtual_exec_core::fn_extern::FnExtern + ::core::marker::Send + ::core::marker::Sync>> = ::std::collections::HashMap::new();
-            $($crate::add_item!(map, $name, $item);)*
-            ::virtual_exec_core::fn_extern::MethodResolver::new(
-                map
-            )
-        }
-    };
-}
+use virtual_exec_extern::resolve;
 
 pub static BASIC: LazyLock<MethodResolver> = LazyLock::new(||
     resolve!(

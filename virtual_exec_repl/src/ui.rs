@@ -9,7 +9,7 @@ use ratatui::crossterm::style::Stylize;
 use ratatui::prelude::Modifier;
 use ratatui_interact::components::{ScrollableContent, TextArea, TextAreaStyle};
 use ratatui_interact::prelude::ScrollableContentStyle;
-use crate::app::{App};
+use crate::app::{App, InteractArea};
 use virtual_exec_core::parse;
 
 pub(crate) fn ui(f: &mut Frame, app: &mut App) {
@@ -36,13 +36,13 @@ pub(crate) fn ui(f: &mut Frame, app: &mut App) {
         .split("\n")
         .map(|x| x.to_string())
         .collect::<Vec<String>>();
-    if app.lock().unwrap().scrollable_content_state.is_at_bottom(chunks[0].height as usize) {
-        app.lock().unwrap().scrollable_content_state.set_lines(content.iter().map(|s| s.to_string()).collect());
-        app.lock().unwrap().scrollable_content_state.scroll_to_bottom(chunks[0].height as usize);
+    if app.lock().unwrap().repl_buffer_state.is_at_bottom(chunks[0].height as usize) {
+        app.lock().unwrap().repl_buffer_state.set_lines(content.iter().map(|s| s.to_string()).collect());
+        app.lock().unwrap().repl_buffer_state.scroll_to_bottom(chunks[0].height as usize);
     } else {
-        app.lock().unwrap().scrollable_content_state.set_lines(content.iter().map(|s| s.to_string()).collect());
+        app.lock().unwrap().repl_buffer_state.set_lines(content.iter().map(|s| s.to_string()).collect());
     }
-    let state = app.lock().unwrap().scrollable_content_state.clone();
+    let state = app.lock().unwrap().repl_buffer_state.clone();
     let title = ScrollableContent::new(&state)
         .style(
             ScrollableContentStyle::default()
@@ -52,6 +52,9 @@ pub(crate) fn ui(f: &mut Frame, app: &mut App) {
 
         );
     f.render_widget(title, chunks[0]);
+    app.lock().unwrap().click_region_registry
+        .register(chunks[0], InteractArea::ReplBufferArea);
+    app.lock().unwrap().repl_buffer_height = chunks[0].height as usize;
 
     // TextArea
     let textarea_area = chunks[1];
@@ -70,7 +73,7 @@ pub(crate) fn ui(f: &mut Frame, app: &mut App) {
 
     let render_result = textarea.render_stateful(f, textarea_area, &mut app.lock().unwrap().repl_input);
     app.lock().unwrap().click_region_registry
-        .register(render_result.click_region.area, ());
+        .register(render_result.click_region.area, InteractArea::Textarea);
 
     // Status bar
     let status_text = format!(

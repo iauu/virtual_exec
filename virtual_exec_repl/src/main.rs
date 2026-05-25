@@ -22,12 +22,12 @@ use ratatui_interact::{
     components::{TabConfig, TextArea, TextAreaState, TextAreaStyle},
     events::{
         get_char, has_ctrl, is_backspace, is_close_key, is_ctrl_a, is_ctrl_e, is_ctrl_k, is_ctrl_u,
-        is_ctrl_w, is_delete, is_end, is_enter, is_home, is_left_click, is_tab,
+        is_ctrl_w, is_delete, is_end, is_enter, is_home, is_left_click, is_tab, get_scroll
     },
     traits::ClickRegionRegistry,
 };
 
-use crate::app::{App, AppState};
+use crate::app::{App, AppState, FocusArea, InteractArea};
 use virtual_exec_std::{SYS, BASIC};
 use crate::ui::ui;
 
@@ -43,6 +43,12 @@ fn main() -> io::Result<()> {
 
     // Create app
     let mut app = Arc::new(Mutex::new(AppState::new(vec![SYS.clone(), BASIC.clone()])));
+
+    if (app.lock().unwrap().focus) == FocusArea::TextArea {
+        app.lock().unwrap().repl_input.focused = true;
+    } else {
+        app.lock().unwrap().repl_input.focused = false;
+    }
 
     // Main loop
     loop {
@@ -112,15 +118,49 @@ fn main() -> io::Result<()> {
                 // }
             }
             Event::Mouse(mouse) => {
-                // if is_left_click(&mouse) {
-                //     if app
-                //         .click_regions
-                //         .handle_click(mouse.column, mouse.row)
-                //         .is_some()
-                //     {
-                //         app.textarea.focused = true;
-                //     }
-                // }
+                if is_left_click(&mouse) {
+                    if let Some(area) = app
+                        .lock().unwrap().click_region_registry
+                        .handle_click(mouse.column, mouse.row)
+                    {
+                        match area {
+                            InteractArea::Textarea => {
+                                app.lock().unwrap().focus = FocusArea::TextArea;
+                            },
+                            _ => {}
+                        }
+                    }
+                }
+                if let Some(v) = get_scroll(&mouse) {
+                    if let Some(area) = app
+                        .lock().unwrap().click_region_registry
+                        .handle_click(mouse.column, mouse.row)
+                    {
+                        match area {
+                            InteractArea::Textarea => {
+                               if v < 0 {
+                                   for _ in 0..(-v) {
+                                       app.lock().unwrap().repl_input.scroll_up();
+                                   }
+                               } else {
+                                   for _ in 0..v {
+                                       app.lock().unwrap().repl_input.scroll_down();
+                                   }
+                               }
+                            },
+                            InteractArea::ReplBufferArea => {
+                                if v < 0 {
+                                    app.lock().unwrap().repl_buffer_state.scroll_up(v as usize);
+                                } else {
+                                    let height = app.lock().unwrap().repl_buffer_height;
+                                    app.lock().unwrap().repl_buffer_state.scroll_down(v as usize, height);
+                                }
+                            },
+                            _ => {}
+                        }
+                    }
+                }
+
             }
             _ => {}
         }

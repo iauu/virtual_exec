@@ -1805,6 +1805,7 @@ dependencies = [
  "ratatui",
  "ratatui-interact",
  "virtual_exec_core",
+ "virtual_exec_std",
  "virtual_exec_type",
 ]
 

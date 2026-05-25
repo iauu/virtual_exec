@@ -31,7 +31,7 @@ impl<'a> Machine<'a> {
     pub fn new(instructions: Vec<Instruction>, memory_lim: usize, inst_limit: u64, resolvers: Vec<MethodResolver>) -> Result<Self, MemoryError> {
         let alloc = MemoryAllocator::construct(memory_lim);
         let mut map = HashMap::new();
-        for resolver in resolvers.iter() {
+        for resolver in resolvers.iter().rev() {
             for item in resolver.get_pair() {
                 let ptr = Value::FnPtrExternal(item.0.clone().into_boxed_str(), item.1);
                 let alloced = alloc.alloc(ptr)?;

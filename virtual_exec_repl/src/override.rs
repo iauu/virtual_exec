@@ -33,9 +33,17 @@ fn println<'a>(_: &mut Machine<'a>, str: Any<'a>) -> Result<None, Error> {
 
 extern_link!(PrintLn, println, 1);
 
-pub static OVERRIDE_PRINT: LazyLock<MethodResolver> = LazyLock::new(||
+#[fn_extern_wrap]
+fn is_none<'a>(_: &mut Machine<'a>, obj: Any<'a>) -> Result<Boolean, Error> {
+    Ok(obj.as_none().is_some())
+}
+
+extern_link!(IsNone, is_none, 1);
+
+pub static OVERRIDE: LazyLock<MethodResolver> = LazyLock::new(||
     resolve!(
         ("print", Print),
-        ("println", PrintLn)
+        ("println", PrintLn),
+        ("is_none", IsNone)
     )
 );

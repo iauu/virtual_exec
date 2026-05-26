@@ -1,7 +1,7 @@
 mod app;
 mod component;
 mod ui;
-mod override_print;
+mod r#override;
 
 use std::fmt::format;
 use std::io;
@@ -30,13 +30,14 @@ use ratatui_interact::{
     traits::ClickRegionRegistry,
 };
 use virtual_exec_core::{compile, parse};
+use virtual_exec_core::sequential::compile::GetInstruction;
 use virtual_exec_core::sequential::exec::State;
-use virtual_exec_core::sequential::instructions::Instruction;
+use virtual_exec_core::sequential::instructions::{InstForceOffset, Instruction};
 use crate::app::{App, AppState, CodeEvalState, FocusArea, InteractArea};
 use virtual_exec_std::{SYS, BASIC};
 use crate::ui::ui;
 use virtual_exec_macro::compile;
-use crate::override_print::{OVERRIDE_PRINT, PRINT_BUFFER};
+use crate::r#override::{OVERRIDE, PRINT_BUFFER};
 
 /// Application state
 
@@ -55,7 +56,7 @@ fn main() -> io::Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     // Create app
-    let mut app = Arc::new(Mutex::new(AppState::new(vec![BASIC.clone(), OVERRIDE_PRINT.clone(), SYS.clone()])));
+    let mut app = Arc::new(Mutex::new(AppState::new(vec![BASIC.clone(), OVERRIDE.clone(), SYS.clone()])));
     app.lock().unwrap().machine.machine.state = Ok(State::Terminated);
     app.lock().unwrap().rollback.machine.state = Ok(State::Terminated);
     
@@ -114,6 +115,7 @@ fn main() -> io::Result<()> {
                 }
             };
         }
+        let mut ctrl_c = false;
         match event::read()? {
             Event::Key(key) => {
                 if is_enter(&key) {
@@ -135,8 +137,12 @@ fn main() -> io::Result<()> {
                 } else if key.code == KeyCode::Char('d') && has_ctrl(&key) {
                     break
                 } else if key.code == KeyCode::Char('c') && has_ctrl(&key) {
+                    if app_obj.first_ctrl_c {
+                        break;
+                    }
                     if app_obj.repl_input.is_empty() {
                         app_obj.first_ctrl_c = true;
+                        ctrl_c = true;
                         is_exec = ExecState::RstInput(Some("Press Ctrl+C again, or press Ctrl+D to exit".to_string()));
                     } else {
                         is_exec = ExecState::RstInput(None);
@@ -234,6 +240,9 @@ fn main() -> io::Result<()> {
             }
             _ => {}
         }
+        if !ctrl_c {
+            app_obj.first_ctrl_c = false;
+        }
 
         if let ExecState::Exec = is_exec && app_obj.can_compile {
             let code = app_obj.repl_input.text();
@@ -241,7 +250,7 @@ fn main() -> io::Result<()> {
             let parsed = parse(&code);
             let inst;
             if let Ok(module) =  parsed {
-                inst = compile(&module);
+                inst = module.inst(app_obj.machine.machine.instructions.len() as u64);
             } else {
                 let parsed = parse(&(code.clone() + ";")).unwrap();
                 let mut pre_inst = compile(&parsed);
@@ -251,7 +260,8 @@ fn main() -> io::Result<()> {
                         pre_inst.push(Instruction::LoadName(Box::from("_r")));
                         pre_inst.push(Instruction::Swap);
                         pre_inst.push(Instruction::Assign);
-                        let print_inst = compile!{print(_r);};
+                        let offset = app_obj.machine.machine.instructions.len() + pre_inst.len();
+                        let print_inst = compile!{if !(is_none(_r)) {print(_r);}}.offset(offset as u64);
                         pre_inst.extend(print_inst);
                     },
                     Some(e) => {

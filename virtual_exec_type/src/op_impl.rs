@@ -34,6 +34,8 @@ register_op_eq!(i64, i64, bool);
 register_op_eq!(f64, f64, bool);
 register_op_eq!(i64, f64, bool, |a, b| Ok(((a as f64) - b).abs() < f64::EPSILON));
 register_op_eq!(f64, i64, bool, |b, a| Ok(((a as f64) - b).abs() < f64::EPSILON));
+register_op_eq!((), (), bool);
+register_op_eq!(bool, bool, bool);
 
 register_op_le!(i64, i64, bool);
 register_op_le!(f64, f64, bool);

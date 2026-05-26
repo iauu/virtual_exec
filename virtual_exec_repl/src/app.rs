@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use ratatui_interact::components::TextAreaState;
-use ratatui_interact::prelude::ScrollableContentState;
+use ratatui_interact::prelude::{ButtonState, ScrollableContentState};
 use ratatui_interact::traits::ClickRegionRegistry;
 use virtual_exec_core::fn_extern::MethodResolver;
 use virtual_exec_core::Machine;
@@ -14,7 +14,9 @@ pub enum InteractArea {
     Textarea,
     Vars,
     DebugInst,
-    DebugStack
+    DebugStack,
+    ToggleVars,
+    ToggleDebugs
 }
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
@@ -43,8 +45,8 @@ pub struct AppState {
     pub repl_buffer: Vec<(String, String)>,
     pub repl_input: TextAreaState,
     pub repl_buffer_state: ScrollableContentState,
-    pub show_vars: bool,
-    pub show_debug: bool,
+    pub show_vars: ButtonState,
+    pub show_debug: ButtonState,
     pub click_region_registry: ClickRegionRegistry<InteractArea>,
     pub first_ctrl_c: bool,
     pub focus: FocusArea,
@@ -64,8 +66,8 @@ impl AppState {
             rollback,
             repl_buffer: vec![],
             repl_input: TextAreaState::new(""),
-            show_vars: false,
-            show_debug: false,
+            show_vars: ButtonState::toggled(false),
+            show_debug: ButtonState::toggled(false),
             click_region_registry: ClickRegionRegistry::new(),
             repl_buffer_state: ScrollableContentState::empty(),
             first_ctrl_c: false,

@@ -84,7 +84,7 @@ fn main() -> io::Result<()> {
                 let buffer = app_obj.eval_state.as_ref().unwrap().buffer.clone();
                 app_obj.repl_buffer.push((code, buffer));
                 app_obj.eval_state = None;
-                app_obj.idx = app_obj.repl_buffer.len() - 1;
+                app_obj.idx = app_obj.repl_buffer.len();
             }
         }
         if let Err(e) = app_obj.machine.machine.state.clone() {
@@ -96,7 +96,7 @@ fn main() -> io::Result<()> {
             buffer.push_str(&format!("Error: {:?}", e));
             app_obj.repl_buffer.push((code, buffer));
             app_obj.eval_state = None;
-            app_obj.idx = app_obj.repl_buffer.len() - 1;
+            app_obj.idx = app_obj.repl_buffer.len();
         }
 
         if (app_obj.focus) == FocusArea::TextArea {
@@ -204,6 +204,12 @@ fn main() -> io::Result<()> {
                             InteractArea::Textarea => {
                                 app_obj.focus = FocusArea::TextArea;
                             },
+                            InteractArea::ToggleDebugs => {
+                                app_obj.show_debug.toggle();
+                            },
+                            InteractArea::ToggleVars => {
+                                app_obj.show_vars.toggle();
+                            }
                             _ => {}
                         }
                     }
@@ -294,7 +300,7 @@ fn main() -> io::Result<()> {
             let txt = app_obj.repl_input.text();
             app_obj.repl_input.set_text("");
             app_obj.repl_buffer.push((txt, opt.unwrap_or("".to_string())));
-            app_obj.idx = app_obj.repl_buffer.len() - 1;
+            app_obj.idx = app_obj.repl_buffer.len();
         }
 
         // if app.should_quit {

@@ -7,8 +7,9 @@ use ratatui::{
 };
 use ratatui::crossterm::style::Stylize;
 use ratatui::prelude::Modifier;
-use ratatui_interact::components::{ScrollableContent, TextArea, TextAreaStyle};
-use ratatui_interact::prelude::ScrollableContentStyle;
+use ratatui::widgets::Padding;
+use ratatui_interact::components::{Button, ButtonVariant, ScrollableContent, TextArea, TextAreaStyle};
+use ratatui_interact::prelude::{ButtonState, ScrollableContentStyle};
 use crate::app::{App, InteractArea};
 use virtual_exec_core::parse;
 
@@ -97,12 +98,35 @@ pub(crate) fn ui(f: &mut Frame, app: &mut App) {
         can_compile = parse(&(app.repl_input.text() + ";")).is_ok();
     }
     app.can_compile = can_compile;
+
+    let status_bar_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .margin(0)
+        .constraints([
+            Constraint::Length(25),
+            Constraint::Percentage(50),
+            Constraint::Percentage(50)
+        ])
+        .split(chunks[2]);
+
     let status = Paragraph::new(Line::from(
         vec![status_text.into(),
              if can_compile { Span::styled("✔ Valid", Style::default().green()) } else {
                  Span::styled("✖ Syntax Error", Style::default().red()) }
         ]))
-        .style(Style::default().fg(Color::White).bg(Color::DarkGray))
+        .style(Style::default().fg(Color::White).bg(Color::Reset))
         .block(Block::default());
-    f.render_widget(status, chunks[2]);
+    f.render_widget(status, status_bar_chunks[0]);
+
+    let b1 = Button::new(&"Debug Panel", &app.show_debug)
+        .variant(ButtonVariant::Toggle);
+    f.render_widget(b1, status_bar_chunks[1]);
+    app.click_region_registry
+        .register(status_bar_chunks[1], InteractArea::ToggleDebugs);
+
+    let b2 = Button::new(&"Vars Panel", &app.show_vars)
+        .variant(ButtonVariant::Toggle);
+    f.render_widget(b2, status_bar_chunks[2]);
+    app.click_region_registry
+        .register(status_bar_chunks[2], InteractArea::ToggleVars);
 }

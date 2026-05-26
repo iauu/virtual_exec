@@ -9,3 +9,4 @@ Module that implement compilation and external function handling
 - [virtual_exec_macro](https://crates.io/crates/virtual_exec_macro)
 - [virtual_exec_extern](https://crates.io/crates/virtual_exec_extern)
 - [virtual_exec_std](https://crates.io/crates/virtual_exec_std)
+- [virtual_exec_repl](https://crates.io/crates/virtual_exec_repl)

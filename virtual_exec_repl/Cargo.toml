@@ -2,6 +2,11 @@
 name = "virtual_exec_repl"
 version = "0.1.0"
 edition = "2024"
+repository = "https://github.com/i-am-unknown-81514525/virtual_exec"
+authors = ["i-am-unknown-81514525" ]
+readme = "README.md"
+description = "Sub-crate of virtual_exec - provide standard library definition for the language"
+license = "GPL-3.0"
 
 [dependencies]
 ratatui = "0.30.0"

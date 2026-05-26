@@ -60,3 +60,4 @@ fn test_simple_assignment_and_expr() {
 - [virtual_exec_core](https://crates.io/crates/virtual_exec_core)
 - [virtual_exec_extern](https://crates.io/crates/virtual_exec_extern)
 - [virtual_exec_std](https://crates.io/crates/virtual_exec_std)
+- [virtual_exec_repl](https://crates.io/crates/virtual_exec_repl)

@@ -30,8 +30,16 @@ impl Into<InteractArea> for FocusArea {
     }
 }
 
+#[derive(Clone)]
+pub struct  CodeEvalState {
+    pub code: String,
+    pub inst_count: usize,
+    pub buffer: String,
+}
+
 pub struct AppState {
     pub machine: Machine<'static>,
+    pub rollback: Machine<'static>,
     pub repl_buffer: Vec<(String, String)>,
     pub repl_input: TextAreaState,
     pub repl_buffer_state: ScrollableContentState,
@@ -43,13 +51,17 @@ pub struct AppState {
     pub repl_buffer_height: usize,
     pub can_compile: bool,
     pub idx: usize,
-    pub switch_mode: bool
+    pub switch_mode: bool,
+    pub eval_state: Option<CodeEvalState>,
 }
 
 impl AppState {
     pub fn new(resolvers: Vec<MethodResolver>) -> Self {
+        let machine = Machine::new(vec![], 2 << 32, u64::MAX, resolvers).unwrap();
+        let rollback = machine.clone();
         Self {
-            machine: Machine::new(vec![], 2 << 28, 2 << 20, resolvers).unwrap(),
+            machine,
+            rollback,
             repl_buffer: vec![],
             repl_input: TextAreaState::new(""),
             show_vars: false,
@@ -61,7 +73,8 @@ impl AppState {
             repl_buffer_height: 1,
             can_compile: false,
             idx: 0,
-            switch_mode: true
+            switch_mode: true,
+            eval_state: None,
         }
     }
 }

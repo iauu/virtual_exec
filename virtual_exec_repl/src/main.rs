@@ -1,9 +1,12 @@
 mod app;
 mod component;
 mod ui;
+mod override_print;
 
+use std::fmt::format;
 use std::io;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use ratatui::crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
@@ -17,7 +20,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
 };
-
+use ratatui::crossterm::style::Stylize;
 use ratatui_interact::{
     components::{TabConfig, TextArea, TextAreaState, TextAreaStyle},
     events::{
@@ -26,10 +29,14 @@ use ratatui_interact::{
     },
     traits::ClickRegionRegistry,
 };
-
-use crate::app::{App, AppState, FocusArea, InteractArea};
+use virtual_exec_core::{compile, parse};
+use virtual_exec_core::sequential::exec::State;
+use virtual_exec_core::sequential::instructions::Instruction;
+use crate::app::{App, AppState, CodeEvalState, FocusArea, InteractArea};
 use virtual_exec_std::{SYS, BASIC};
 use crate::ui::ui;
+use virtual_exec_macro::compile;
+use crate::override_print::{OVERRIDE_PRINT, PRINT_BUFFER};
 
 /// Application state
 
@@ -48,7 +55,9 @@ fn main() -> io::Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     // Create app
-    let mut app = Arc::new(Mutex::new(AppState::new(vec![SYS.clone(), BASIC.clone()])));
+    let mut app = Arc::new(Mutex::new(AppState::new(vec![BASIC.clone(), OVERRIDE_PRINT.clone(), SYS.clone()])));
+    app.lock().unwrap().machine.machine.state = Ok(State::Terminated);
+    app.lock().unwrap().rollback.machine.state = Ok(State::Terminated);
     
 
     // Main loop
@@ -58,12 +67,53 @@ fn main() -> io::Result<()> {
 
         let mut app_obj = app.lock().unwrap();
 
+        let mut curr_exec = false;
+
+        if let Ok(State::Ok) = app_obj.machine.machine.state {
+            curr_exec = true;
+            app_obj.machine.machine.lim = u64::MAX;
+            let _ = app_obj.machine.sync_run_for(100);
+            app_obj.eval_state.as_mut().unwrap().buffer.push_str(PRINT_BUFFER.lock().unwrap().as_str());
+            PRINT_BUFFER.lock().unwrap().clear();
+            if let Ok(State::Terminated) = app_obj.machine.machine.state {
+                app_obj.rollback.machine = app_obj.machine.machine.clone();
+                let code = app_obj.eval_state.as_ref().unwrap().code.clone();
+                app_obj.eval_state.as_mut().unwrap().buffer.push_str(PRINT_BUFFER.lock().unwrap().as_str());
+                PRINT_BUFFER.lock().unwrap().clear();
+                let buffer = app_obj.eval_state.as_ref().unwrap().buffer.clone();
+                app_obj.repl_buffer.push((code, buffer));
+                app_obj.eval_state = None;
+                app_obj.idx = app_obj.repl_buffer.len() - 1;
+            }
+        }
+        if let Err(e) = app_obj.machine.machine.state.clone() {
+            app_obj.machine.machine = app_obj.rollback.machine.clone();
+            let code = app_obj.eval_state.as_ref().unwrap().code.clone();
+            app_obj.eval_state.as_mut().unwrap().buffer.push_str(PRINT_BUFFER.lock().unwrap().as_str());
+            PRINT_BUFFER.lock().unwrap().clear();
+            let mut buffer = app_obj.eval_state.as_ref().unwrap().buffer.clone();
+            buffer.push_str(&format!("Error: {:?}", e));
+            app_obj.repl_buffer.push((code, buffer));
+            app_obj.eval_state = None;
+            app_obj.idx = app_obj.repl_buffer.len() - 1;
+        }
+
         if (app_obj.focus) == FocusArea::TextArea {
             app_obj.repl_input.focused = true;
         } else {
             app_obj.repl_input.focused = false;
         }
-        
+        if curr_exec {
+            match event::poll(Duration::from_millis(1)) {
+                Ok(true) => {},
+                Ok(false) => {
+                    continue;
+                },
+                Err(e) => {
+                    Err(e)?
+                }
+            };
+        }
         match event::read()? {
             Event::Key(key) => {
                 if is_enter(&key) {
@@ -183,6 +233,58 @@ fn main() -> io::Result<()> {
 
             }
             _ => {}
+        }
+
+        if let ExecState::Exec = is_exec && app_obj.can_compile {
+            let code = app_obj.repl_input.text();
+            app_obj.repl_input.set_text("");
+            let parsed = parse(&code);
+            let inst;
+            if let Ok(module) =  parsed {
+                inst = compile(&module);
+            } else {
+                let parsed = parse(&(code.clone() + ";")).unwrap();
+                let mut pre_inst = compile(&parsed);
+                let inst_last = pre_inst.pop();
+                match inst_last {
+                    Some(Instruction::Pop) => {
+                        pre_inst.push(Instruction::LoadName(Box::from("_r")));
+                        pre_inst.push(Instruction::Swap);
+                        pre_inst.push(Instruction::Assign);
+                        let print_inst = compile!{print(_r);};
+                        pre_inst.extend(print_inst);
+                    },
+                    Some(e) => {
+                        pre_inst.push(e);
+                    },
+                    None => {
+                        continue;
+                    }
+                }
+
+                inst = pre_inst;
+            }
+            let len = inst.len();
+            app_obj.machine.machine.instructions.extend(inst);
+            app_obj.eval_state = Some(CodeEvalState {
+                code,
+                inst_count: 0,
+                buffer: String::new()
+            });
+            if let Ok(State::Terminated) = app_obj.machine.machine.state && len > 0 {
+                app_obj.machine.machine.state = Ok(State::Ok);
+            } else if let Ok(State::Terminated) = app_obj.machine.machine.state && len == 0 {
+                let code = app_obj.eval_state.as_ref().unwrap().code.clone();
+                app_obj.repl_buffer.push((code, "".to_string()));
+                app_obj.eval_state = None;
+            }
+            app_obj.machine.machine.lim = u64::MAX;
+        }
+        else if let ExecState::RstInput(opt) = is_exec {
+            let txt = app_obj.repl_input.text();
+            app_obj.repl_input.set_text("");
+            app_obj.repl_buffer.push((txt, opt.unwrap_or("".to_string())));
+            app_obj.idx = app_obj.repl_buffer.len() - 1;
         }
 
         // if app.should_quit {

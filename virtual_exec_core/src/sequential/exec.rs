@@ -203,47 +203,7 @@ impl<'ctx> InstStateMachine<'ctx> {
         self.alloc.alloc(data).map_err(|e| e.into())
     }
 
-    pub fn run_once(&mut self) -> Result<State<'ctx>, ExecutionError> {
-        match self.state.clone() {
-            Ok(State::Terminated) => {
-                return Ok(State::Terminated)
-            },
-            Ok(State::Interrupt) => {
-                return Ok(State::Interrupt)
-            },
-            Ok(State::FnExternInput(a, b)) => {
-              return Ok(State::FnExternInput(a, b))  
-            },
-            Ok(State::FnExternOutput(a, b)) => {
-                return Ok(State::FnExternOutput(a,b))
-            },
-            Err(ExecutionError::Recoverable(rec)) => {
-                self.state = Err(ExecutionError::NonRecoverable(NonRecoverableError::NonRecoveredRecoverableError(rec)));
-                return self.state.clone();
-            },
-            Err(err) => {
-                return Err(err)
-            },
-            Ok(State::Ok) | Ok(State::Timeout(_)) => {}
-        };
-        let instruction;
-        {
-            let stack =  self.get_stack_ref()?;
-            let ptr = stack.ptr as usize;
-            instruction = self.instructions[ptr].clone();
-            let stack =  self.get_mut_stack_ref()?;
-            stack.ptr += 1;
-        }
-        if let Ok(State::Timeout(req)) = self.state && req > self.lim {
-            return self.state.clone();
-        }
-        if self.lim == 0 {
-            self.state = Ok(State::Timeout(1));
-            return self.state.clone()
-        } else {
-            self.state = Ok(State::Ok)
-        }
-        self.lim -= 1;
+    fn inst_eval(&mut self, instruction: Instruction) -> Result<State<'ctx>, ExecutionError> {
         match instruction {
             Instruction::Add => { __binary_autogen!(err_op_add, self); },
             Instruction::Sub => { __binary_autogen!(err_op_sub, self); },
@@ -331,12 +291,12 @@ impl<'ctx> InstStateMachine<'ctx> {
                             return self.state.clone();
                         }
                     };
-                    
+
                     if given_size as usize != fn_size {
                         self.state = Err(ExecutionError::NonRecoverable(NonRecoverableError::IncorrectArgumentCountError));
                         return self.state.clone();
                     }
-                    
+
                     self.fn_stack_frame.push(
                         FnStackFrame {
                             ptr,
@@ -357,7 +317,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                         self.state = Err(ExecutionError::NonRecoverable(NonRecoverableError::IncorrectArgumentCountError));
                         return self.state.clone();
                     }
-                    
+
                     self.state = Ok(State::FnExternInput(name, fn_size))
                 }
                 else {
@@ -458,12 +418,65 @@ impl<'ctx> InstStateMachine<'ctx> {
             Instruction::LoadDPtr(ptr, arg_len) => {
                 self.push(StackItem::Value(self.alloc(Value::DPtr(ptr, arg_len))?))
             }
+        };
+        self.state.clone()
+    }
+
+    pub fn run_once(&mut self) -> Result<State<'ctx>, ExecutionError> {
+        match self.state.clone() {
+            Ok(State::Terminated) => {
+                return Ok(State::Terminated)
+            },
+            Ok(State::Interrupt) => {
+                return Ok(State::Interrupt)
+            },
+            Ok(State::FnExternInput(a, b)) => {
+              return Ok(State::FnExternInput(a, b))  
+            },
+            Ok(State::FnExternOutput(a, b)) => {
+                return Ok(State::FnExternOutput(a,b))
+            },
+            Err(ExecutionError::Recoverable(rec)) => {
+                self.state = Err(ExecutionError::NonRecoverable(NonRecoverableError::NonRecoveredRecoverableError(rec)));
+                return self.state.clone();
+            },
+            Err(err) => {
+                return Err(err)
+            },
+            Ok(State::Ok) | Ok(State::Timeout(_)) => {}
+        };
+        let instruction;
+        {
+            let stack =  self.get_stack_ref()?;
+            let ptr = stack.ptr as usize;
+            instruction = self.instructions[ptr].clone();
+            let stack =  self.get_mut_stack_ref()?;
+            stack.ptr += 1;
         }
+        if let Ok(State::Timeout(req)) = self.state && req > self.lim {
+            return self.state.clone();
+        }
+        if self.lim == 0 {
+            self.state = Ok(State::Timeout(1));
+            return self.state.clone()
+        } else {
+            self.state = Ok(State::Ok)
+        }
+        self.lim -= 1;
+
+        self.state = self.inst_eval(instruction);
+        match self.state.clone() {
+            Err(e) => {
+                return self.state.clone();
+            }
+            _ => {}
+        }
+
         if self.fn_stack_frame.last().unwrap().ptr as usize == self.instructions.len()  {
             self.state = Ok(State::Terminated);
             return self.state.clone()
         }
-        Ok(State::Ok)
+        self.state.clone()
     }
     
     pub fn retrieve_fn_input(&mut self) -> Result<Option<(String, ArgumentPackage<'ctx>)>, ExecutionError> {

@@ -1801,10 +1801,13 @@ dependencies = [
 name = "virtual_exec_repl"
 version = "0.1.0"
 dependencies = [
+ "cfg-if",
  "color-eyre",
  "ratatui",
  "ratatui-interact",
  "virtual_exec_core",
+ "virtual_exec_extern",
+ "virtual_exec_macro",
  "virtual_exec_std",
  "virtual_exec_type",
 ]

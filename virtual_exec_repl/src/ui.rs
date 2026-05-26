@@ -31,7 +31,7 @@ pub(crate) fn ui(f: &mut Frame, app: &mut App) {
         .split(area);
 
     // Repl buffer
-    let content = app.repl_buffer.iter()
+    let mut content = app.repl_buffer.iter()
         .map(
             |(k, v)|
                 if v.is_empty() {format!(">>> {}", k)}
@@ -42,6 +42,9 @@ pub(crate) fn ui(f: &mut Frame, app: &mut App) {
         .split("\n")
         .map(|x| x.to_string())
         .collect::<Vec<String>>();
+    if let Some(eval_state) = app.eval_state.clone() {
+        content.push(format!("\n>>> {}\n{}", eval_state.code, eval_state.buffer));
+    }
     if app.repl_buffer_state.is_at_bottom(chunks[0].height as usize) {
         app.repl_buffer_state.set_lines(content.iter().map(|s| s.to_string()).collect());
         app.repl_buffer_state.scroll_to_bottom(chunks[0].height as usize);
@@ -89,7 +92,10 @@ pub(crate) fn ui(f: &mut Frame, app: &mut App) {
         app.repl_input.line_count(),
 
     );
-    let can_compile = parse(&app.repl_input.text()).is_ok();
+    let mut can_compile = parse(&app.repl_input.text()).is_ok();
+    if !can_compile {
+        can_compile = parse(&(app.repl_input.text() + ";")).is_ok();
+    }
     app.can_compile = can_compile;
     let status = Paragraph::new(Line::from(
         vec![status_text.into(),

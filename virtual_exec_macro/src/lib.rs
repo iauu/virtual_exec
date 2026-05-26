@@ -241,7 +241,21 @@ fn fn_stmt_to_token(stmt: virtual_exec_parser::tokenizer::FnStmt) -> impl ToToke
                     span: None,
                 }
             }
-        }
+        },
+        virtual_exec_parser::tokenizer::FnStmt::Fn { name, args, body } => {
+            let body_token = fn_stmts_to_token(body.stmts);
+
+            quote! {
+                ::virtual_exec_type::ast::core::Node {
+                    kind: ::virtual_exec_type::ast::core::Stmt::FunctionDef {
+                        name: #name.to_string(),
+                        args: vec![ #(#args.to_string()),* ],
+                        body: #body_token,
+                    },
+                    span: None,
+                }
+            }
+        },
     }
 }
 

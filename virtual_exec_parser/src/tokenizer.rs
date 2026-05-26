@@ -107,7 +107,12 @@ pub enum FnStmt {
         test: Expr,
         body: FnBlock
     },
-    Return(Option<Expr>)
+    Return(Option<Expr>),
+    Fn {
+        name: String,
+        args: Vec<String>,
+        body: FnBlock,
+    }
 }
 
 #[derive(Clone)]
@@ -201,10 +206,10 @@ impl Parse for Stmt {
 impl Parse for FnStmt {
     fn parse(input: ParseStream) -> Result<Self> {
         if input.peek(Token![if]) {
-            return parse_if_statement(input).map(FnStmt::from);
+            return parse_if_fn_statement(input);
         }
         else if input.peek(Token![while]) {
-            return parse_while_statement(input).map(FnStmt::from);
+            return parse_while_fn_statement(input);
         }
         else if input.peek(Token![return]) {
             input.parse::<Token![return]>()?;
@@ -215,6 +220,8 @@ impl Parse for FnStmt {
             let expr = input.parse::<Expr>()?;
             input.parse::<Token![;]>()?;
             return Ok(FnStmt::Return(Some(expr)));
+        } else if input.peek(Token![fn]) {
+            return parse_fn_statement(input).map(FnStmt::from);
         }
 
         let fork = input.fork();
@@ -261,8 +268,7 @@ impl From<Stmt> for FnStmt {
             Stmt::If { test, body, otherwise } => FnStmt::If { test, body: body.into(), otherwise: otherwise.map(|x| x.into()) },
             Stmt::Scoped(stmts) => FnStmt::Scoped(stmts),
             Stmt::Loop { test, body } => FnStmt::Loop { test, body: body.into() },
-            // TODO: Perper way to handle people trying to define function within a function
-            Stmt::Fn { .. } => FnStmt::Expr(Expr::Atom(Atom::Literal(Literal::Int(0))))
+            Stmt::Fn { name, args, body } => FnStmt::Fn { name, args, body },
         }
     }
 }
@@ -294,11 +300,37 @@ fn parse_if_statement(input: ParseStream) -> Result<Stmt> {
     Ok(Stmt::If { test, body, otherwise })
 }
 
+fn parse_if_fn_statement(input: ParseStream) -> Result<FnStmt> {
+    input.parse::<Token![if]>()?;
+    let test = input.parse::<Expr>()?;
+    let body = input.parse::<FnBlock>()?;
+    let mut otherwise = None;
+
+    if input.peek(Token![else]) {
+        input.parse::<Token![else]>()?;
+        if input.peek(Token![if]) {
+            let nested_if = parse_if_fn_statement(input)?;
+            otherwise = Some(FnBlock { stmts: vec![nested_if] });
+        } else {
+            otherwise = Some(input.parse::<FnBlock>()?);
+        }
+    }
+
+    Ok(FnStmt::If { test, body, otherwise })
+}
+
 fn parse_while_statement(input: ParseStream) -> Result<Stmt> {
     input.parse::<Token![while]>()?;
     let test = input.parse::<Expr>()?;
     let body = input.parse::<Block>()?;
     Ok(Stmt::Loop { test, body })
+}
+
+fn parse_while_fn_statement(input: ParseStream) -> Result<FnStmt> {
+    input.parse::<Token![while]>()?;
+    let test = input.parse::<Expr>()?;
+    let body = input.parse::<FnBlock>()?;
+    Ok(FnStmt::Loop { test, body })
 }
 
 fn parse_fn_statement(input: ParseStream) -> Result<Stmt> {

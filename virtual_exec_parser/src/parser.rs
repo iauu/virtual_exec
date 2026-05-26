@@ -39,8 +39,8 @@ pub fn convert_stmt(stmt: tokenizer::Stmt) -> Result<final_ast::Node<final_ast::
         tokenizer::Stmt::Fn { name, args, body} => {
             let final_body = body.stmts.into_iter().map(convert_fn_stmt).collect::<Result<_, _>>()?;
             final_ast::Stmt::FunctionDef {
-                name: name,
-                args: args,
+                name,
+                args,
                 body: final_body,
             }
         }
@@ -48,7 +48,7 @@ pub fn convert_stmt(stmt: tokenizer::Stmt) -> Result<final_ast::Node<final_ast::
     Ok(final_ast::Node { kind, span: None })
 }
 
-pub fn convert_fn_stmt(stmt: tokenizer::FnStmt) -> Result<final_ast::Node<final_ast::Stmt>, ParseError> {
+fn convert_fn_stmt(stmt: tokenizer::FnStmt) -> Result<final_ast::Node<final_ast::Stmt>, ParseError> {
     let kind = match stmt {
         tokenizer::FnStmt::Expr(expr) => final_ast::Stmt::Expression(convert_expr(expr)),
         tokenizer::FnStmt::Assign { target, value } => {
@@ -67,7 +67,7 @@ pub fn convert_fn_stmt(stmt: tokenizer::FnStmt) -> Result<final_ast::Node<final_
             let final_otherwise = otherwise
                 .map(|b| b.stmts.into_iter().map(convert_fn_stmt).collect())
                 .transpose()?;
-
+            
             final_ast::Stmt::If {
                 test: final_test,
                 body: final_body,
@@ -82,13 +82,20 @@ pub fn convert_fn_stmt(stmt: tokenizer::FnStmt) -> Result<final_ast::Node<final_
                 body: final_body,
             }
         },
+        tokenizer::FnStmt::Fn { name, args, body} => {
+            let final_body = body.stmts.into_iter().map(convert_fn_stmt).collect::<Result<_, _>>()?;
+            final_ast::Stmt::FunctionDef {
+                name,
+                args,
+                body: final_body,
+            }
+        },
         tokenizer::FnStmt::Return(expr) => {
             final_ast::Stmt::Return(expr.map(|x| convert_expr(x)))
         }
     };
     Ok(final_ast::Node { kind, span: None })
 }
-
 
 fn convert_expr(expr: tokenizer::Expr) -> final_ast::Node<final_ast::Expr> {
     let kind = match expr {

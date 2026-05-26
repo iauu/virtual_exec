@@ -253,33 +253,31 @@ fn main() -> io::Result<()> {
         if let ExecState::Exec = is_exec && app_obj.can_compile {
             let code = app_obj.repl_input.text();
             app_obj.repl_input.set_text("");
-            let parsed = parse(&code);
-            let inst;
-            if let Ok(module) =  parsed {
-                inst = module.inst(app_obj.machine.machine.instructions.len() as u64);
-            } else {
-                let parsed = parse(&(code.clone() + ";")).unwrap();
-                let mut pre_inst = compile(&parsed);
-                let inst_last = pre_inst.pop();
-                match inst_last {
-                    Some(Instruction::Pop) => {
-                        pre_inst.push(Instruction::LoadName(Box::from("_r")));
-                        pre_inst.push(Instruction::Swap);
-                        pre_inst.push(Instruction::Assign);
-                        let offset = app_obj.machine.machine.instructions.len() + pre_inst.len();
-                        let print_inst = compile!{if !(is_none(_r)) {print(_r);}}.offset(offset as u64);
-                        pre_inst.extend(print_inst);
-                    },
-                    Some(e) => {
-                        pre_inst.push(e);
-                    },
-                    None => {
-                        continue;
+            let inst = match parse(&code) {
+                Ok(module) => module.inst(app_obj.machine.machine.instructions.len() as u64),
+                Err(_) => {
+                    let parsed = parse(&(code.clone() + ";")).unwrap();
+                    let mut pre_inst = compile(&parsed);
+                    let inst_last = pre_inst.pop();
+                    match inst_last {
+                        Some(Instruction::Pop) => {
+                            pre_inst.push(Instruction::LoadName(Box::from("_r")));
+                            pre_inst.push(Instruction::Swap);
+                            pre_inst.push(Instruction::Assign);
+                            let offset = app_obj.machine.machine.instructions.len() + pre_inst.len();
+                            let print_inst = compile!{if !(is_none(_r)) {print(_r);}}.offset(offset as u64);
+                            pre_inst.extend(print_inst);
+                        },
+                        Some(e) => {
+                            pre_inst.push(e);
+                        },
+                        None => {
+                            continue;
+                        }
                     }
+                    pre_inst
                 }
-
-                inst = pre_inst;
-            }
+            };
             let len = inst.len();
             app_obj.machine.machine.instructions.extend(inst);
             app_obj.eval_state = Some(CodeEvalState {

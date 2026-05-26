@@ -36,7 +36,7 @@ use virtual_exec_core::sequential::instructions::{InstForceOffset, Instruction};
 use crate::app::{App, AppState, CodeEvalState, FocusArea, InteractArea};
 use virtual_exec_std::{SYS, BASIC};
 use crate::ui::ui;
-use virtual_exec_macro::compile;
+use virtual_exec_macro::{compile, parse};
 use crate::r#override::{OVERRIDE, PRINT_BUFFER};
 
 /// Application state
@@ -59,7 +59,7 @@ fn main() -> io::Result<()> {
     let mut app = Arc::new(Mutex::new(AppState::new(vec![BASIC.clone(), OVERRIDE.clone(), SYS.clone()])));
     app.lock().unwrap().machine.machine.state = Ok(State::Terminated);
     app.lock().unwrap().rollback.machine.state = Ok(State::Terminated);
-    
+
 
     // Main loop
     loop {

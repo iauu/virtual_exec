@@ -345,14 +345,7 @@ fn parse_fn_statement(input: ParseStream) -> Result<Stmt> {
 
 impl Parse for Expr {
     fn parse(input: ParseStream) -> Result<Self> {
-        let mut result = parse_expr_with_precedence(input, 0)?;
-        while input.peek(syn::token::Paren) {
-            let content;
-            parenthesized!(content in input);
-            let arr: Punctuated<Expr, Token![,]> = Punctuated::parse_terminated(&content)?;
-            result = Expr::Call(Box::from(result), arr.into_iter().collect());
-        }
-        Ok(result)
+        parse_expr_with_precedence(input, 0)
     }
 }
 
@@ -370,6 +363,14 @@ fn parse_expr_with_precedence(input: ParseStream, min_bp: u8) -> Result<Expr> {
     };
 
     loop {
+        if input.peek(syn::token::Paren) {
+            let content;
+            parenthesized!(content in input);
+            let arr: Punctuated<Expr, Token![,]> = Punctuated::parse_terminated(&content)?;
+            lhs = Expr::Call(Box::from(lhs), arr.into_iter().collect());
+            continue;
+        }
+
         let (op, _l_bp, r_bp) = match peek_infix_op(input) {
             Some(op_data) if op_data.1 >= min_bp => op_data,
             _ => break,

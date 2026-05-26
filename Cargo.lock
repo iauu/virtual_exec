@@ -1750,14 +1750,14 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "virtual_exec"
-version = "0.5.0-alpha.1"
+version = "0.5.0-alpha.2"
 dependencies = [
  "virtual_exec_core",
 ]
 
 [[package]]
 name = "virtual_exec_core"
-version = "0.5.0-alpha.1"
+version = "0.5.0-alpha.2"
 dependencies = [
  "async-lock",
  "async-trait",
@@ -1768,7 +1768,7 @@ dependencies = [
 
 [[package]]
 name = "virtual_exec_extern"
-version = "0.5.0-alpha.1"
+version = "0.5.0-alpha.2"
 dependencies = [
  "async-trait",
  "virtual_exec_core",
@@ -1778,7 +1778,7 @@ dependencies = [
 
 [[package]]
 name = "virtual_exec_macro"
-version = "0.5.0-alpha.1"
+version = "0.5.0-alpha.2"
 dependencies = [
  "async-lock",
  "proc-macro2",
@@ -1791,7 +1791,7 @@ dependencies = [
 
 [[package]]
 name = "virtual_exec_parser"
-version = "0.5.0-alpha.1"
+version = "0.5.0-alpha.2"
 dependencies = [
  "syn 2.0.117",
  "virtual_exec_type",
@@ -1799,7 +1799,7 @@ dependencies = [
 
 [[package]]
 name = "virtual_exec_repl"
-version = "0.1.0"
+version = "0.5.0-alpha.2"
 dependencies = [
  "cfg-if",
  "color-eyre",
@@ -1814,7 +1814,7 @@ dependencies = [
 
 [[package]]
 name = "virtual_exec_std"
-version = "0.5.0-alpha.1"
+version = "0.5.0-alpha.2"
 dependencies = [
  "async-lock",
  "async-trait",
@@ -1828,7 +1828,7 @@ dependencies = [
 
 [[package]]
 name = "virtual_exec_type"
-version = "0.5.0-alpha.1"
+version = "0.5.0-alpha.2"
 dependencies = [
  "async-lock",
  "inventory",

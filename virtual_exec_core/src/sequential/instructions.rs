@@ -176,6 +176,7 @@ pub trait ConvertInstruction {
 
 pub trait InstForceOffset: Sized {
     fn offset(&self, offset: u64) -> Self;
+    fn offset_with_dptr(&self, offset: u64) -> Self;
 }
 
 impl InstForceOffset for Instruction {
@@ -184,6 +185,16 @@ impl InstForceOffset for Instruction {
             Instruction::Jmp(x) => Instruction::Jmp(x + offset),
             Instruction::JmpNz(x) => Instruction::JmpNz(x + offset),
             Instruction::JmpZ(x) => Instruction::JmpZ(x + offset),
+            _ => self.clone()
+        }
+    }
+
+    fn offset_with_dptr(&self, offset: u64) -> Self {
+        match self {
+            Instruction::Jmp(x) => Instruction::Jmp(x + offset),
+            Instruction::JmpNz(x) => Instruction::JmpNz(x + offset),
+            Instruction::JmpZ(x) => Instruction::JmpZ(x + offset),
+            Instruction::LoadDPtr(x, s) => Instruction::LoadDPtr(x + offset, *s),
             _ => self.clone()
         }
     }
@@ -201,17 +212,38 @@ impl InstForceOffset for InstructionBuilder {
             _ => self.clone()
         }
     }
+
+    fn offset_with_dptr(&self, offset: u64) -> Self {
+        match self {
+            InstructionBuilder::Jmp(x) => InstructionBuilder::Jmp(x + offset),
+            InstructionBuilder::JmpNz(x) => InstructionBuilder::JmpNz(x + offset),
+            InstructionBuilder::JmpZ(x) => InstructionBuilder::JmpZ(x + offset),
+            InstructionBuilder::JmpR(x) => InstructionBuilder::JmpR(x + offset),
+            InstructionBuilder::JmpZR(x) => InstructionBuilder::JmpZR(x + offset),
+            InstructionBuilder::JmpNzR(x) => InstructionBuilder::JmpNzR(x + offset),
+            InstructionBuilder::LoadDPtr(x, l) => InstructionBuilder::LoadDPtr(x + offset, *l),
+            _ => self.clone()
+        }
+    }
 }
 
 impl InstForceOffset for Vec<Instruction> {
     fn offset(&self, offset: u64) -> Self {
         self.iter().map(|i| i.offset(offset)).collect()
     }
+
+    fn offset_with_dptr(&self, offset: u64) -> Self {
+        self.iter().map(|i| i.offset_with_dptr(offset)).collect()
+    }
 }
 
 impl InstForceOffset for Vec<InstructionBuilder> {
     fn offset(&self, offset: u64) -> Self {
         self.iter().map(|i| i.offset(offset)).collect()
+    }
+
+    fn offset_with_dptr(&self, offset: u64) -> Self {
+        self.iter().map(|i| i.offset_with_dptr(offset)).collect()
     }
 }
 

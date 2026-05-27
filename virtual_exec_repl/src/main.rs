@@ -265,7 +265,7 @@ fn main() -> io::Result<()> {
                             pre_inst.push(Instruction::Swap);
                             pre_inst.push(Instruction::Assign);
                             let offset = app_obj.machine.machine.instructions.len() + pre_inst.len();
-                            let print_inst = compile!{if !(is_none(_r)) {print(_r);}}.offset(offset as u64);
+                            let print_inst = compile!{if _r != None {print(_r);}}.offset(offset as u64);
                             pre_inst.extend(print_inst);
                         },
                         Some(e) => {

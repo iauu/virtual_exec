@@ -73,6 +73,14 @@ macro_rules! __binary_autogen {
             $ss.push_value(result);
         }
     };
+    ($f:ident, $ss:ident, $v:expr) => {
+        {
+            let b = $ss.pop_get()?;
+            let a = $ss.pop_get()?;
+            let result = $f(a, b, &$ss.alloc).map_err(|_| ExecutionError::NonRecoverable(NonRecoverableError::UndefinedOperendError)).or_else(|_| $v)?;
+            $ss.push_value(result);
+        }
+    };
 }
 
 
@@ -81,6 +89,13 @@ macro_rules! __unary_autogen {
         {
             let a = $ss.pop_get()?;
             let result = $f(a, &$ss.alloc).map_err(|_| ExecutionError::NonRecoverable(NonRecoverableError::UndefinedOperendError))?;
+            $ss.push_value(result);
+        }
+    };
+    ($f:ident, $ss:ident, $v:expr) => {
+        {
+            let b = $ss.pop_get()?;
+            let result = $f(a, &$ss.alloc).map_err(|_| ExecutionError::NonRecoverable(NonRecoverableError::UndefinedOperendError)).or_else(|_| $v)?;
             $ss.push_value(result);
         }
     };
@@ -219,8 +234,8 @@ impl<'ctx> InstStateMachine<'ctx> {
             Instruction::UnaryMinus => { __unary_autogen!(err_op_neg, self); }
             Instruction::Not => { __unary_autogen!(err_op_not, self); },
             Instruction::BitwiseNot => { __unary_autogen!(err_op_bnot, self); }
-            Instruction::Eq => { __binary_autogen!(err_op_eq, self); },
-            Instruction::NotEq => { __binary_autogen!(err_op_ne, self); }
+            Instruction::Eq => { __binary_autogen!(err_op_eq, self, self.alloc(Value::Bool(false))); },
+            Instruction::NotEq => { __binary_autogen!(err_op_ne, self, self.alloc(Value::Bool(true))); }
             Instruction::Lt => { __binary_autogen!(err_op_lt, self); },
             Instruction::Lte => { __binary_autogen!(err_op_le, self); },
             Instruction::Gt => { __binary_autogen!(err_op_gt, self); },

@@ -32,12 +32,8 @@ register_op_ge!(bool, bool, bool, |a: bool, b: bool| Ok(a >= b));
 register_op_gt!(bool, bool, bool, |a: bool, b: bool| Ok(a & !b));
 register_op_ne!(bool, bool, bool, |a: bool, b: bool| Ok(a != b));
 
-register_op_eq!(i64, i64, bool);
-register_op_eq!(f64, f64, bool);
 register_op_eq!(i64, f64, bool, |a, b| Ok(((a as f64) - b).abs() < f64::EPSILON));
 register_op_eq!(f64, i64, bool, |b, a| Ok(((a as f64) - b).abs() < f64::EPSILON));
-register_op_eq!((), (), bool);
-register_op_eq!(bool, bool, bool);
 
 register_op_le!(i64, i64, bool);
 register_op_le!(f64, f64, bool);
@@ -59,8 +55,6 @@ register_op_gt!(f64, f64, bool);
 register_op_gt!(i64, f64, bool, |a, b| Ok((a as f64) > b));
 register_op_gt!(f64, i64, bool, |a, b| Ok(a > (b as f64)));
 
-register_op_ne!(i64, i64, bool);
-register_op_ne!(f64, f64, bool);
 register_op_ne!(i64, f64, bool, |a, b| Ok(((a as f64) - b).abs() >= f64::EPSILON));
 register_op_ne!(f64, i64, bool, |b, a| Ok(((a as f64) - b).abs() >= f64::EPSILON));
 
@@ -98,6 +92,24 @@ macro_rules! auto_diff_type_op {
         )*
     };
 }
+
+macro_rules! auto_same_type_eq {
+    ($($t:ty),+) => {
+        $(
+            register_op_eq!($t, $t, bool);
+            register_op_ne!($t, $t, bool);
+        )*
+    };
+}
+
+auto_same_type_eq!(
+    (),
+    bool,
+    f64,
+    i64,
+    Error,
+    String
+);
 
 auto_diff_type_op!(
     ((), bool),

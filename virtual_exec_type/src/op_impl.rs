@@ -1,3 +1,5 @@
+use crate::vm_type::Error;
+
 register_op_add!(i64, i64, i64);
 register_op_add!(f64, f64, f64);
 register_op_add!(i64, f64, f64, |a, b| Ok((a as f64) + b));
@@ -84,4 +86,32 @@ register_op_add!(
     String,
     String,
     |a: String, b: String| Ok(format!("{}{}", a, b).to_string())
+);
+
+macro_rules! auto_diff_type_op {
+    ($(($lhs:ty, $rhs: ty)),+) => {
+        $(
+            register_op_eq!($lhs, $rhs, bool, |_, _| Ok(false));
+            register_op_ne!($lhs, $rhs, bool, |_, _| Ok(true));
+            register_op_eq!($rhs, $lhs, bool, |_, _| Ok(false));
+            register_op_ne!($rhs, $lhs, bool, |_, _| Ok(true));
+        )*
+    };
+}
+
+auto_diff_type_op!(
+    ((), bool),
+    ((), f64),
+    ((), i64),
+    ((), Error),
+    ((), String),
+    (bool, f64),
+    (bool, i64),
+    (bool, Error),
+    (bool, String),
+    (f64, Error),
+    (f64, String),
+    (i64, Error),
+    (i64, String),
+    (String, Error)
 );

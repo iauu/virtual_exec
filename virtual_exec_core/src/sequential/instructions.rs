@@ -97,6 +97,59 @@ impl Display for Instruction {
     }
 }
 
+pub trait DisplayInst {
+    fn display(&self) -> String;
+}
+
+impl DisplayInst for Instruction {
+    fn display(&self) -> String {
+        match self {
+            Instruction::Add => "add".to_string(),
+            Instruction::Sub => "sub".to_string(),
+            Instruction::Mul => "mul".to_string(),
+            Instruction::Div => "div".to_string(),
+            Instruction::Mod => "mod".to_string(),
+            Instruction::BitwiseAnd => "band".to_string(),
+            Instruction::BitwiseOr => "bor".to_string(),
+            Instruction::BitwiseXor => "bxor".to_string(),
+            Instruction::Shl => "bsl".to_string(),
+            Instruction::Shr => "bsr".to_string(),
+            Instruction::UnaryPlus => "uadd".to_string(),
+            Instruction::UnaryMinus => "usub".to_string(),
+            Instruction::Not => "not".to_string(),
+            Instruction::BitwiseNot => "bnot".to_string(),
+            Instruction::Eq => "eq".to_string(),
+            Instruction::NotEq => "neq".to_string(),
+            Instruction::Lt => "lt".to_string(),
+            Instruction::Lte => "lte".to_string(),
+            Instruction::Gt => "gt".to_string(),
+            Instruction::Gte => "gte".to_string(),
+            Instruction::Assign => "assign".to_string(),
+            Instruction::JmpNz(x) => format!("jnz {}", x),
+            Instruction::JmpZ(x) => format!("jz {}", x),
+            Instruction::Jmp(x) => format!("jmp {}", x),
+            Instruction::Call => "call".to_string(),
+            Instruction::Ret => "ret".to_string(),
+            Instruction::LoadNone => "load None".to_string(),
+            Instruction::LoadLitFloat(x) => format!("lit_load {}f64", x),
+            Instruction::LoadLitInt(x) => format!("lit_load {}i64", x),
+            Instruction::LoadLitString(x) => format!("lit_load \"{}\"", x),
+            Instruction::LoadLitBool(x) => format!("lit_load {}", x),
+            Instruction::ConstructArr(x) => format!("construct_arr len={}", x),
+            Instruction::ConstructObj(x) => format!("construct_obj len={}", x),
+            Instruction::LoadName(x) => format!("name_load {}", x),
+            Instruction::LoadObjectAttr(x) => format!("attr_load {}", x),
+            Instruction::LoadObjectIndex(x) => format!("index_load {:?}", x),
+            Instruction::Terminate => "term".to_string(),
+            Instruction::Interrupt => "int".to_string(),
+            Instruction::Pop => "pop".to_string(),
+            Instruction::LoadDPtr(x, l) => format!("lit_load ptr={x}, len={l}"),
+            Instruction::Swap => "swp".to_string(),
+
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub enum SubscriptLoad {
     String(Box<str>),

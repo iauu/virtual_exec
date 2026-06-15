@@ -1,6 +1,8 @@
+#![cfg(feature = "parse")]
+
 use virtual_exec_parser::parser::parse;
 use virtual_exec_core::sequential::compile::compile;
-use std::collections::HashMap;
+use virtual_exec_type::HashMap;
 use std::sync::{Arc};
 use async_lock::{RwLock};
 use virtual_exec_core::sequential::exec::{InstStateMachine, FnStackFrame, State};

@@ -10,7 +10,13 @@ description = "Sub-crate of virtual_exec - provide definition for external funct
 
 [dependencies]
 virtual_exec_type = { path = "../virtual_exec_type", version = "0.5.0-alpha.1"}
-virtual_exec_parser = { path = "../virtual_exec_parser", version = "0.5.0-alpha.1"}
-serde = { version = "1.0.228", features = ["derive"] }
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
 async-trait = "0.1.89"
-async-lock = "3.4.2"
+async-lock =  { version = "3.4.2", default-features = false }
+virtual_exec_parser = { path = "../virtual_exec_parser", version = "0.5.0-alpha.1", optional = true}
+
+[features]
+parse = ["virtual_exec_parser"]
+async = ["std"]
+std = ["async-lock/std"]
+default = [] # "parse", "async"

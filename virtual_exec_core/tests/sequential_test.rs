@@ -1,3 +1,5 @@
+#![cfg(feature = "parse")]
+
 use virtual_exec_parser::parser::parse;
 use virtual_exec_core::sequential::compile::compile;
 use virtual_exec_core::sequential::instructions::Instruction;

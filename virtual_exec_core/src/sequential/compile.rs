@@ -1,3 +1,5 @@
+use alloc::vec;
+use alloc::vec::Vec;
 use virtual_exec_type::ast::core::{Module, Expr, Literal, Stmt, AssignExpr, Node, BinaryOperator, UnaryOperator};
 use crate::sequential::instructions::Instruction;
 use crate::sequential::instructions::Instruction::{Jmp, JmpNz, JmpZ, LoadLitBool};

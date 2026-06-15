@@ -1,4 +1,10 @@
+use alloc::boxed::Box;
+use alloc::format;
 use serde::{Deserialize, Serialize};
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
+
+#[cfg(feature = "std")]
 use std::fmt::Display;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialOrd, PartialEq)]
@@ -91,6 +97,7 @@ pub enum Instruction {
     Swap
 }
 
+#[cfg(feature = "std")]
 impl Display for Instruction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)

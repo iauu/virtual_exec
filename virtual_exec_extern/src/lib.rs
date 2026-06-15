@@ -1,5 +1,7 @@
 pub use virtual_exec_macro::{fn_extern_wrap, fn_extern_wrap_async};
 
+extern crate alloc;
+
 #[macro_export]
 macro_rules! extern_link {
     ($name:ident, $sync_fn:expr, $size:expr) => {
@@ -74,12 +76,18 @@ macro_rules! add_item {
     };
 }
 
+
+pub mod __private {
+    pub use alloc::sync::Arc;
+    pub use alloc::string::String;
+}
+
 #[macro_export]
 macro_rules! resolve {
     ($(($name:expr, $item:ident)),*) => {
 
         {
-            let mut map: ::std::collections::HashMap<::std::string::String, Arc<dyn ::virtual_exec_core::fn_extern::FnExtern + ::core::marker::Send + ::core::marker::Sync>> = ::std::collections::HashMap::new();
+            let mut map: ::virtual_exec_type::HashMap<$crate::__private::String, $crate::__private::Arc<dyn ::virtual_exec_core::fn_extern::FnExtern + ::core::marker::Send + ::core::marker::Sync>> = ::virtual_exec_type::HashMap::new();
             $($crate::add_item!(map, $name, $item);)*
             ::virtual_exec_core::fn_extern::MethodResolver::new(
                 map

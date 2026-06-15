@@ -1,13 +1,18 @@
-use std::collections::HashMap;
-use std::marker::PhantomData;
-use std::ops::Deref;
-use std::sync::{Arc, Weak};
-use async_lock::{Mutex, RwLock};
+use alloc::borrow::ToOwned;
+use alloc::boxed::Box;
+use alloc::string::String;
+use crate::HashMap;
+use core::marker::PhantomData;
+use core::ops::Deref;
+use alloc::sync::{Arc, Weak};
+use alloc::vec::Vec;
+use async_lock::{Mutex, MutexGuardArc, RwLock, RwLockReadGuardArc, RwLockWriteGuardArc};
 use crate::error::{MemoryError, ExecutionError};
+use crate::ext::*;
 
 pub type MemoryAllocator<'a> = Arc<Mutex<MemoryAllocation<'a>>>;
 
-pub trait ToOwned {
+pub trait ToOwnedValue {
     type Output;
 
     fn to_owned_value(&self) -> Self::Output;
@@ -49,7 +54,7 @@ impl PartialEq for Value<'_> {
     }
 }
 
-impl ToOwned for Value<'_> {
+impl ToOwnedValue for Value<'_> {
     type Output = OwnedValue;
 
     fn to_owned_value(&self) -> Self::Output {
@@ -60,10 +65,10 @@ impl ToOwned for Value<'_> {
             Value::None => OwnedValue::None,
             Value::String(s) => OwnedValue::String(s.to_owned()),
             Value::Collection(c) => {
-                OwnedValue::Collection(c.read_arc_blocking().iter().map(|v| v.lock_arc_blocking().to_owned_value()).collect::<Vec<_>>().into())
+                OwnedValue::Collection(c.read_arc_safe().iter().map(|v| v.lock_arc_safe().to_owned_value()).collect::<Vec<_>>().into())
             },
             Value::Object(d) => {
-                OwnedValue::Object(d.read_arc_blocking().iter().map(|(k, v)| (k.to_owned(), v.lock_arc_blocking().to_owned_value())).collect())
+                OwnedValue::Object(d.read_arc_safe().iter().map(|(k, v)| (k.to_owned(), v.lock_arc_safe().to_owned_value())).collect())
             },
             Value::_Scope(_) => OwnedValue::None,
             Value::MemoryChunk(_) => OwnedValue::None,
@@ -226,9 +231,9 @@ impl<'a> GetSize for Value<'a> {
             Value::Int(_i) => 8,
             Value::Float(_f) => 8,
             Value::Bool(_b) => 1,
-            Value::Collection(c) => c.read_arc_blocking().len() * 8,
+            Value::Collection(c) => c.read_arc_safe().len() * 8,
             Value::Object(d) => {
-                let map = d.read_arc_blocking();
+                let map = d.read_arc_safe();
                 map.len() * 8 + map.keys().map(|k| k.len()).sum::<usize>()
             },
             Value::String(s) => s.len(),
@@ -256,25 +261,25 @@ impl<'a> Allocator for MemoryAllocator<'a> {
 
     fn alloc(&self, input: Self::Input) -> Result<Self::Output, MemoryError> {
         let size = input.get_size();
-        self.lock_arc_blocking()._internal_alloc(size)?;
+        self.lock_arc_safe()._internal_alloc(size)?;
         let obj = ValueInnerPtr::new(input, size, self);
         let ptr = Arc::new(Mutex::new(obj));
-        self.lock_arc_blocking()._index_obj(&ptr);
+        self.lock_arc_safe()._index_obj(&ptr);
         Ok(ptr)
     }
 
     fn change_alloc(&self, data: &mut Self::Output) -> Result<(), MemoryError> {
-        let marked_size = data.lock_arc_blocking().marked_size();
-        let new_size = data.lock_arc_blocking().get_size();
+        let marked_size = data.lock_arc_safe().marked_size();
+        let new_size = data.lock_arc_safe().get_size();
         if marked_size == new_size {
             return Ok(());
         }
         if marked_size < new_size {
-            self.lock_arc_blocking()._internal_alloc(new_size - marked_size)?;
+            self.lock_arc_safe()._internal_alloc(new_size - marked_size)?;
         } else if marked_size > new_size {
-            self.lock_arc_blocking()._internal_dealloc(marked_size - new_size);
+            self.lock_arc_safe()._internal_dealloc(marked_size - new_size);
         }
-        data.lock_arc_blocking().size = new_size;
+        data.lock_arc_safe().size = new_size;
         Ok(())
 
     }

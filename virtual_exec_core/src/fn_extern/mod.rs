@@ -1,10 +1,12 @@
 mod resolver;
 
+use alloc::vec::Vec;
 use virtual_exec_type::mem::{ValuePtr};
 use async_trait::async_trait;
 use virtual_exec_type::error::ExecutionError;
 use crate::Machine;
 pub use crate::fn_extern::resolver::MethodResolver;
+use alloc::boxed::Box;
 
 pub trait FnExternConstruct {
     fn new() -> Self where Self: Sized;

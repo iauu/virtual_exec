@@ -1,12 +1,15 @@
 
-use std::collections::HashMap;
-use std::sync::{Arc};
+use crate::HashMap;
+use alloc::sync::{Arc};
+use alloc::vec;
+use alloc::vec::Vec;
 use async_lock::RwLock;
 use crate::sequential::exec::{FnStackFrame, InstStateMachine, State};
 use crate::sequential::instructions::Instruction;
 use virtual_exec_type::error::{ExecutionError, MemoryError};
-use virtual_exec_type::mem::{Allocator, MemoryAllocator, MemoryAllocatorConstructor, OwnedValue, ToOwned, Value};
+use virtual_exec_type::mem::{Allocator, MemoryAllocator, MemoryAllocatorConstructor, OwnedValue, ToOwnedValue, Value};
 use crate::fn_extern::{FnExtern, MethodResolver};
+use virtual_exec_type::ext::*;
 
 /// The execution instance including the memory allocator and the instruction state machine
 #[derive(Debug, Clone)]
@@ -96,6 +99,7 @@ impl<'a> Machine<'a> {
         self.machine.state.clone()
     }
 
+    #[cfg(feature = "async")]
     pub async fn async_run_once(&mut self) -> Result<(State<'a>, bool), ExecutionError> {
         if let Ok(State::Ok) = self.machine.state {
             self.machine.run_once().map(|x| (x, true))
@@ -114,6 +118,7 @@ impl<'a> Machine<'a> {
         }
     }
 
+    #[cfg(feature = "async")]
     pub async fn async_run_for(&mut self, count: u64) -> Result<State<'a>, ExecutionError> {
         for _ in 0..count {
             if let Ok(State::Ok) | Ok(State::FnExternInput(_, _)) = self.machine.state {
@@ -126,6 +131,7 @@ impl<'a> Machine<'a> {
         self.machine.state.clone()
     }
 
+    #[cfg(feature = "async")]
     pub async fn async_run_all(&mut self) -> Result<State<'a>, ExecutionError> {
         while let Ok(State::Ok) | Ok(State::FnExternInput(_, _)) = self.machine.state {
             let result = self.async_run_once().await?;
@@ -138,8 +144,8 @@ impl<'a> Machine<'a> {
 
     pub fn get(&self, name: &str) -> Option<OwnedValue> {
         for fn_frame in self.machine.fn_stack_frame.iter().rev() {
-            if let Some(v) = fn_frame.mapping.read_arc_blocking().get(name).cloned() {
-                return Some(v.lock_arc_blocking().inner.to_owned_value());
+            if let Some(v) = fn_frame.mapping.read_arc_safe().get(name).cloned() {
+                return Some(v.lock_arc_safe().inner.to_owned_value());
             }
         }
         None

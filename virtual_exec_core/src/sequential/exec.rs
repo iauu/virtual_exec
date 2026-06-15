@@ -1,5 +1,7 @@
-use std::collections::HashMap;
-use std::sync::{Arc};
+use crate::HashMap;
+use alloc::sync::{Arc};
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 use async_lock::RwLock;
 use virtual_exec_type::mem::{Allocator, MemoryAllocator, Value, ValuePtr};
 use virtual_exec_type::op::*;
@@ -7,6 +9,7 @@ use crate::sequential::instructions::{Instruction, SubscriptLoad};
 use virtual_exec_type::base::{IsTruhy, TypeCast};
 use virtual_exec_type::error::{NonRecoverableError, CriticalError, RecoverableError};
 pub use virtual_exec_type::error::ExecutionError;
+use virtual_exec_type::ext::*;
 
 type AttrReference<'ctx> = (Option<ValuePtr<'ctx>>, String);
 type IdxReference<'ctx> = (ValuePtr<'ctx>, i64);
@@ -159,7 +162,7 @@ impl<'ctx> InstStateMachine<'ctx> {
 
     fn resolve(&self, name: &str) -> Result<ValuePtr<'ctx>, ExecutionError> {
         for frame in self.fn_stack_frame.iter().rev() {
-            if let Some(val) = frame.mapping.read_arc_blocking().get(name) {
+            if let Some(val) = frame.mapping.read_arc_safe().get(name) {
                 return Ok(val.clone());
             }
         }
@@ -178,7 +181,7 @@ impl<'ctx> InstStateMachine<'ctx> {
                 match target.0 {
                     Some(obj) => {
                         if let Some(o) = obj.as_object() {
-                            Ok(o.read_arc_blocking().get(&target.1).ok_or_else(|| ExecutionError::NonRecoverable(NonRecoverableError::ReferenceNotExistError(target.1.clone())))?.clone())
+                            Ok(o.read_arc_safe().get(&target.1).ok_or_else(|| ExecutionError::NonRecoverable(NonRecoverableError::ReferenceNotExistError(target.1.clone())))?.clone())
                         } else {
                             Err(ExecutionError::NonRecoverable(NonRecoverableError::UnexpectedAttrError))
                         }
@@ -192,10 +195,10 @@ impl<'ctx> InstStateMachine<'ctx> {
                 if let Some(arr)= target.0.as_collections() {
                     let mut idx = target.1;
                     if idx < 0 {
-                        idx += arr.read_arc_blocking().len() as i64;
+                        idx += arr.read_arc_safe().len() as i64;
                     }
-                    if idx >= 0 && (idx as usize) < arr.read_arc_blocking().len() {
-                        Ok(arr.read_arc_blocking()[idx as usize].clone())
+                    if idx >= 0 && (idx as usize) < arr.read_arc_safe().len() {
+                        Ok(arr.read_arc_safe()[idx as usize].clone())
                     } else {
                         Err(ExecutionError::NonRecoverable(NonRecoverableError::IndexOutOfRangeError))
                     }
@@ -250,11 +253,11 @@ impl<'ctx> InstStateMachine<'ctx> {
                     },
                     StackItem::AttrReference((None, target)) => {
                         let stack =  self.get_mut_stack_ref()?;
-                        stack.mapping.write_arc_blocking().insert(target, value.clone());
+                        stack.mapping.write_arc_safe().insert(target, value.clone());
                     },
                     StackItem::AttrReference((Some(value), target)) => {
                         if let Some(obj) = value.as_object() {
-                            obj.write_arc_blocking().insert(target, value.clone());
+                            obj.write_arc_safe().insert(target, value.clone());
                         } else {
                             self.state = Err(ExecutionError::NonRecoverable(NonRecoverableError::UnexpectedAttrError));
                             return self.state.clone()
@@ -264,10 +267,10 @@ impl<'ctx> InstStateMachine<'ctx> {
                         if let Some(arr) = target.0.as_collections() {
                             let mut idx = target.1;
                             if idx < 0 {
-                                idx += arr.read_arc_blocking().len() as i64
+                                idx += arr.read_arc_safe().len() as i64
                             }
-                            if idx >= 0 && (idx as usize) < arr.read_arc_blocking().len() {
-                                arr.write_arc_blocking()[idx as usize] = value;
+                            if idx >= 0 && (idx as usize) < arr.read_arc_safe().len() {
+                                arr.write_arc_safe()[idx as usize] = value;
                             }
                             else {
                                 self.state = Err(ExecutionError::NonRecoverable(NonRecoverableError::IndexOutOfRangeError));

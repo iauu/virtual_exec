@@ -1,4 +1,6 @@
+use alloc::format;
 use crate::vm_type::Error;
+use alloc::string::{String, ToString};
 
 register_op_add!(i64, i64, i64);
 register_op_add!(f64, f64, f64);

@@ -1,6 +1,8 @@
-use std::collections::HashMap;
-use std::fmt::{Debug, Formatter};
-use std::sync::{Arc};
+use alloc::string::String;
+use crate::HashMap;
+use core::fmt::{Debug, Formatter};
+use alloc::sync::{Arc};
+use alloc::vec::Vec;
 use crate::fn_extern::{FnExtern};
 
 #[derive(Clone)]
@@ -25,7 +27,7 @@ impl<'a> MethodResolver {
 }
 
 impl Debug for MethodResolver {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let method_names: Vec<&String> = self.funcs.keys().collect();
 
         f.debug_struct("MethodResolver")

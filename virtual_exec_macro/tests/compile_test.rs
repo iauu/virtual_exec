@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use virtual_exec_type::HashMap;
 use std::sync::{Arc};
 use async_lock::RwLock;
 use virtual_exec_macro::compile;
@@ -272,7 +272,7 @@ fn test_function() {
         } else {
             break;
         }
-        println!("{}", state_machine.instructions[state_machine.fn_stack_frame.last().unwrap().ptr as usize]);
+        println!("{:?}", state_machine.instructions[state_machine.fn_stack_frame.last().unwrap().ptr as usize]);
         let _ = state_machine.run_once();
     }
 

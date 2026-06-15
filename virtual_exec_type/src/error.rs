@@ -1,3 +1,4 @@
+use alloc::string::String;
 
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct MemoryError;

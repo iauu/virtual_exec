@@ -9,7 +9,10 @@ readme = "README.md"
 license = "GPL-3.0"
 
 [dependencies]
-async-lock = "3.4.2"
+async-lock = {version = "3.4.2", default-features = false}
 inventory = "0.3.21"
 paste = "1.0.15"
 
+[features]
+std = ["async-lock/std"]
+default = [] # "std"

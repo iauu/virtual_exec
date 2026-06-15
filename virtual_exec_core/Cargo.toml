@@ -19,4 +19,4 @@ virtual_exec_parser = { path = "../virtual_exec_parser", version = "0.5.0-alpha.
 parse = ["virtual_exec_parser"]
 async = ["std"]
 std = ["async-lock/std"]
-default = [] # "parse", "async"
+default = ["parse", "async"] #

@@ -31,7 +31,7 @@ impl<T> SafeReadArcExt<T> for Arc<RwLock<T>> {
 impl<T> SafeLockArcExt<T> for Arc<Mutex<T>> {
     #[cfg(feature = "std")]
     #[inline]
-    fn read_arc_safe(&self) -> MutexGuardArc<T> {
+    fn lock_arc_safe(&self) -> MutexGuardArc<T> {
         self.lock_arc_blocking()
     }
 

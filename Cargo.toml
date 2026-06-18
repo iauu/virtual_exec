@@ -20,3 +20,11 @@ members = [
     "virtual_exec_extern",
     "virtual_exec_std", "virtual_exec_repl",
 ]
+
+[profile.release-nano]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

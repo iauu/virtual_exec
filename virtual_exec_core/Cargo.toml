@@ -9,7 +9,7 @@ readme = "README.md"
 description = "Sub-crate of virtual_exec - provide definition for external function trait, and compile code AST to instructions"
 
 [dependencies]
-virtual_exec_type = { path = "../virtual_exec_type", version = "0.5.0-alpha.1"}
+virtual_exec_type = { path = "../virtual_exec_type", version = "0.5.0-alpha.1", default-features = false}
 serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
 async-trait = "0.1.89"
 async-lock =  { version = "3.4.2", default-features = false }
@@ -18,5 +18,5 @@ virtual_exec_parser = { path = "../virtual_exec_parser", version = "0.5.0-alpha.
 [features]
 parse = ["virtual_exec_parser"]
 async = ["std"]
-std = ["async-lock/std"]
-default = ["parse", "async"] #
+std = ["async-lock/std", "virtual_exec_type/std"]
+default = ["parse", "async", "async-lock/default", "virtual_exec_type/default"]

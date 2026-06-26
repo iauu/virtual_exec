@@ -47,7 +47,7 @@ macro_rules! extern_link {
                 machine: &mut ::virtual_exec_core::Machine<'a>,
                 values: ::std::vec::Vec<::virtual_exec_type::mem::ValuePtr<'a>>
             ) -> Result<::virtual_exec_type::mem::ValuePtr<'a>, ::virtual_exec_type::error::ExecutionError> {
-                $sync_fn(machine, values)
+                $sync_fn(machine, values) 
             }
 
             async fn fn_extern_async<'a>(

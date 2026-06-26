@@ -1,7 +1,9 @@
 use proc_macro2::{Ident, TokenStream as TokenStream2};
 use proc_macro::TokenStream;
+use std::ops::Deref;
 use quote::{quote, ToTokens};
-use syn::{parse_macro_input, FnArg, ItemFn};
+use syn::{parse_macro_input, parse_quote, FnArg, ItemFn, Pat, PatType, Type};
+use syn::spanned::Spanned;
 use virtual_exec_parser::parser::convert_stmt;
 use virtual_exec_core::sequential::instructions::{Instruction, SubscriptLoad};
 use virtual_exec_parser::tokenizer::{Stmt, Expr, Atom, TopLevelBlock, AssignExpr};
@@ -444,20 +446,51 @@ pub fn compile(input: TokenStream) -> TokenStream {
     quote! { #token_content }.into()
 }
 
-fn arg_to_token(_: FnArg, idx: usize) -> impl ToTokens {
-    quote! {
-        ::virtual_exec_type::base::Downcast::from_value(values[#idx].clone()).ok_or(::virtual_exec_type::error::ExecutionError::NonRecoverable(::virtual_exec_type::error::NonRecoverableError::InvalidTypeError))?
+
+
+fn arg_to_token(arg: FnArg, idx: usize) -> (impl ToTokens, Option<syn::Type>) {
+    let span = arg.span();
+    if let FnArg::Typed(pat_type) = arg {
+
+        if let Pat::TupleStruct(pat_tuple) = &*pat_type.pat {
+            if let Some(opt) = pat_tuple.path.get_ident().map(virtual_exec_core::fn_extern::fn_args::FnExternArgType::from_ident).flatten() {
+                match opt {
+                    virtual_exec_core::fn_extern::fn_args::FnExternArgType::Alloc => (quote! { mapping.get(::virtual_exec_core::fn_extern::fn_args::FnExternArgType::Alloc) }, Some(parse_quote!( ::virtual_exec_core::fn_extern::fn_args::FnExternArg ))),
+                }
+            } else {
+                (syn::Error::new(span, virtual_exec_core::fn_extern::fn_args::FnExternArgType::err_string()).to_compile_error(), None)
+            }
+        } else {
+            (quote! {
+                ::virtual_exec_type::base::Downcast::from_value(values[#idx].clone()).ok_or(::virtual_exec_type::error::ExecutionError::NonRecoverable(::virtual_exec_type::error::NonRecoverableError::InvalidTypeError))?
+            }, None)
+        }
+    } else {
+        (syn::Error::new(span, "Methods taking 'self' are not supported here.").to_compile_error(), None)
     }
 }
+
+
 #[proc_macro_attribute]
 pub fn fn_extern_wrap(_: TokenStream, input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as ItemFn);
     let ident = input.sig.ident;
     let tokens = input.sig.inputs.clone()
-        .into_iter().skip(1)
+        .into_iter()
         .enumerate().map(|(idx, arg)| arg_to_token(arg, idx)).collect::<Vec<_>>();
     input.sig.ident = Ident::new("__fn_wrap", ident.span());
-    let expected_length = input.sig.inputs.len() - 1;
+    let expected_length = tokens.iter().filter(|x| x.1.is_some()).count();
+    for (arg_token, replacement) in input.sig.inputs.iter_mut().zip(tokens.iter().as_ref()) {
+        match (arg_token, &replacement.1) {
+            (FnArg::Typed(t), Some(ty)) => {
+                if let Type::Infer(_) = t.ty.deref() {
+                    t.ty = Box::new(ty.clone());
+                }
+            },
+            _ => {}
+        }
+    }
+    let reduced: Vec<_> = tokens.into_iter().map(|x| x.0).collect();
     quote! {
         fn #ident<'__wrap_internal>(
             machine: &mut ::virtual_exec_core::Machine<'__wrap_internal>,
@@ -467,10 +500,12 @@ pub fn fn_extern_wrap(_: TokenStream, input: TokenStream) -> TokenStream {
             if values.len() != #expected_length {
                 return Err(::virtual_exec_type::error::ExecutionError::NonRecoverable(::virtual_exec_type::error::NonRecoverableError::IncorrectArgumentCountError))
             }
+            let alloc = machine.alloc.clone();
+            let mut mapping = ::virtual_exec_core::fn_extern::fn_args::LazyMapping::new(machine);
             #input
-            let result = __fn_wrap(machine, #(#tokens),*).map(|x| ::virtual_exec_type::base::Upcast::from_value(&x, &machine.alloc))??;
+            let result = __fn_wrap(#(#reduced),*).map(|x| ::virtual_exec_type::base::Upcast::from_value(&x, &alloc))??;
             for mut item in values {
-                machine.alloc.change_alloc(&mut item)?;
+                alloc.change_alloc(&mut item)?;
             }
             Ok(result)
         }
@@ -482,10 +517,21 @@ pub fn fn_extern_wrap_async(_: TokenStream, input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as ItemFn);
     let ident = input.sig.ident;
     let tokens = input.sig.inputs.clone()
-        .into_iter().skip(1)
+        .into_iter()
         .enumerate().map(|(idx, arg)| arg_to_token(arg, idx)).collect::<Vec<_>>();
     input.sig.ident = Ident::new("__fn_wrap", ident.span());
-    let expected_length = input.sig.inputs.len() - 1;
+    let expected_length = tokens.iter().filter(|x| x.1.is_some()).count();
+    for (arg_token, replacement) in input.sig.inputs.iter_mut().zip(tokens.iter().as_ref()) {
+        match (arg_token, &replacement.1) {
+            (FnArg::Typed(t), Some(ty)) => {
+                if let Type::Infer(_) = t.ty.deref() {
+                    t.ty = Box::new(ty.clone());
+                }
+            },
+            _ => {}
+        }
+    }
+    let reduced: Vec<_> = tokens.into_iter().map(|x| x.0).collect();
     quote! {
         async fn #ident<'__wrap_internal>(
             machine: &mut ::virtual_exec_core::Machine<'__wrap_internal>,
@@ -495,10 +541,12 @@ pub fn fn_extern_wrap_async(_: TokenStream, input: TokenStream) -> TokenStream {
             if values.len() != #expected_length {
                 return Err(::virtual_exec_type::error::ExecutionError::NonRecoverable(::virtual_exec_type::error::NonRecoverableError::IncorrectArgumentCountError))
             }
+            let alloc = machine.alloc.clone();
+            let mut mapping = ::virtual_exec_core::fn_extern::fn_args::LazyMapping::new(machine);
             #input
-            let result = __fn_wrap(machine, #(#tokens),*).await.map(|x| ::virtual_exec_type::base::Upcast::from_value(&x, &machine.alloc))??;
+            let result = __fn_wrap(#(#reduced),*).await.map(|x| ::virtual_exec_type::base::Upcast::from_value(&x, &alloc))??;
             for mut item in values {
-                machine.alloc.change_alloc(&mut item)?;
+                alloc.change_alloc(&mut item)?;
             }
             Ok(result)
         }

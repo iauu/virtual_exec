@@ -4,7 +4,7 @@ use virtual_exec_core::Machine;
 use virtual_exec_type::base::Upcast;
 
 #[fn_extern_wrap]
-fn push_array_sync<'a>(_: &mut Machine<'a>, array: Collection<'a>, item: Any<'a>) -> Result<None, Error> {
+fn push_array_sync<'a>( array: Collection<'a>, item: Any<'a>) -> Result<None, Error> {
     array.write_arc_blocking().push(item);
     Ok(())
 }

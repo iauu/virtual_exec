@@ -1,4 +1,5 @@
-mod resolver;
+pub mod resolver;
+pub mod fn_args;
 
 use alloc::vec::Vec;
 use virtual_exec_type::mem::{ValuePtr};
@@ -14,9 +15,9 @@ pub trait FnExternConstruct {
 
 #[async_trait]
 pub trait FnExtern : FnExternConstruct {
-    fn fn_extern_sync<'a>(&self, machine: &mut Machine<'a>, values: Vec<ValuePtr<'a>>) -> Result<ValuePtr<'a>, ExecutionError>;
+    fn fn_extern_sync<'a>(&self, machine: & mut Machine<'a>, values: Vec<ValuePtr<'a>>) -> Result<ValuePtr<'a>, ExecutionError>;
 
-    async fn fn_extern_async<'a>(&self, machine: &mut Machine<'a>, values: Vec<ValuePtr<'a>>) -> Result<ValuePtr<'a>, ExecutionError> where
+    async fn fn_extern_async<'a>(&self, machine: & mut Machine<'a>, values: Vec<ValuePtr<'a>>) -> Result<ValuePtr<'a>, ExecutionError> where
     'a : 'async_trait {
         self.fn_extern_sync(machine, values)
     }

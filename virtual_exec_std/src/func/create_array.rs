@@ -5,7 +5,7 @@ use virtual_exec_type::vm_type::*;
 use virtual_exec_core::Machine;
 
 #[fn_extern_wrap]
-fn create_array_sync<'a>(_: &mut Machine<'a>) -> Result<Collection<'a>, Error> {
+fn create_array_sync<'a>() -> Result<Collection<'a>, Error> {
     Ok(Arc::new(RwLock::new(Vec::new())))
 }
 

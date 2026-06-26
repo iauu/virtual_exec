@@ -6,7 +6,7 @@ use virtual_exec_type::base::TypeCast;
 use virtual_exec_type::error::{ExecutionError, NonRecoverableError};
 
 #[fn_extern_wrap]
-fn print<'a>(_: &mut Machine<'a>, str: Any<'a>) -> Result<None, Error> {
+fn print<'a>(str: Any<'a>) -> Result<None, Error> {
     if let Some(s) = str.as_string() {
         print!("{}", s);
     } else {
@@ -24,7 +24,7 @@ cfg_if!(
 cfg_if!(
     if #[cfg(feature = "tokio-io")] {
         #[fn_extern_wrap_async]
-        async fn print_async<'a>(_: &mut Machine<'a>, str: Any<'a>) -> Result<None, Error> {
+        async fn print_async<'a>(str: Any<'a>) -> Result<None, Error> {
             let mut stdout = io::stdout();
             if let Some(s) = str.as_string() {
                 stdout.write_all(s.as_bytes()).await.map_err(|_| ExecutionError::NonRecoverable(NonRecoverableError::GenericError))
@@ -41,7 +41,7 @@ cfg_if!(
 );
 
 #[fn_extern_wrap]
-fn println<'a>(_: &mut Machine<'a>, str: Any<'a>) -> Result<None, Error> {
+fn println<'a>(str: Any<'a>) -> Result<None, Error> {
     if let Some(s) = str.as_string() {
         println!("{}", s);
     } else {
@@ -53,7 +53,7 @@ fn println<'a>(_: &mut Machine<'a>, str: Any<'a>) -> Result<None, Error> {
 cfg_if!(
     if #[cfg(feature = "tokio-io")] {
         #[fn_extern_wrap_async]
-        async fn println_async<'a>(_: &mut Machine<'a>, str: Any<'a>) -> Result<None, Error> {
+        async fn println_async<'a>(str: Any<'a>) -> Result<None, Error> {
             let mut stdout = io::stdout();
             if let Some(s) = str.as_string() {
                 stdout.write_all((s + "\n").as_bytes()).await.map_err(|_| ExecutionError::NonRecoverable(NonRecoverableError::GenericError))

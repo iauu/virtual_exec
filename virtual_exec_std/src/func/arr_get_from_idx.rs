@@ -4,7 +4,7 @@ use virtual_exec_core::Machine;
 use virtual_exec_type::error::{ExecutionError, NonRecoverableError};
 
 #[fn_extern_wrap]
-fn arr_get_from_idx<'a>(_: &mut Machine<'a>, array: Collection<'a>, idx: Integer) -> Result<Any<'a>, Error> {
+fn arr_get_from_idx<'a>(array: Collection<'a>, idx: Integer) -> Result<Any<'a>, Error> {
     array.write_arc_blocking().get(idx as usize).ok_or(ExecutionError::NonRecoverable(NonRecoverableError::IndexOutOfRangeError)).map(|x| x.clone())
 }
 

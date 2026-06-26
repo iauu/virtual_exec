@@ -14,6 +14,7 @@ serde = { version = "1.0", default-features = false, features = ["derive", "allo
 async-trait = "0.1.89"
 async-lock =  { version = "3.4.2", default-features = false }
 virtual_exec_parser = { path = "../virtual_exec_parser", version = "0.5.0-alpha.1", optional = true}
+proc-macro2 = "1.0"
 
 [features]
 parse = ["virtual_exec_parser"]

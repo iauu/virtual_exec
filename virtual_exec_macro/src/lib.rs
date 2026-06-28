@@ -515,8 +515,10 @@ pub fn fn_extern_wrap(_: TokenStream, input: TokenStream) -> TokenStream {
     for (arg_token, replacement) in input.sig.inputs.iter_mut().zip(tokens.iter().as_ref()) {
         match (arg_token, &replacement.1) {
             (FnArg::Typed(t), Some(ty)) => {
-                if let Type::Infer(_) = t.ty.deref() && let Pat::TupleStruct(pat_tuple) = t.pat.deref() && pat_tuple.elems.len() == 1 {
-                    t.ty = Box::new(ty.clone());
+                if let Pat::TupleStruct(pat_tuple) = t.pat.deref() && pat_tuple.elems.len() == 1 {
+                    if let Type::Infer(_) = t.ty.deref() {
+                        t.ty = Box::new(ty.clone());
+                    }
                     t.pat = Box::new(pat_tuple.elems[0].clone());
                 }
             },

@@ -1783,6 +1783,7 @@ name = "virtual_exec_macro"
 version = "0.5.0-alpha.2"
 dependencies = [
  "async-lock",
+ "paste",
  "proc-macro2",
  "quote",
  "syn 2.0.117",

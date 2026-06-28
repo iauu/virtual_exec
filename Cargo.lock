@@ -1761,6 +1761,7 @@ version = "0.5.0-alpha.2"
 dependencies = [
  "async-lock",
  "async-trait",
+ "paste",
  "proc-macro2",
  "serde",
  "virtual_exec_parser",

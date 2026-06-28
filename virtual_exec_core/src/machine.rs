@@ -109,7 +109,11 @@ impl<'a> Machine<'a> {
                 let fns: Vec<Arc<dyn FnExtern + Send + Sync>> = self.resolvers.iter().filter_map(|x| x.get(func)).collect();
                 if fns.len() > 0 {
                     let inputs = self.machine.retrieve_fn_input()?.unwrap();
-                    let result = fns[0].fn_extern_async(self, inputs.1).await;
+                    let result;
+                    {
+                        let x: &'_ mut Self = &mut *self;
+                        result = fns[0].fn_extern_async(x, inputs.1).await;
+                    }
                     self.machine.push_fn_output(result);
                     return self.machine.state.clone().map(|x| (x, true))
                 }

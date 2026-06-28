@@ -455,7 +455,8 @@ fn arg_to_token(arg: FnArg, idx: usize) -> (impl ToTokens, Option<syn::Type>) {
         if let Pat::TupleStruct(pat_tuple) = &*pat_type.pat {
             if let Some(opt) = pat_tuple.path.get_ident().map(virtual_exec_core::fn_extern::fn_args::FnExternArgType::from_ident).flatten() {
                 match opt {
-                    virtual_exec_core::fn_extern::fn_args::FnExternArgType::Alloc => (quote! { mapping.get(::virtual_exec_core::fn_extern::fn_args::FnExternArgType::Alloc) }, Some(parse_quote!( ::virtual_exec_core::fn_extern::fn_args::FnExternArg ))),
+                    virtual_exec_core::fn_extern::fn_args::FnExternArgType::Alloc => (quote! { mapping.get(::virtual_exec_core::fn_extern::fn_args::FnExternArgType::Alloc).unwrap_Alloc() }, Some(parse_quote!( ::virtual_exec_type::mem::MemoryAllocator ))),
+                    virtual_exec_core::fn_extern::fn_args::FnExternArgType::Machine => (quote! { mapping.get(::virtual_exec_core::fn_extern::fn_args::FnExternArgType::Machine).unwrap_Machine() }, Some(parse_quote!( ::virtual_exec_type::__private::Arc<::async_lock::Mutex<&mut ::virtual_exec_core::machine::Machine>>) )),
                 }
             } else {
                 (syn::Error::new(span, virtual_exec_core::fn_extern::fn_args::FnExternArgType::err_string()).to_compile_error(), None)
@@ -483,8 +484,9 @@ pub fn fn_extern_wrap(_: TokenStream, input: TokenStream) -> TokenStream {
     for (arg_token, replacement) in input.sig.inputs.iter_mut().zip(tokens.iter().as_ref()) {
         match (arg_token, &replacement.1) {
             (FnArg::Typed(t), Some(ty)) => {
-                if let Type::Infer(_) = t.ty.deref() {
+                if let Type::Infer(_) = t.ty.deref() && let Pat::TupleStruct(pat_tuple) = t.pat.deref() && pat_tuple.elems.len() == 1 {
                     t.ty = Box::new(ty.clone());
+                    t.pat = Box::new(pat_tuple.elems[0].clone());
                 }
             },
             _ => {}
@@ -492,8 +494,8 @@ pub fn fn_extern_wrap(_: TokenStream, input: TokenStream) -> TokenStream {
     }
     let reduced: Vec<_> = tokens.into_iter().map(|x| x.0).collect();
     quote! {
-        fn #ident<'__wrap_internal>(
-            machine: &mut ::virtual_exec_core::Machine<'__wrap_internal>,
+        fn #ident<'__wrap_internal, '__wrap_internal2>(
+            machine: &'__wrap_internal2 mut ::virtual_exec_core::Machine<'__wrap_internal>,
             values: ::std::vec::Vec<::virtual_exec_type::mem::ValuePtr<'__wrap_internal>>
         ) -> ::core::result::Result<::virtual_exec_type::mem::ValuePtr<'__wrap_internal>, ::virtual_exec_type::error::ExecutionError> {
             use virtual_exec_type::mem::Allocator;
@@ -533,8 +535,8 @@ pub fn fn_extern_wrap_async(_: TokenStream, input: TokenStream) -> TokenStream {
     }
     let reduced: Vec<_> = tokens.into_iter().map(|x| x.0).collect();
     quote! {
-        async fn #ident<'__wrap_internal>(
-            machine: &mut ::virtual_exec_core::Machine<'__wrap_internal>,
+        async fn #ident<'__wrap_internal, '__wrap_internal2>(
+            machine: &'__wrap_internal2 mut ::virtual_exec_core::Machine<'__wrap_internal>,
             values: ::std::vec::Vec<::virtual_exec_type::mem::ValuePtr<'__wrap_internal>>
         ) -> ::core::result::Result<::virtual_exec_type::mem::ValuePtr<'__wrap_internal>, ::virtual_exec_type::error::ExecutionError> {
             use virtual_exec_type::mem::Allocator;

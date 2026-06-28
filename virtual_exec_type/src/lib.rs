@@ -43,3 +43,8 @@ pub type HashMap<K, V> = std::collections::HashMap<K, V>;
 
 #[cfg(not(feature = "std"))]
 pub type HashMap<K, V> = alloc::collections::BTreeMap<K, V>;
+
+pub mod __private {
+    pub use alloc::sync::Arc;
+    pub use alloc::string::String;
+}

@@ -16,9 +16,9 @@ macro_rules! extern_link {
         }
         impl<'async_trait> ::virtual_exec_core::fn_extern::FnExtern for $name {
 
-            fn fn_extern_sync<'a>(
+            fn fn_extern_sync<'a, 'b>(
                 &self,
-                machine: &mut ::virtual_exec_core::Machine<'a>,
+                machine: &'b mut ::virtual_exec_core::Machine<'a>,
                 values: ::std::vec::Vec<::virtual_exec_type::mem::ValuePtr<'a>>
             ) -> Result<::virtual_exec_type::mem::ValuePtr<'a>, ::virtual_exec_type::error::ExecutionError> {
                 $sync_fn(machine, values)
@@ -42,17 +42,17 @@ macro_rules! extern_link {
         #[::async_trait::async_trait]
         impl ::virtual_exec_core::fn_extern::FnExtern for $name {
 
-            fn fn_extern_sync<'a>(
+            fn fn_extern_sync<'a, 'b>(
                 &self,
-                machine: &mut ::virtual_exec_core::Machine<'a>,
+                machine: &'b mut ::virtual_exec_core::Machine<'a>,
                 values: ::std::vec::Vec<::virtual_exec_type::mem::ValuePtr<'a>>
             ) -> Result<::virtual_exec_type::mem::ValuePtr<'a>, ::virtual_exec_type::error::ExecutionError> {
                 $sync_fn(machine, values) 
             }
 
-            async fn fn_extern_async<'a>(
+            async fn fn_extern_async<'a, 'b>(
                 &self,
-                machine: &mut ::virtual_exec_core::Machine<'a>,
+                machine: &'b mut ::virtual_exec_core::Machine<'a>,
                 values: ::std::vec::Vec<::virtual_exec_type::mem::ValuePtr<'a>>
             ) -> Result<::virtual_exec_type::mem::ValuePtr<'a>, ::virtual_exec_type::error::ExecutionError> where
     'a : 'async_trait {

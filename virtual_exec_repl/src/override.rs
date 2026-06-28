@@ -9,7 +9,7 @@ use virtual_exec_type::base::TypeCast;
 pub static PRINT_BUFFER: Mutex<String> = Mutex::new(String::new());
 
 #[fn_extern_wrap]
-fn print<'a>(_: &mut Machine<'a>, str: Any<'a>) -> Result<None, Error> {
+fn print<'a>(str: Any<'a>) -> Result<None, Error> {
     if let Some(s) = str.as_string() {
         PRINT_BUFFER.lock().unwrap().push_str(&format!("{}", s));
     } else {
@@ -21,7 +21,7 @@ fn print<'a>(_: &mut Machine<'a>, str: Any<'a>) -> Result<None, Error> {
 extern_link!(Print, print, 1);
 
 #[fn_extern_wrap]
-fn println<'a>(_: &mut Machine<'a>, str: Any<'a>) -> Result<None, Error> {
+fn println<'a>(str: Any<'a>) -> Result<None, Error> {
     if let Some(s) = str.as_string() {
         PRINT_BUFFER.lock().unwrap().push_str(&format!("{}\n", s));
     } else {
@@ -34,7 +34,7 @@ fn println<'a>(_: &mut Machine<'a>, str: Any<'a>) -> Result<None, Error> {
 extern_link!(PrintLn, println, 1);
 
 #[fn_extern_wrap]
-fn is_none<'a>(_: &mut Machine<'a>, obj: Any<'a>) -> Result<Boolean, Error> {
+fn is_none<'a>(obj: Any<'a>) -> Result<Boolean, Error> {
     Ok(obj.as_none().is_some())
 }
 

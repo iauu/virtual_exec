@@ -448,6 +448,32 @@ pub fn compile(input: TokenStream) -> TokenStream {
 
 
 
+macro_rules! gen_op {
+    ($name:ident, $path:ident) => {
+        ::paste::paste! {
+            quote! {
+                {
+                    #[allow(path_statements)]
+                    if false {
+                        #$path;
+                    };
+                    mapping.get(::virtual_exec_core::fn_extern::fn_args::FnExternArgType::$name).[<unwrap_ $name>]()
+                }
+            }
+        }
+    };
+}
+
+macro_rules! gen_branch {
+    ($opt:ident,$path:ident, $(($name:ident, $t:path)),*) => {
+        match $opt {
+            $(
+                ::virtual_exec_core::fn_extern::fn_args::FnExternArgType::$name => (gen_op!($name, $path), Some(parse_quote!( $t ))),
+            )*
+        }
+    };
+}
+
 fn arg_to_token(arg: FnArg, idx: usize) -> (impl ToTokens, Option<syn::Type>) {
     let span = arg.span();
     if let FnArg::Typed(pat_type) = arg {
@@ -455,24 +481,14 @@ fn arg_to_token(arg: FnArg, idx: usize) -> (impl ToTokens, Option<syn::Type>) {
         if let Pat::TupleStruct(pat_tuple) = &*pat_type.pat {
             if let Some(opt) = pat_tuple.path.get_ident().map(virtual_exec_core::fn_extern::fn_args::FnExternArgType::from_ident).flatten() {
                 let path = pat_tuple.path.to_token_stream();
-                match opt {
-                    virtual_exec_core::fn_extern::fn_args::FnExternArgType::Alloc => (quote! {{
-                        #[allow(path_statements)]
-                        if false {
-                            #path;
-                        };
-
-                        mapping.get(::virtual_exec_core::fn_extern::fn_args::FnExternArgType::Alloc).unwrap_Alloc()}
-                    }, Some(parse_quote!( ::virtual_exec_type::mem::MemoryAllocator ))),
-                    virtual_exec_core::fn_extern::fn_args::FnExternArgType::Machine => (quote! { {
-                        #[allow(path_statements)]
-                        if false {
-                            #path;
-                        };
-
-                        mapping.get(::virtual_exec_core::fn_extern::fn_args::FnExternArgType::Machine).unwrap_Machine()
-                    } }, Some(parse_quote!( ::virtual_exec_type::__private::Arc<::async_lock::Mutex<&mut ::virtual_exec_core::machine::Machine>>) )),
-                }
+                // match opt {
+                //     virtual_exec_core::fn_extern::fn_args::FnExternArgType::Alloc => (gen_op!(Alloc, path), Some(parse_quote!( ::virtual_exec_type::mem::MemoryAllocator ))),
+                //     virtual_exec_core::fn_extern::fn_args::FnExternArgType::Machine => (gen_op!(Machine, path), Some(parse_quote!( ::virtual_exec_type::__private::Arc<::async_lock::Mutex<&mut ::virtual_exec_core::machine::Machine>>) )),
+                // }
+                gen_branch!(opt, path,
+                    (Alloc, ::virtual_exec_type::mem::MemoryAllocator),
+                    (Machine, ::virtual_exec_type::__private::Arc<::async_lock::Mutex<&mut ::virtual_exec_core::machine::Machine>>)
+                )
             } else {
                 (syn::Error::new(span, virtual_exec_core::fn_extern::fn_args::FnExternArgType::err_string()).to_compile_error(), None)
             }

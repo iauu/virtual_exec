@@ -1,8 +1,7 @@
-use virtual_exec_core::fn_extern::fn_args::FnExternArg::{Alloc, Machine};
+use virtual_exec_core::fn_extern::fn_args::FnExternArg::Alloc;
 use virtual_exec_extern::*;
 use virtual_exec_type::vm_type::*;
 use virtual_exec_type::error::{ExecutionError, NonRecoverableError};
-
 
 #[fn_extern_wrap]
 fn concat<'a>(left: Str, right: Str, Alloc(alloc): _) -> Result<Str, Error> {

@@ -487,7 +487,8 @@ fn arg_to_token(arg: FnArg, idx: usize) -> (impl ToTokens, Option<syn::Type>) {
                 // }
                 gen_branch!(opt, path,
                     (Alloc, ::virtual_exec_type::mem::MemoryAllocator),
-                    (Machine, ::virtual_exec_type::__private::Arc<::async_lock::Mutex<&mut ::virtual_exec_core::machine::Machine>>)
+                    (Machine, ::virtual_exec_type::__private::Arc<::async_lock::Mutex<&mut ::virtual_exec_core::machine::Machine>>),
+                    (Recurse, ::virtual_exec_core::config::recurse::RecurseRestricter)
                 )
             } else {
                 (syn::Error::new(span, virtual_exec_core::fn_extern::fn_args::FnExternArgType::err_string()).to_compile_error(), None)

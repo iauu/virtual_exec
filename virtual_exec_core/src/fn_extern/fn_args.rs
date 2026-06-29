@@ -3,7 +3,7 @@ use virtual_exec_type::HashMap;
 use virtual_exec_type::mem::MemoryAllocator;
 use crate::Machine;
 use async_lock::Mutex;
-
+use crate::config::recurse::{RecurseConfig, RecurseRestricter};
 
 macro_rules! fn_extern_arg_type_construct {
     ($(($name:ident, $t:ty)),*) => {
@@ -46,7 +46,7 @@ macro_rules! fn_extern_arg_type_construct {
     };
 }
 
-fn_extern_arg_type_construct!((Alloc, MemoryAllocator<'a>), (Machine, Arc<Mutex<&'b mut Machine<'a>>>));
+fn_extern_arg_type_construct!((Alloc, MemoryAllocator<'a>), (Machine, Arc<Mutex<&'b mut Machine<'a>>>), (Recurse, RecurseRestricter<'a>));
 
 pub struct LazyMapping<'a, 'b>(Arc<Mutex<&'b mut Machine<'a>>>, HashMap<FnExternArgType, FnExternArg<'a, 'b>>);
 
@@ -63,6 +63,9 @@ impl<'a, 'b> LazyMapping<'a, 'b> {
             FnExternArgType::Machine => {
                 FnExternArg::Machine(machine)
             },
+            FnExternArgType::Recurse => {
+                FnExternArg::Recurse(RecurseConfig::default().as_lim(machine.lock_blocking().alloc.clone()))
+            }
         }
     }
 

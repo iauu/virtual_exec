@@ -5,6 +5,7 @@ extern crate alloc;
 pub mod sequential;
 pub mod machine;
 pub mod fn_extern;
+pub mod config;
 
 #[cfg(feature = "parse")]
 pub use virtual_exec_parser::parser::parse;

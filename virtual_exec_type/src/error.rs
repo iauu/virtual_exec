@@ -36,6 +36,7 @@ pub enum NonRecoverableError {
     UnexpectedFunctionCall,
     IncorrectArgumentCountError,
     GenericError,
+    RecursionError,
     NonRecoveredRecoverableError(RecoverableError)
 }
 

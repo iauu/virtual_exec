@@ -64,17 +64,17 @@ impl ToStringSafe for Value<'_> {
             Value::String(s) => consume_fmt!(recurse_restricter, "\"{}\"", s),
             Value::Collection(v) => {
                 recurse_restricter.consume_mem((v.read_arc_safe().len() as u64 + 1)*2)?;
-                v.read_arc_safe().iter().map(|v| Ok(
+                format!("[{}]", v.read_arc_safe().iter().map(|v| Ok(
                     v.to_string_safe(recurse_restricter.incr()?)?
-                )).collect::<Result<Vec<String>, RecursionError>>()?.join(", ")
+                )).collect::<Result<Vec<String>, RecursionError>>()?.join(", "))
             },
             Value::Object(v) => {
                 recurse_restricter.consume_mem((v.read_arc_safe().len() as u64 + 1)*4)?;
                 let key_lens: u64 = v.read_arc_safe().iter().map(|v| v.0.len()).sum::<usize>() as u64;
                 recurse_restricter.consume_mem(key_lens)?;
-                v.read_arc_safe().iter().map(|v| Ok(
+                format!("{{{}}}", v.read_arc_safe().iter().map(|v| Ok(
                     format!("\"{}\": {}", v.0, v.1.to_string_safe(recurse_restricter.incr()?)?)
-                )).collect::<Result<Vec<String>, RecursionError>>()?.join(", ")
+                )).collect::<Result<Vec<String>, RecursionError>>()?.join(", "))
             }
             Value::None => consume_fmt!(recurse_restricter, "None"),
             Value::_Scope(_) => consume_fmt!(recurse_restricter, "_Scoped"),

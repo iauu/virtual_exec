@@ -512,7 +512,7 @@ pub fn fn_extern_wrap(_: TokenStream, input: TokenStream) -> TokenStream {
         .into_iter()
         .enumerate().map(|(idx, arg)| arg_to_token(arg, idx)).collect::<Vec<_>>();
     input.sig.ident = Ident::new("__fn_wrap", ident.span());
-    let expected_length = tokens.iter().filter(|x| x.1.is_some()).count();
+    let expected_length = tokens.iter().filter(|x| x.1.is_none()).count();
     for (arg_token, replacement) in input.sig.inputs.iter_mut().zip(tokens.iter().as_ref()) {
         match (arg_token, &replacement.1) {
             (FnArg::Typed(t), Some(ty)) => {
@@ -556,7 +556,7 @@ pub fn fn_extern_wrap_async(_: TokenStream, input: TokenStream) -> TokenStream {
         .into_iter()
         .enumerate().map(|(idx, arg)| arg_to_token(arg, idx)).collect::<Vec<_>>();
     input.sig.ident = Ident::new("__fn_wrap", ident.span());
-    let expected_length = tokens.iter().filter(|x| x.1.is_some()).count();
+    let expected_length = tokens.iter().filter(|x| x.1.is_none()).count();
     for (arg_token, replacement) in input.sig.inputs.iter_mut().zip(tokens.iter().as_ref()) {
         match (arg_token, &replacement.1) {
             (FnArg::Typed(t), Some(ty)) => {

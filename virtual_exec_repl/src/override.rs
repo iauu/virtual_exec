@@ -4,6 +4,7 @@ use virtual_exec_core::fn_extern::MethodResolver;
 use virtual_exec_extern::*;
 use virtual_exec_type::vm_type::*;
 use virtual_exec_type::base::{ToStringSafe, TypeCast};
+use virtual_exec_type::ext::*;
 
 pub static PRINT_BUFFER: Mutex<String> = Mutex::new(String::new());
 
@@ -12,7 +13,7 @@ fn print<'a>(str: Any<'a>, Recurse(recurse): _) -> Result<None, Error> {
     if let Some(s) = str.as_string() {
         PRINT_BUFFER.lock().unwrap().push_str(&format!("{}", s));
     } else {
-        PRINT_BUFFER.lock().unwrap().push_str(&str.lock_arc_blocking().to_string_safe(recurse).map_err(|e| into!(e, Error))?);
+        PRINT_BUFFER.lock().unwrap().push_str(&str.read_arc_blocking().to_string_safe(recurse).map_err(|e| into!(e, Error))?);
     }
     Ok(())
 }
@@ -24,7 +25,7 @@ fn println<'a>(str: Any<'a>, Recurse(recurse): _) -> Result<None, Error> {
     if let Some(s) = str.as_string() {
         PRINT_BUFFER.lock().unwrap().push_str(&format!("{}\n", s));
     } else {
-        PRINT_BUFFER.lock().unwrap().push_str(&str.lock_arc_blocking().to_string_safe(recurse).map_err(|e| into!(e, Error))?);
+        PRINT_BUFFER.lock().unwrap().push_str(&str.read_arc_blocking().to_string_safe(recurse).map_err(|e| into!(e, Error))?);
         PRINT_BUFFER.lock().unwrap().push_str("\n");
     }
     Ok(())

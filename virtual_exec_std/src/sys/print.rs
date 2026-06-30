@@ -4,6 +4,7 @@ use virtual_exec_extern::*;
 use virtual_exec_type::vm_type::*;
 use virtual_exec_type::base::{ToStringSafe, TypeCast};
 use virtual_exec_type::error::{ExecutionError, NonRecoverableError};
+use virtual_exec_type::ext::SafeReadArcExt;
 
 #[fn_extern_wrap]
 fn print<'a>(str: Any<'a>, Recurse(recurse): _) -> Result<None, Error> {
@@ -11,7 +12,7 @@ fn print<'a>(str: Any<'a>, Recurse(recurse): _) -> Result<None, Error> {
         print!("{}", s);
     } else {
         print!("{}", str
-            .lock_arc_blocking()
+            .read_arc_blocking()
             .to_string_safe(recurse)
             .map_err(|e| into!(e, ExecutionError))?
         );
@@ -39,7 +40,7 @@ cfg_if!(
             } else {
                 stdout
                 .write_all(
-                    str.lock_arc_blocking()
+                    str.read_arc_blocking()
                     .to_string_safe(recurse)
                     .map_err(|e| into!(e, ExecutionError))?
                     .as_bytes()
@@ -61,7 +62,7 @@ fn println<'a>(str: Any<'a>, Recurse(recurse): _) -> Result<None, Error> {
         println!("{}", s);
     } else {
         println!("{}", str
-            .lock_arc_blocking()
+            .read_arc_blocking()
             .to_string_safe(recurse)
             .map_err(|e| into!(e, ExecutionError))?
         );
@@ -80,7 +81,7 @@ cfg_if!(
                 stdout
                 .write_all(
                     (
-                        str.lock_arc_blocking()
+                        str.read_arc_blocking()
                         .to_string_safe(recurse)
                         .map_err(|e| into!(e, ExecutionError)
                     )? + "\n")

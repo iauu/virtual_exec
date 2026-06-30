@@ -35,7 +35,7 @@ impl IsTruhy for Value<'_> {
 
 impl IsTruhy for ValuePtr<'_> {
     fn is_truthy(&self) -> bool {
-        self.lock_arc_safe().is_truthy()
+        self.read_arc_safe().is_truthy()
     }
 }
 
@@ -88,7 +88,7 @@ impl ToStringSafe for Value<'_> {
 
 impl ToStringSafe for ValuePtr<'_> {
     fn to_string_safe(&self, recurse_restricter: RecurseRestricter) -> Result<String, RecursionError> {
-        self.lock_arc_safe().to_string_safe(recurse_restricter)
+        self.read_arc_safe().to_string_safe(recurse_restricter)
     }
 }
 
@@ -115,7 +115,7 @@ pub trait TypeCast<'a> {
 
 impl<'a> TypeCast<'a> for ValuePtr<'a> {
     fn as_int(&self) -> Option<i64> {
-        if let Value::Int(v) = self.lock_arc_safe().inner {
+        if let Value::Int(v) = self.read_arc_safe().inner {
             Some(v)
         } else {
             None
@@ -123,7 +123,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
 
     fn as_bool(&self) -> Option<bool> {
-        if let Value::Bool(b) = self.lock_arc_safe().inner {
+        if let Value::Bool(b) = self.read_arc_safe().inner {
             Some(b)
         } else {
             None
@@ -131,7 +131,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
 
     fn as_float(&self) -> Option<f64> {
-        if let Value::Float(v) = self.lock_arc_safe().inner {
+        if let Value::Float(v) = self.read_arc_safe().inner {
             Some(v)
         } else {
             None
@@ -139,7 +139,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
 
     fn as_object(&self) -> Option<Arc<RwLock<HashMap<String, ValuePtr<'a>>>>> {
-        if let Value::Object(o) = &self.clone().lock_arc_safe().inner {
+        if let Value::Object(o) = &self.clone().read_arc_safe().inner {
             Some(o.clone())
         } else {
             None
@@ -147,7 +147,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
 
     fn as_collections(&self) -> Option<Arc<RwLock<Vec<ValuePtr<'a>>>>> {
-        if let Value::Collection(c) = &self.clone().lock_arc_safe().inner {
+        if let Value::Collection(c) = &self.clone().read_arc_safe().inner {
             Some(c.clone())
         } else {
             None
@@ -155,7 +155,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
 
     fn as_string(&self) -> Option<String> {
-        if let Value::String(s) = &self.lock_arc_safe().inner {
+        if let Value::String(s) = &self.read_arc_safe().inner {
             Some(s.to_string())
         } else {
             None
@@ -163,7 +163,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
 
     fn as_none(&self) -> Option<()> {
-        let item = &self.lock_arc_safe().inner;
+        let item = &self.read_arc_safe().inner;
         if let Value::None = item {
             Some(())
         } else if let Value::MemoryChunk(_) = item  {
@@ -177,7 +177,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
 
     fn as_error(&self) -> Option<ExecutionError> {
-        if let Value::Error(e) = &self.lock_arc_safe().inner {
+        if let Value::Error(e) = &self.read_arc_safe().inner {
             Some(e.clone())
         } else {
             None
@@ -185,7 +185,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
 
     fn as_dptr(&self) -> Option<(u64, usize)> {
-        if let Value::DPtr(d, s) = &self.clone().lock_arc_safe().inner {
+        if let Value::DPtr(d, s) = &self.clone().read_arc_safe().inner {
             Some((*d, *s))
         } else {
             None
@@ -193,7 +193,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
     }
     
     fn as_fn_ptr_extern(&self) -> Option<(String, usize)> {
-        if let Value::FnPtrExternal(f, s) = &self.clone().lock_arc_safe().inner {
+        if let Value::FnPtrExternal(f, s) = &self.clone().read_arc_safe().inner {
             Some((f.to_string(), *s))
         } else {
             None

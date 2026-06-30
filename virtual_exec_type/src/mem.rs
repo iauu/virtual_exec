@@ -65,10 +65,10 @@ impl ToOwnedValue for Value<'_> {
             Value::None => OwnedValue::None,
             Value::String(s) => OwnedValue::String(s.to_owned()),
             Value::Collection(c) => {
-                OwnedValue::Collection(c.read_arc_safe().iter().map(|v| v.lock_arc_safe().to_owned_value()).collect::<Vec<_>>().into())
+                OwnedValue::Collection(c.read_arc_safe().iter().map(|v| v.read_arc_safe().to_owned_value()).collect::<Vec<_>>().into())
             },
             Value::Object(d) => {
-                OwnedValue::Object(d.read_arc_safe().iter().map(|(k, v)| (k.to_owned(), v.lock_arc_safe().to_owned_value())).collect())
+                OwnedValue::Object(d.read_arc_safe().iter().map(|(k, v)| (k.to_owned(), v.read_arc_safe().to_owned_value())).collect())
             },
             Value::_Scope(_) => OwnedValue::None,
             Value::MemoryChunk(_) => OwnedValue::None,
@@ -132,14 +132,14 @@ impl<'a> Drop for ValueInnerPtr<'a> {
     }
 }
 
-pub type ValuePtr<'a> = Arc<Mutex<ValueInnerPtr<'a>>>;
+pub type ValuePtr<'a> = Arc<RwLock<ValueInnerPtr<'a>>>;
 
 #[derive(Debug)]
 pub struct MemoryAllocation<'a> {
     curr: usize,
     pub max: usize,
     _phantom: PhantomData<&'a ()>,
-    _obj: Vec<Weak<Mutex<ValueInnerPtr<'a>>>>
+    _obj: Vec<Weak<RwLock<ValueInnerPtr<'a>>>>
 }
 
 impl<'a> MemoryAllocation<'a> {
@@ -190,7 +190,7 @@ impl<'a> MemoryAllocation<'a> {
         self._obj.len()
     }
 
-    pub(self) fn _index_obj(&mut self, obj: &Arc<Mutex<ValueInnerPtr<'a>>>) -> () {
+    pub(self) fn _index_obj(&mut self, obj: &ValuePtr<'a>) -> () {
         self._obj.push(Arc::downgrade(obj));
     }
 
@@ -204,7 +204,7 @@ impl<'a> Drop for MemoryAllocation<'a> {
         self.gc_weak();
         self._obj.iter().for_each(|obj| {
             if let Some(ptr) = obj.upgrade() {
-                if let Some(mut inner) = ptr.try_lock() {
+                if let Some(mut inner) = ptr.try_write() {
                     inner.inner = Value::None;
                 }
             }
@@ -257,20 +257,20 @@ impl<'a> MemoryAllocatorConstructor<'a> for MemoryAllocator<'a> {}
 
 impl<'a> Allocator for MemoryAllocator<'a> {
     type Input = Value<'a>;
-    type Output = Arc<Mutex<ValueInnerPtr<'a>>>;
+    type Output = Arc<RwLock<ValueInnerPtr<'a>>>;
 
     fn alloc(&self, input: Self::Input) -> Result<Self::Output, MemoryError> {
         let size = input.get_size();
         self.lock_arc_safe()._internal_alloc(size)?;
         let obj = ValueInnerPtr::new(input, size, self);
-        let ptr = Arc::new(Mutex::new(obj));
+        let ptr = Arc::new(RwLock::new(obj));
         self.lock_arc_safe()._index_obj(&ptr);
         Ok(ptr)
     }
 
     fn change_alloc(&self, data: &mut Self::Output) -> Result<(), MemoryError> {
-        let marked_size = data.lock_arc_safe().marked_size();
-        let new_size = data.lock_arc_safe().get_size();
+        let marked_size = data.read_arc_safe().marked_size();
+        let new_size = data.read_arc_safe().get_size();
         if marked_size == new_size {
             return Ok(());
         }
@@ -279,7 +279,7 @@ impl<'a> Allocator for MemoryAllocator<'a> {
         } else if marked_size > new_size {
             self.lock_arc_safe()._internal_dealloc(marked_size - new_size);
         }
-        data.lock_arc_safe().size = new_size;
+        data.write_arc_safe().size = new_size;
         Ok(())
 
     }

@@ -1,5 +1,6 @@
 use std::sync::{Arc};
 use async_lock::Mutex;
+use virtual_exec_type::ext::SafeWriteArcExt;
 use virtual_exec_type::mem::*;
 
 #[test]
@@ -38,12 +39,12 @@ fn test_mem_change_alloc() {
     let mut obj_1 = alloc.alloc(MemoryChunk(50)).unwrap();
     let mut obj_2 = alloc.alloc(MemoryChunk(50)).unwrap();
     assert_eq!(alloc.lock_arc_blocking().curr(), 100);
-    obj_1.lock_arc_blocking().inner = MemoryChunk(60);
+    obj_1.write_arc_blocking().inner = MemoryChunk(60);
     assert_eq!(alloc.change_alloc(&mut obj_1).is_err(), true, "Memory extend shouldn't be possible when there are no memory remaining");
-    obj_1.lock_arc_blocking().inner = MemoryChunk(50);
+    obj_1.write_arc_blocking().inner = MemoryChunk(50);
     std::mem::drop(obj_1);
     assert_eq!(alloc.lock_arc_blocking().curr(), 50);
-    obj_2.lock_arc_blocking().inner = MemoryChunk(100);
+    obj_2.write_arc_blocking().inner = MemoryChunk(100);
     assert_eq!(alloc.change_alloc(&mut obj_2).is_ok(), true, "Memory extend should be possible as there are 100 memory slot in total");
     assert_eq!(alloc.lock_arc_blocking().curr(), 100);
 }

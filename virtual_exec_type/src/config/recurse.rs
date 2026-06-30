@@ -1,7 +1,7 @@
 use alloc::sync::Arc;
 use async_lock::Mutex;
-use virtual_exec_type::error::NonRecoverableError;
-use virtual_exec_type::mem::MemoryAllocator;
+use crate::error::{ExecutionError, NonRecoverableError};
+use crate::mem::MemoryAllocator;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RecurseConfig {
@@ -35,6 +35,13 @@ pub struct RecursionError;
 impl Into<NonRecoverableError> for RecursionError {
     fn into(self) -> NonRecoverableError {
         NonRecoverableError::RecursionError
+    }
+}
+
+impl Into<ExecutionError> for RecursionError {
+    fn into(self) -> ExecutionError {
+        let non_recoverable: NonRecoverableError = self.into();
+        non_recoverable.into()
     }
 }
 

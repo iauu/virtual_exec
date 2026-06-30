@@ -1,6 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
+extern crate core;
 
 #[macro_use]
 pub mod op;
@@ -11,6 +12,7 @@ pub mod error;
 mod op_impl;
 pub mod mem;
 pub mod ext;
+pub mod config;
 
 pub mod vm_type {
     #[cfg(feature = "std")]

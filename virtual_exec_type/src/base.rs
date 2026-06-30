@@ -3,7 +3,9 @@ use crate::HashMap;
 use alloc::sync::{Arc};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
+use core::fmt::Display;
 use async_lock::{RwLock};
+use crate::config::recurse::{RecurseRestricter, RecursionError};
 use crate::mem::{Allocator, MemoryAllocator, Value, ValuePtr};
 use crate::error::{MemoryError, ExecutionError};
 use crate::ext::*;
@@ -37,37 +39,56 @@ impl IsTruhy for ValuePtr<'_> {
     }
 }
 
-trait ToStringInternal {
-    fn to_string(&self) -> String;
+
+pub trait ToStringSafe {
+    fn to_string_safe(&self, recurse_restricter: RecurseRestricter) -> Result<String, RecursionError>;
 }
 
+macro_rules! consume_fmt {
+    ($rest:expr, $fmt:literal $(, $args:tt)* $(,)?) => {
+        {
+            let x = format!($fmt $(, $args)*);
+            $rest.consume_mem(x.len() as u64)?;
+            x
+        }
+    };
+}
 
-impl ToString for Value<'_> {
-    fn to_string(&self) -> String {
-        match self {
-            Value::Int(i) => format!("{}", i),
-            Value::Float(f) => format!("{}", f),
-            Value::Bool(b) => format!("{}", b),
-            Value::String(s) => format!("\"{}\"", s),
+impl ToStringSafe for Value<'_> {
+    fn to_string_safe(&self, recurse_restricter: RecurseRestricter) -> Result<String, RecursionError> {
+        recurse_restricter.consume_inst(1)?;
+        Ok(match self {
+            Value::Int(i) => consume_fmt!(recurse_restricter, "{}", i),
+            Value::Float(f) => consume_fmt!(recurse_restricter, "{}", f),
+            Value::Bool(b) => consume_fmt!(recurse_restricter, "{}", b),
+            Value::String(s) => consume_fmt!(recurse_restricter, "\"{}\"", s),
             Value::Collection(v) => {
-                v.read_arc_safe().iter().map(|v| v.to_string()).collect()
+                recurse_restricter.consume_mem((v.read_arc_safe().len() as u64 + 1)*2)?;
+                v.read_arc_safe().iter().map(|v| Ok(
+                    v.to_string_safe(recurse_restricter.incr()?)?
+                )).collect::<Result<Vec<String>, RecursionError>>()?.join(", ")
             },
             Value::Object(v) => {
-                v.read_arc_safe().iter().map(|v| format!("\"{}\": {}", v.0, v.1.to_string())).collect()
+                recurse_restricter.consume_mem((v.read_arc_safe().len() as u64 + 1)*4)?;
+                let key_lens: u64 = v.read_arc_safe().iter().map(|v| v.0.len()).sum::<usize>() as u64;
+                recurse_restricter.consume_mem(key_lens)?;
+                v.read_arc_safe().iter().map(|v| Ok(
+                    format!("\"{}\": {}", v.0, v.1.to_string_safe(recurse_restricter.incr()?)?)
+                )).collect::<Result<Vec<String>, RecursionError>>()?.join(", ")
             }
-            Value::None => "None".to_string(),
-            Value::_Scope(_) => "_Scoped".to_string(),
-            Value::MemoryChunk(size) => format!("_MemChunk(size: {})", size),
-            Value::Error(e) => format!("_Error({:?})", e),
-            Value::DPtr(ptr, size) => format!("DynFuncPtr(loc: {}, arg_len: {})", ptr, size),
-            Value::FnPtrExternal(name, size) => format!("DynExternFuncPtr(loc: {}, arg_len: {})", name, size)
-        }
+            Value::None => consume_fmt!(recurse_restricter, "None"),
+            Value::_Scope(_) => consume_fmt!(recurse_restricter, "_Scoped"),
+            Value::MemoryChunk(size) => consume_fmt!(recurse_restricter, "_MemChunk(size: {})", size),
+            Value::Error(e) => consume_fmt!(recurse_restricter, "_Error({:?})", e),
+            Value::DPtr(ptr, size) => consume_fmt!(recurse_restricter, "DynFuncPtr(loc: {}, arg_len: {})", ptr, size),
+            Value::FnPtrExternal(name, size) => consume_fmt!(recurse_restricter, "DynExternFuncPtr(loc: {}, arg_len: {})", name, size)
+        })
     }
 }
 
-impl ToStringInternal for ValuePtr<'_> {
-    fn to_string(&self) -> String {
-        self.lock_arc_safe().to_string()
+impl ToStringSafe for ValuePtr<'_> {
+    fn to_string_safe(&self, recurse_restricter: RecurseRestricter) -> Result<String, RecursionError> {
+        self.lock_arc_safe().to_string_safe(recurse_restricter)
     }
 }
 

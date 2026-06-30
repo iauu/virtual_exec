@@ -2,7 +2,7 @@ use proc_macro2::{Ident, TokenStream as TokenStream2};
 use proc_macro::TokenStream;
 use std::ops::Deref;
 use quote::{quote, ToTokens};
-use syn::{parse_macro_input, parse_quote, FnArg, ItemFn, Pat, PatType, Type};
+use syn::{parse_macro_input, parse_quote, FnArg, ItemFn, Pat, Type};
 use syn::spanned::Spanned;
 use virtual_exec_parser::parser::convert_stmt;
 use virtual_exec_core::sequential::instructions::{Instruction, SubscriptLoad};
@@ -486,9 +486,9 @@ fn arg_to_token(arg: FnArg, idx: usize) -> (impl ToTokens, Option<syn::Type>) {
                 //     virtual_exec_core::fn_extern::fn_args::FnExternArgType::Machine => (gen_op!(Machine, path), Some(parse_quote!( ::virtual_exec_type::__private::Arc<::async_lock::Mutex<&mut ::virtual_exec_core::machine::Machine>>) )),
                 // }
                 gen_branch!(opt, path,
-                    (Alloc, ::virtual_exec_type::mem::MemoryAllocator),
-                    (Machine, ::virtual_exec_type::__private::Arc<::async_lock::Mutex<&mut ::virtual_exec_core::machine::Machine>>),
-                    (Recurse, ::virtual_exec_core::config::recurse::RecurseRestricter)
+                    (Alloc, ::virtual_exec_type::mem::MemoryAllocator<'a>),
+                    (Machine, ::virtual_exec_type::__private::Arc<::async_lock::Mutex<&'__wrap_internal2 mut ::virtual_exec_core::machine::Machine<'a>>>),
+                    (Recurse, ::virtual_exec_type::config::recurse::RecurseRestricter<'a>)
                 )
             } else {
                 (syn::Error::new(span, virtual_exec_core::fn_extern::fn_args::FnExternArgType::err_string()).to_compile_error(), None)
@@ -560,8 +560,11 @@ pub fn fn_extern_wrap_async(_: TokenStream, input: TokenStream) -> TokenStream {
     for (arg_token, replacement) in input.sig.inputs.iter_mut().zip(tokens.iter().as_ref()) {
         match (arg_token, &replacement.1) {
             (FnArg::Typed(t), Some(ty)) => {
-                if let Type::Infer(_) = t.ty.deref() {
-                    t.ty = Box::new(ty.clone());
+                if let Pat::TupleStruct(pat_tuple) = t.pat.deref() && pat_tuple.elems.len() == 1 {
+                    if let Type::Infer(_) = t.ty.deref() {
+                        t.ty = Box::new(ty.clone());
+                    }
+                    t.pat = Box::new(pat_tuple.elems[0].clone());
                 }
             },
             _ => {}

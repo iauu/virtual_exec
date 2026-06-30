@@ -95,3 +95,13 @@ macro_rules! resolve {
         }
     };
 }
+
+#[macro_export]
+macro_rules! into {
+    ($src:expr, $dst:path) => {
+        {
+            let x: $dst = $src.into();
+            x
+        }
+    };
+}

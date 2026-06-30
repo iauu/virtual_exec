@@ -3,7 +3,7 @@ use virtual_exec_type::HashMap;
 use virtual_exec_type::mem::MemoryAllocator;
 use crate::Machine;
 use async_lock::Mutex;
-use crate::config::recurse::{RecurseConfig, RecurseRestricter};
+use virtual_exec_type::config::recurse::{RecurseConfig, RecurseRestricter};
 
 macro_rules! fn_extern_arg_type_construct {
     ($(($name:ident, $t:ty)),*) => {

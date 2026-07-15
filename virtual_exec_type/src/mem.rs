@@ -139,7 +139,8 @@ pub struct MemoryAllocation<'a> {
     curr: usize,
     pub max: usize,
     _phantom: PhantomData<&'a ()>,
-    _obj: Vec<Weak<RwLock<ValueInnerPtr<'a>>>>
+    _obj: Vec<Weak<RwLock<ValueInnerPtr<'a>>>>,
+    _obj_watermark: usize
 }
 
 impl<'a> MemoryAllocation<'a> {
@@ -147,7 +148,8 @@ impl<'a> MemoryAllocation<'a> {
         Self {
             curr: 0, max,
             _phantom: Default::default(),
-            _obj: Vec::new()
+            _obj: Vec::new(),
+            _obj_watermark: 16
         }
     }
 
@@ -196,6 +198,10 @@ impl<'a> MemoryAllocation<'a> {
     }
 
     pub(self) fn _index_obj(&mut self, obj: &ValuePtr<'a>) -> () {
+        if self._obj.len() >= self._obj_watermark {
+            self.gc_weak();
+            self._obj_watermark = self._obj.len() * 2 + 16;
+        }
         self._obj.push(Arc::downgrade(obj));
     }
 

@@ -150,6 +150,21 @@ impl<'ctx> InstStateMachine<'ctx> {
         self.fn_stack_frame.pop().ok_or(ExecutionError::Critical(CriticalError::FnStackUnderflowError))
     }
 
+    fn reaccount_current_frame(&mut self) -> Result<(), ExecutionError> {
+        let (acct, footprint) = {
+            let frame = self.get_stack_ref()?;
+            match &frame._acct {
+                Some(acct) => {
+                    let keys = frame.mapping.read_arc_safe().keys().map(|k| k.len()).sum::<usize>();
+                    (acct.clone(), Self::FN_FRAME_COST + keys)
+                }
+                None => return Ok(()),
+            }
+        };
+        acct.write_arc_safe().inner = Value::MemoryChunk(footprint);
+        self.alloc.change_alloc(&acct).map_err(ExecutionError::from)
+    }
+
     #[allow(unused)]
     fn pop_value(&mut self) -> Result<ValuePtr<'ctx>, ExecutionError> {
         let result = self.stack_pop()?;
@@ -296,8 +311,8 @@ impl<'ctx> InstStateMachine<'ctx> {
                         return self.state.clone()
                     },
                     StackItem::AttrReference((None, target)) => {
-                        let stack =  self.get_mut_stack_ref()?;
-                        stack.mapping.write_arc_safe().insert(target, value.clone());
+                        self.get_mut_stack_ref()?.mapping.write_arc_safe().insert(target, value.clone());
+                        self.reaccount_current_frame()?;
                     },
                     StackItem::AttrReference((Some(obj_ptr), target)) => {
                         if let Some(obj) = obj_ptr.as_object() {

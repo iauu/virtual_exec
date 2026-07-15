@@ -6,8 +6,8 @@ use alloc::vec::Vec;
 use async_lock::RwLock;
 use crate::sequential::exec::{FnStackFrame, InstStateMachine, State};
 use crate::sequential::instructions::Instruction;
-use virtual_exec_type::error::{ExecutionError, MemoryError};
-use virtual_exec_type::mem::{Allocator, MemoryAllocator, MemoryAllocatorConstructor, OwnedValue, ToOwnedValue, Value};
+use virtual_exec_type::error::{CriticalError, ExecutionError, MemoryError};
+use virtual_exec_type::mem::{Allocator, MemoryAllocator, MemoryAllocatorConstructor, OwnedValue, ToOwnedValue, Value, ValuePtr};
 use crate::fn_extern::{FnExtern, MethodResolver};
 use virtual_exec_type::ext::*;
 
@@ -60,6 +60,19 @@ impl<'a> Machine<'a> {
         })
     }
 
+    #[cfg(feature = "std")]
+    fn dispatch_extern_sync(&mut self, f: &Arc<dyn FnExtern + Send + Sync>, values: Vec<ValuePtr<'a>>) -> Result<ValuePtr<'a>, ExecutionError> {
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f.fn_extern_sync(self, values))) {
+            Ok(result) => result,
+            Err(_) => Err(ExecutionError::Critical(CriticalError::GenericPanicRewindError)),
+        }
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn dispatch_extern_sync(&mut self, f: &Arc<dyn FnExtern + Send + Sync>, values: Vec<ValuePtr<'a>>) -> Result<ValuePtr<'a>, ExecutionError> {
+        f.fn_extern_sync(self, values)
+    }
+
     pub fn sync_run_once(&mut self) -> Result<(State<'a>, bool), ExecutionError> {
         if let Ok(State::Ok) = self.machine.state {
             self.machine.run_once().map(|x| (x, true))
@@ -69,7 +82,7 @@ impl<'a> Machine<'a> {
                 let fns: Vec<Arc<dyn FnExtern + Send + Sync>> = self.resolvers.iter().filter_map(|x| x.get(func)).collect();
                 if fns.len() > 0 {
                     let inputs = self.machine.retrieve_fn_input()?.unwrap();
-                    let result = fns[0].fn_extern_sync(self, inputs.1);
+                    let result = self.dispatch_extern_sync(&fns[0], inputs.1);
                     self.machine.push_fn_output(result);
                     return self.machine.state.clone().map(|x| (x, true))
                 }

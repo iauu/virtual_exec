@@ -43,7 +43,9 @@ impl<'ctx> From<ValuePtr<'ctx>> for StackItem<'ctx> {
 
 impl<'ctx> GetSize for StackItem<'ctx> {
     fn get_size(&self) -> usize {
-        const SLOT: usize = 8;
+        // A stack entry is a real heap node plus its `_acct` MemoryChunk node,
+        // so a slot costs more virtual than a bare collection element (8 B).
+        const SLOT: usize = 32;
         match self {
             StackItem::Value(_) => SLOT,
             StackItem::AttrReference((_, name)) => SLOT + name.len(),
@@ -92,7 +94,7 @@ macro_rules! __binary_autogen {
         {
             let b = $ss.pop_get()?;
             let a = $ss.pop_get()?;
-            let result = $f(a, b, &$ss.alloc).map_err(|_| ExecutionError::NonRecoverable(NonRecoverableError::UndefinedOperendError))?;
+            let result = $f(a, b, &$ss.alloc).map_err(ExecutionError::from)?;
             $ss.push_value(result)?;
         }
     };
@@ -100,7 +102,7 @@ macro_rules! __binary_autogen {
         {
             let b = $ss.pop_get()?;
             let a = $ss.pop_get()?;
-            let result = $f(a, b, &$ss.alloc).map_err(|_| ExecutionError::NonRecoverable(NonRecoverableError::UndefinedOperendError)).or_else(|_| $v)?;
+            let result = $f(a, b, &$ss.alloc).map_err(ExecutionError::from).or_else(|_| $v)?;
             $ss.push_value(result)?;
         }
     };
@@ -111,14 +113,14 @@ macro_rules! __unary_autogen {
     ($f:ident, $ss:ident) => {
         {
             let a = $ss.pop_get()?;
-            let result = $f(a, &$ss.alloc).map_err(|_| ExecutionError::NonRecoverable(NonRecoverableError::UndefinedOperendError))?;
+            let result = $f(a, &$ss.alloc).map_err(ExecutionError::from)?;
             $ss.push_value(result)?;
         }
     };
     ($f:ident, $ss:ident, $v:expr) => {
         {
             let b = $ss.pop_get()?;
-            let result = $f(a, &$ss.alloc).map_err(|_| ExecutionError::NonRecoverable(NonRecoverableError::UndefinedOperendError)).or_else(|_| $v)?;
+            let result = $f(a, &$ss.alloc).map_err(ExecutionError::from).or_else(|_| $v)?;
             $ss.push_value(result)?;
         }
     };
@@ -503,6 +505,16 @@ impl<'ctx> InstStateMachine<'ctx> {
         self.state.clone()
     }
 
+    #[cfg(feature = "std")]
+    fn eval_guarded(&mut self, instruction: Instruction) -> Result<State<'ctx>, ExecutionError> {
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.inst_eval(instruction))).unwrap_or_else(|_| Err(ExecutionError::Critical(CriticalError::GenericPanicRewindError)))
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn eval_guarded(&mut self, instruction: Instruction) -> Result<State<'ctx>, ExecutionError> {
+        self.inst_eval(instruction)
+    }
+
     pub fn run_once(&mut self) -> Result<State<'ctx>, ExecutionError> {
         match self.state.clone() {
             Ok(State::Terminated) => {
@@ -549,7 +561,7 @@ impl<'ctx> InstStateMachine<'ctx> {
         }
         self.lim -= 1;
 
-        self.state = self.inst_eval(instruction);
+        self.state = self.eval_guarded(instruction);
         match self.state.clone() {
             Err(_e) => {
                 return self.state.clone();

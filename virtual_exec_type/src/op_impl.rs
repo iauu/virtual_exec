@@ -1,31 +1,32 @@
 use alloc::format;
 use crate::vm_type::Error;
+use crate::error::TypeConversionError;
 use alloc::string::{String, ToString};
 
-register_op_add!(i64, i64, i64);
+register_op_add!(i64, i64, i64, |a: i64, b: i64| Ok(a.wrapping_add(b)));
 register_op_add!(f64, f64, f64);
 register_op_add!(i64, f64, f64, |a, b| Ok((a as f64) + b));
 register_op_add!(f64, i64, f64, |a, b| Ok(a + (b as f64)));
 
-register_op_sub!(i64, i64, i64);
+register_op_sub!(i64, i64, i64, |a: i64, b: i64| Ok(a.wrapping_sub(b)));
 register_op_sub!(f64, f64, f64);
 register_op_sub!(i64, f64, f64, |a, b| Ok((a as f64) - b));
 register_op_sub!(f64, i64, f64, |a, b| Ok(a - (b as f64)));
 
-register_op_mul!(i64, i64, i64);
+register_op_mul!(i64, i64, i64, |a: i64, b: i64| Ok(a.wrapping_mul(b)));
 register_op_mul!(f64, f64, f64);
 register_op_mul!(i64, f64, f64, |a, b| Ok((a as f64) * b));
 register_op_mul!(f64, i64, f64, |a, b| Ok(a * (b as f64)));
 
-register_op_div!(i64, i64, f64, |a, b| Ok((a as f64) / (b as f64)));
-register_op_div!(f64, f64, f64);
-register_op_div!(i64, f64, f64, |a, b| Ok((a as f64) / b));
-register_op_div!(f64, i64, f64, |a, b| Ok(a / (b as f64)));
+register_op_div!(i64, i64, f64, |a: i64, b: i64| if b == 0 { Err(TypeConversionError::DivideByZeroError) } else { Ok((a as f64) / (b as f64)) });
+register_op_div!(f64, f64, f64, |a: f64, b: f64| if b == 0.0 { Err(TypeConversionError::DivideByZeroError) } else { Ok(a / b) });
+register_op_div!(i64, f64, f64, |a: i64, b: f64| if b == 0.0 { Err(TypeConversionError::DivideByZeroError) } else { Ok((a as f64) / b) });
+register_op_div!(f64, i64, f64, |a: f64, b: i64| if b == 0 { Err(TypeConversionError::DivideByZeroError) } else { Ok(a / (b as f64)) });
 
-register_op_moduls!(i64, i64, i64);
-register_op_moduls!(f64, f64, f64);
-register_op_moduls!(i64, f64, f64, |a, b| Ok((a as f64) % b));
-register_op_moduls!(f64, i64, f64, |a, b| Ok(a % (b as f64)));
+register_op_moduls!(i64, i64, i64, |a: i64, b: i64| if b == 0 { Err(TypeConversionError::DivideByZeroError) } else { Ok(a.wrapping_rem(b)) });
+register_op_moduls!(f64, f64, f64, |a: f64, b: f64| if b == 0.0 { Err(TypeConversionError::DivideByZeroError) } else { Ok(a % b) });
+register_op_moduls!(i64, f64, f64, |a: i64, b: f64| if b == 0.0 { Err(TypeConversionError::DivideByZeroError) } else { Ok((a as f64) % b) });
+register_op_moduls!(f64, i64, f64, |a: f64, b: i64| if b == 0 { Err(TypeConversionError::DivideByZeroError) } else { Ok(a % (b as f64)) });
 
 register_op_eq!(bool, bool, bool, |a: bool, b: bool| Ok(a == b));
 register_op_le!(bool, bool, bool, |a: bool, b: bool| Ok(a <= b));
@@ -60,8 +61,8 @@ register_op_gt!(f64, i64, bool, |a, b| Ok(a > (b as f64)));
 register_op_ne!(i64, f64, bool, |a, b| Ok(((a as f64) - b).abs() >= f64::EPSILON));
 register_op_ne!(f64, i64, bool, |b, a| Ok(((a as f64) - b).abs() >= f64::EPSILON));
 
-register_op_bsl!(i64, i64, i64);
-register_op_bsr!(i64, i64, i64);
+register_op_bsl!(i64, i64, i64, |a: i64, b: i64| Ok(a.wrapping_shl(b as u32)));
+register_op_bsr!(i64, i64, i64, |a: i64, b: i64| Ok(a.wrapping_shr(b as u32)));
 register_op_band!(i64, i64, i64);
 register_op_bor!(i64, i64, i64);
 register_op_and!(bool, bool, bool, |a: bool, b: bool| Ok(a && b));
@@ -74,7 +75,7 @@ register_op_bor!(bool, bool, bool, |a: bool, b: bool| Ok(a ^ b));
 register_op_not!(bool, bool, |a: bool| Ok(!a));
 register_op_pos!(i64, i64, |a| Ok(a));
 register_op_pos!(f64, f64, |a| Ok(a));
-register_op_neg!(i64, i64);
+register_op_neg!(i64, i64, |a: i64| Ok(a.wrapping_neg()));
 register_op_neg!(f64, f64);
 
 register_op_add!(

@@ -12,7 +12,7 @@ fn test_arr() {
     let code = "arr = create_array(); push_array(arr, 100); value = arr_get_from_idx(arr, 0); size = arr_get_len(arr); value2 = pop_array(arr);";
     let compiled = compile(&parse(code).unwrap());
     println!("{:?}", compiled);
-    let mut machine = Machine::new(compiled, 200, 200, vec![BASIC.clone()]).unwrap();
+    let mut machine = Machine::new(compiled, 2000, 200, vec![BASIC.clone()]).unwrap();
     match machine.sync_run_all() {
         Ok(State::Ok) => {},
         Ok(reason) => {

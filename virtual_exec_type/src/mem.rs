@@ -121,6 +121,26 @@ impl<'a> ValueInnerPtr<'a> {
 }
 
 
+fn drop_value_iter(root: Value) {
+    let mut work = Vec::new();
+    work.push(root);
+    while let Some(value) = work.pop() {
+        let children: Option<Vec<ValuePtr>> = match value {
+            Value::Collection(arc) => Arc::try_unwrap(arc).ok().map(|lock| lock.into_inner()),
+            Value::Object(arc) => Arc::try_unwrap(arc).ok().map(|lock| lock.into_inner().into_values().collect()),
+            _ => None,
+        };
+        if let Some(children) = children {
+            for child in children {
+                if let Ok(lock) = Arc::try_unwrap(child) {
+                    let mut inner = lock.into_inner();
+                    work.push(core::mem::replace(&mut inner.inner, Value::None));
+                }
+            }
+        }
+    }
+}
+
 impl<'a> Drop for ValueInnerPtr<'a> {
     fn drop(&mut self) {
         let ptr = self.alloc.upgrade();
@@ -129,6 +149,7 @@ impl<'a> Drop for ValueInnerPtr<'a> {
                 alloc._internal_dealloc(self.size);
             }
         }
+        drop_value_iter(core::mem::replace(&mut self.inner, Value::None));
     }
 }
 
@@ -236,24 +257,27 @@ pub trait Allocator {
     fn change_alloc(&self, data: & Self::Output) -> Result<(), MemoryError>;
 }
 
+const NODE_OVERHEAD: usize = 32;
+const CONTAINER_OVERHEAD: usize = 32;
+
 impl<'a> GetSize for Value<'a> {
     fn get_size(&self) -> usize {
         match self {
-            Value::Int(_i) => 8,
-            Value::Float(_f) => 8,
-            Value::Bool(_b) => 1,
-            Value::Collection(c) => c.read_arc_safe().len() * 8 + 16,
+            Value::Int(_i) => 8 + NODE_OVERHEAD,
+            Value::Float(_f) => 8 + NODE_OVERHEAD,
+            Value::Bool(_b) => 1 + NODE_OVERHEAD,
+            Value::Collection(c) => c.read_arc_safe().len() * 8 + 16 + NODE_OVERHEAD + CONTAINER_OVERHEAD,
             Value::Object(d) => {
                 let map = d.read_arc_safe();
-                map.len() * 8 + map.keys().map(|k| k.len()).sum::<usize>() + 16
+                map.len() * 8 + map.keys().map(|k| k.len()).sum::<usize>() + 16 + NODE_OVERHEAD + CONTAINER_OVERHEAD
             },
-            Value::String(s) => s.len(),
-            Value::None => 1,
-            Value::_Scope(_) => 1,
+            Value::String(s) => s.len() + NODE_OVERHEAD,
+            Value::None => 1 + NODE_OVERHEAD,
+            Value::_Scope(_) => 1 + NODE_OVERHEAD,
             Value::MemoryChunk(size) => *size,
             Value::Error(_) => 1024,
-            Value::DPtr(_, _) => 16,
-            Value::FnPtrExternal(f, _) => f.len(),
+            Value::DPtr(_, _) => 16 + NODE_OVERHEAD,
+            Value::FnPtrExternal(f, _) => f.len() + NODE_OVERHEAD,
         }
     }
 }

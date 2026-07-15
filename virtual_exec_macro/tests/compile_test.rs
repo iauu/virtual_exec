@@ -13,7 +13,7 @@ fn test_simple_assignment_and_expr() {
         a = a + 5;
         a;
     };
-    let alloc = MemoryAllocator::construct(100);
+    let alloc = MemoryAllocator::construct(600);
 
     let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 
@@ -62,7 +62,7 @@ fn test_more() {
         }
         a;
     };
-    let alloc = MemoryAllocator::construct(100);
+    let alloc = MemoryAllocator::construct(600);
 
     let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 
@@ -110,7 +110,7 @@ fn test_timeout() {
         }
         a;
     };
-    let alloc = MemoryAllocator::construct(100);
+    let alloc = MemoryAllocator::construct(600);
 
     let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 
@@ -154,7 +154,7 @@ fn test_if_fail_path() {
         }
         a;
     };
-    let alloc = MemoryAllocator::construct(100);
+    let alloc = MemoryAllocator::construct(600);
 
     let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 
@@ -202,7 +202,7 @@ fn test_while_loop() {
             a -= 1;
         }
     };
-    let alloc = MemoryAllocator::construct(100);
+    let alloc = MemoryAllocator::construct(600);
 
     let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 
@@ -253,7 +253,7 @@ fn test_function() {
             a = add(a, -1);
         }
     };
-    let alloc = MemoryAllocator::construct(100);
+    let alloc = MemoryAllocator::construct(600);
 
     let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 

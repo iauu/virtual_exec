@@ -16,7 +16,7 @@ fn test_execution_compiled_code() {
     let parsed = parse(code).unwrap();
     let compiled = compile(&parsed);
 
-    let alloc = MemoryAllocator::construct(100);
+    let alloc = MemoryAllocator::construct(600);
 
     let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 
@@ -58,7 +58,7 @@ fn test_execution_compiled_code_if_false() {
     let parsed = parse(code).unwrap();
     let compiled = compile(&parsed);
 
-    let alloc = MemoryAllocator::construct(100);
+    let alloc = MemoryAllocator::construct(600);
 
     let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 
@@ -100,7 +100,7 @@ fn test_execution_compiled_code_math_operations() {
     let parsed = parse(code).unwrap();
     let compiled = compile(&parsed);
 
-    let alloc = MemoryAllocator::construct(100);
+    let alloc = MemoryAllocator::construct(600);
 
     let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 
@@ -159,7 +159,7 @@ fn test_execution_compiled_code_bitwise_operations() {
     let parsed = parse(code).unwrap();
     let compiled = compile(&parsed);
 
-    let alloc = MemoryAllocator::construct(100);
+    let alloc = MemoryAllocator::construct(600);
 
     let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
 

@@ -48,7 +48,7 @@ macro_rules! consume_fmt {
     ($rest:expr, $fmt:literal $(, $args:tt)* $(,)?) => {
         {
             let x = format!($fmt $(, $args)*);
-            $rest.consume_mem(x.len() as u64)?;
+            $rest.consume_mem(x.len() as usize)?;
             x
         }
     };
@@ -63,15 +63,15 @@ impl ToStringSafe for Value<'_> {
             Value::Bool(b) => consume_fmt!(recurse_restricter, "{}", b),
             Value::String(s) => consume_fmt!(recurse_restricter, "\"{}\"", s),
             Value::Collection(v) => {
-                recurse_restricter.consume_mem((v.read_arc_safe().len() as u64 + 1)*2)?;
+                recurse_restricter.consume_mem((v.read_arc_safe().len() + 1)*2)?;
                 format!("[{}]", v.read_arc_safe().iter().map(|v| Ok(
                     v.to_string_safe(recurse_restricter.incr()?)?
                 )).collect::<Result<Vec<String>, RecursionError>>()?.join(", "))
             },
             Value::Object(v) => {
-                recurse_restricter.consume_mem((v.read_arc_safe().len() as u64 + 1)*4)?;
+                recurse_restricter.consume_mem((v.read_arc_safe().len() + 1)*4)?;
                 let key_lens: u64 = v.read_arc_safe().iter().map(|v| v.0.len()).sum::<usize>() as u64;
-                recurse_restricter.consume_mem(key_lens)?;
+                recurse_restricter.consume_mem(key_lens as usize)?;
                 format!("{{{}}}", v.read_arc_safe().iter().map(|v| Ok(
                     format!("\"{}\": {}", v.0, v.1.to_string_safe(recurse_restricter.incr()?)?)
                 )).collect::<Result<Vec<String>, RecursionError>>()?.join(", "))

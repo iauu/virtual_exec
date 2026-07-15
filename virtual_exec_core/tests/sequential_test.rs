@@ -13,7 +13,7 @@ fn test_value_creation_and_downcast() {
         Instruction::LoadName(Box::from("a")),
         Instruction::LoadLitInt(1),
         Instruction::Assign,
-        Instruction::LoadName(Box::from("a")),
+        Instruction::LoadName(Box::from("b")),
         Instruction::LoadLitInt(2),
         Instruction::Assign,
         Instruction::LoadName(Box::from("c")),

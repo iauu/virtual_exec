@@ -64,12 +64,29 @@ impl<'a, 'b> LazyMapping<'a, 'b> {
                 FnExternArg::Machine(machine)
             },
             FnExternArgType::Recurse => {
-                FnExternArg::Recurse(RecurseConfig::default().as_lim(machine.lock_blocking().alloc.clone()))
+                let (remaining_lim, alloc) = {
+                    let m = machine.lock_blocking();
+                    (m.machine.lim, m.alloc.clone())
+                };
+                let mut config = RecurseConfig::default();
+                config.inst_limit = Some(match config.inst_limit {
+                    Some(default) => default.min(remaining_lim),
+                    None => remaining_lim,
+                });
+                FnExternArg::Recurse(config.as_lim(alloc))
             }
         }
     }
 
     pub fn get(&mut self, ty: FnExternArgType) -> FnExternArg<'a, 'b> {
         self.1.entry(ty).or_insert_with(|| LazyMapping::construct(Arc::clone(&self.0), ty)).clone()
+    }
+
+    pub fn settle_recurse_cost(&self) {
+        if let Some(FnExternArg::Recurse(restricter)) = self.1.get(&FnExternArgType::Recurse) {
+            let consumed = *restricter.curr_inst.lock_arc_blocking();
+            let mut m = self.0.lock_blocking();
+            m.machine.lim = m.machine.lim.saturating_sub(consumed);
+        }
     }
 }

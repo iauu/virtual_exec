@@ -45,7 +45,8 @@ impl<'a> Machine<'a> {
             lim: inst_limit,
             fn_stack_frame: vec![FnStackFrame {
                 ptr: 0,
-                mapping: Arc::new(RwLock::new(map))
+                mapping: Arc::new(RwLock::new(map)),
+                _acct: None,
             }],
             alloc: alloc.clone(),
             instructions,

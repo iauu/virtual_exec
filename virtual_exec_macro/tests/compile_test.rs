@@ -21,7 +21,8 @@ fn test_simple_assignment_and_expr() {
         lim: 1000,
         fn_stack_frame: vec![FnStackFrame {
             ptr: 0,
-            mapping: global_mapping.clone()
+            mapping: global_mapping.clone(),
+            _acct: None,
         }],
         alloc,
         instructions: insts,
@@ -69,7 +70,8 @@ fn test_more() {
         lim: 1000,
         fn_stack_frame: vec![FnStackFrame {
             ptr: 0,
-            mapping: global_mapping.clone()
+            mapping: global_mapping.clone(),
+            _acct: None,
         }],
         alloc,
         instructions: insts,
@@ -116,7 +118,8 @@ fn test_timeout() {
         lim: 15,
         fn_stack_frame: vec![FnStackFrame {
             ptr: 0,
-            mapping: global_mapping.clone()
+            mapping: global_mapping.clone(),
+            _acct: None,
         }],
         alloc,
         instructions: insts,
@@ -160,7 +163,8 @@ fn test_if_fail_path() {
         lim: 1000,
         fn_stack_frame: vec![FnStackFrame {
             ptr: 0,
-            mapping: global_mapping.clone()
+            mapping: global_mapping.clone(),
+            _acct: None,
         }],
         alloc,
         instructions: insts,
@@ -207,7 +211,8 @@ fn test_while_loop() {
         lim: 1000,
         fn_stack_frame: vec![FnStackFrame {
             ptr: 0,
-            mapping: global_mapping.clone()
+            mapping: global_mapping.clone(),
+            _acct: None,
         }],
         alloc,
         instructions: insts,
@@ -257,7 +262,8 @@ fn test_function() {
         lim: 1000,
         fn_stack_frame: vec![FnStackFrame {
             ptr: 0,
-            mapping: global_mapping.clone()
+            mapping: global_mapping.clone(),
+            _acct: None,
         }],
         alloc,
         instructions: insts,

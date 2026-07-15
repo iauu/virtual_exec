@@ -78,14 +78,17 @@ impl<'a> RecurseRestricter<'a> {
         Ok(())
     }
 
-    pub fn consume_mem(&self, amount: u64) -> Result<(), RecursionError> {
-        let mut v = self.curr_inst.lock_arc_blocking();
-        let value = v.checked_add(amount).ok_or(RecursionError)?;
-        *v = value;
-        if let Some(inst_lim) = self.config.inst_limit && *v > inst_lim {
-            return Err(RecursionError);
-        }
-        self.alloc.lock_arc_blocking().check_alloc_err(*self.curr_mem.lock_arc_blocking()).map_err(|_|RecursionError)?;
+    pub fn consume_mem(&self, amount: usize) -> Result<(), RecursionError> {
+        let value;
+        {
+            let mut v = self.curr_mem.lock_arc_blocking();
+            value = v.checked_add(amount).ok_or(RecursionError)?;
+            *v = value;
+            if let Some(mem_lim) = self.config.mem_limit && *v > mem_lim {
+                return Err(RecursionError);
+            }
+        };
+        self.alloc.lock_arc_blocking().check_alloc_err(value).map_err(|_|RecursionError)?;
         Ok(())
     }
 }

@@ -172,14 +172,19 @@ impl<'a> MemoryAllocation<'a> {
         Err(MemoryError)
     }
 
-    #[allow(unreachable_code)]
     pub(self) fn _internal_dealloc(&mut self, size: usize) -> () {
-        if size > self.curr {
-            unreachable!();
-            self.curr = 0;
-        } else {
-            self.curr -= size;
-        }
+        // `size` should never exceed `curr` while accounting is consistent
+        // (`curr` is the sum of every live object's marked size). In debug/test
+        // builds (`debug_assertions` on) panic loudly so a desync never goes
+        // silent; in release, saturate so a bookkeeping bug degrades into a
+        // recoverable over-count instead of aborting the whole process.
+        debug_assert!(
+            size <= self.curr,
+            "memory accounting desync: dealloc of {} exceeds tracked {}",
+            size,
+            self.curr
+        );
+        self.curr = self.curr.saturating_sub(size);
     }
 
     pub fn gc_weak(&mut self) -> () {
@@ -222,7 +227,7 @@ pub trait Allocator {
 
     fn alloc(&self, input: Self::Input) -> Result<Self::Output, MemoryError>;
 
-    fn change_alloc(&self, data: &mut Self::Output) -> Result<(), MemoryError>;
+    fn change_alloc(&self, data: & Self::Output) -> Result<(), MemoryError>;
 }
 
 impl<'a> GetSize for Value<'a> {
@@ -231,10 +236,10 @@ impl<'a> GetSize for Value<'a> {
             Value::Int(_i) => 8,
             Value::Float(_f) => 8,
             Value::Bool(_b) => 1,
-            Value::Collection(c) => c.read_arc_safe().len() * 8,
+            Value::Collection(c) => c.read_arc_safe().len() * 8 + 16,
             Value::Object(d) => {
                 let map = d.read_arc_safe();
-                map.len() * 8 + map.keys().map(|k| k.len()).sum::<usize>()
+                map.len() * 8 + map.keys().map(|k| k.len()).sum::<usize>() + 16
             },
             Value::String(s) => s.len(),
             Value::None => 1,
@@ -268,7 +273,7 @@ impl<'a> Allocator for MemoryAllocator<'a> {
         Ok(ptr)
     }
 
-    fn change_alloc(&self, data: &mut Self::Output) -> Result<(), MemoryError> {
+    fn change_alloc(&self, data: &Self::Output) -> Result<(), MemoryError> {
         let marked_size = data.read_arc_safe().marked_size();
         let new_size = data.read_arc_safe().get_size();
         if marked_size == new_size {

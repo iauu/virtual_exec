@@ -543,6 +543,7 @@ pub fn fn_extern_wrap(_: TokenStream, input: TokenStream) -> TokenStream {
             for mut item in values {
                 alloc.change_alloc(&mut item)?;
             }
+            mapping.settle_recurse_cost();
             Ok(result)
         }
     }.into()
@@ -587,6 +588,7 @@ pub fn fn_extern_wrap_async(_: TokenStream, input: TokenStream) -> TokenStream {
             for mut item in values {
                 alloc.change_alloc(&mut item)?;
             }
+            mapping.settle_recurse_cost();
             Ok(result)
         }
     }.into()

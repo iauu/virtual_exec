@@ -17,7 +17,7 @@ register_op_mul!(f64, f64, f64);
 register_op_mul!(i64, f64, f64, |a, b| Ok((a as f64) * b));
 register_op_mul!(f64, i64, f64, |a, b| Ok(a * (b as f64)));
 
-register_op_div!(i64, i64, i64);
+register_op_div!(i64, i64, f64, |a, b| Ok((a as f64) / (b as f64)));
 register_op_div!(f64, f64, f64);
 register_op_div!(i64, f64, f64, |a, b| Ok((a as f64) / b));
 register_op_div!(f64, i64, f64, |a, b| Ok(a / (b as f64)));

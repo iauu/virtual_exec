@@ -95,3 +95,7 @@ impl From<TypeConversionError> for ExecutionError {
         }
     }
 }
+
+
+/// Memory that doesn't exist in the current allocator (It might exist in a different allocator, which cross allocator transfer is not supported)
+pub struct MemoryOutOfBoundError;

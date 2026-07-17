@@ -7,16 +7,10 @@ use core::ops::Deref;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use async_lock::{Mutex, MutexGuardArc, RwLock, RwLockReadGuardArc, RwLockWriteGuardArc};
-use crate::error::{MemoryError, ExecutionError};
+use crate::error::{MemoryError, ExecutionError, MemoryOutOfBoundError};
 use crate::ext::*;
 
 pub type MemoryAllocator<'a> = Arc<Mutex<MemoryAllocation<'a>>>;
-
-pub trait ToOwnedValue {
-    type Output;
-
-    fn to_owned_value(&self) -> Self::Output;
-}
 
 #[derive(Debug, Clone)]
 pub enum Value<'a> {
@@ -54,33 +48,22 @@ impl PartialEq for Value<'_> {
     }
 }
 
-impl ToOwnedValue for Value<'_> {
-    type Output = OwnedValue;
-
-    fn to_owned_value(&self) -> Self::Output {
-        match self {
-            Value::Int(i) => OwnedValue::Int(*i),
-            Value::Float(f) => OwnedValue::Float(*f),
-            Value::Bool(b) => OwnedValue::Bool(*b),
-            Value::None => OwnedValue::None,
-            Value::String(s) => OwnedValue::String(s.to_owned()),
-            Value::Collection(c) => {
-                OwnedValue::Collection(c.read_arc_safe().iter().map(|v| v.read_arc_safe().to_owned_value()).collect::<Vec<_>>().into())
-            },
-            Value::Object(d) => {
-                OwnedValue::Object(d.read_arc_safe().iter().map(|(k, v)| (k.to_owned(), v.read_arc_safe().to_owned_value())).collect())
-            },
-            Value::_Scope(_) => OwnedValue::None,
-            Value::MemoryChunk(_) => OwnedValue::None,
-            Value::Error(e) => OwnedValue::Error(e.clone()),
-            Value::DPtr(d, s) => OwnedValue::DPtr(*d, *s),
-            Value::FnPtrExternal(f, s) => OwnedValue::FnPtrExternal(f.clone(), *s),
-        }
-    }
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum ValueKind {
+    Int,
+    Float,
+    Bool,
+    String,
+    None,
+    Collection,
+    Object,
+    Error,
+    DPtr,
+    FnPtrExternal
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum OwnedValue {
+pub enum OwnedValueInternal {
     Int(i64),
     Float(f64),
     Bool(bool),
@@ -92,6 +75,9 @@ pub enum OwnedValue {
     DPtr(u64, usize),
     FnPtrExternal(Box<str>, usize)
 }
+
+/// Note: Restoring owned value pointer that also currently exist in the allocator doesn't re-merge them (just so I don't forget :p)
+pub type OwnedValue = Arc<OwnedValueInternal>;
 
 #[derive(Debug)]
 pub struct ValueInnerPtr<'a> {
@@ -154,6 +140,12 @@ impl<'a> Drop for ValueInnerPtr<'a> {
 }
 
 pub type ValuePtr<'a> = Arc<RwLock<ValueInnerPtr<'a>>>;
+
+enum OwnedValueConstruction {
+    List(Vec<usize>),
+    Dict(HashMap<String, usize>),
+    None
+}
 
 #[derive(Debug)]
 pub struct MemoryAllocation<'a> {
@@ -228,6 +220,36 @@ impl<'a> MemoryAllocation<'a> {
 
     pub fn curr(&self) -> usize {
         self.curr
+    }
+    
+    fn get_idx_ref(&self, value: &ValuePtr<'a>) -> Result<usize, MemoryOutOfBoundError> {
+        self._obj.iter().position(|obj| if let Some(ptr) = obj.upgrade() {Arc::ptr_eq(&ptr, value)} else {false})
+            .ok_or(MemoryOutOfBoundError)
+    }
+    
+    fn get_obj_construction(&self, value: &ValuePtr<'a>) -> Result<OwnedValueConstruction, MemoryOutOfBoundError> {
+        Ok(match value.read_arc_safe().clone() {
+            Value::Collection(collect) => OwnedValueConstruction::List(
+                collect.read_arc_safe()
+                    .iter()
+                    .map(
+                        |item| 
+                            self.get_idx_ref(item)
+                    ).collect::<Result<_, MemoryOutOfBoundError>>()?),
+            Value::Object(obj) => OwnedValueConstruction::Dict(
+                obj.read_arc_safe()
+                    .iter()
+                    .map(
+                        |(k, v)| 
+                            Ok((k.clone(), self.get_idx_ref(v)?))
+                    ).collect::<Result<_, MemoryOutOfBoundError>>()?),
+            _ => OwnedValueConstruction::None
+        })
+    }
+    
+    pub fn get_owned(&mut self, value: &ValuePtr<'a>) -> OwnedValue {
+        self.gc_weak();
+        todo!();
     }
 }
 

@@ -7,7 +7,7 @@ use async_lock::RwLock;
 use crate::sequential::exec::{FnStackFrame, InstStateMachine, State};
 use crate::sequential::instructions::Instruction;
 use virtual_exec_type::error::{CriticalError, ExecutionError, MemoryError};
-use virtual_exec_type::mem::{Allocator, MemoryAllocator, MemoryAllocatorConstructor, OwnedValue, ToOwnedValue, Value, ValuePtr};
+use virtual_exec_type::mem::{Allocator, MemoryAllocator, MemoryAllocatorConstructor, OwnedValue, Value, ValuePtr};
 use crate::fn_extern::{FnExtern, MethodResolver};
 use virtual_exec_type::ext::*;
 
@@ -163,7 +163,7 @@ impl<'a> Machine<'a> {
     pub fn get(&self, name: &str) -> Option<OwnedValue> {
         for fn_frame in self.machine.fn_stack_frame.iter().rev() {
             if let Some(v) = fn_frame.mapping.read_arc_safe().get(name).cloned() {
-                return Some(v.read_arc_safe().inner.to_owned_value());
+                return Some(self.alloc.lock_arc_safe().get_owned(&v));
             }
         }
         None

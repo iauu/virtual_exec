@@ -334,7 +334,6 @@ impl<'a> MemoryAllocation<'a> {
     pub fn get_owned(&mut self, value: &ValuePtr<'a>) -> Result<OwnedValue, MemoryOutOfBoundError> {
         self.gc_weak();
         let idx_self = self.get_idx_ref(value)?;
-        let mut ref_id: HashSet<usize> = HashSet::new();
         let mut non_handled: Vec<usize> = Vec::new();
         let mut obj_map: HashMap<usize, (OwnedValue, OwnedValueConstruction)> = HashMap::new();
         non_handled.push(idx_self);
@@ -344,15 +343,15 @@ impl<'a> MemoryAllocation<'a> {
             match &construction {
                 OwnedValueConstruction::List(list) => {
                     list.iter().for_each(|item| {
-                        if !non_handled.contains(item) {
-                            ref_id.insert(*item);
+                        if !non_handled.contains(item) && !obj_map.contains_key(item) {
+                            non_handled.push(*item);
                         }
                     });
                 },
                 OwnedValueConstruction::Dict(map) => {
                     map.values().for_each(|item| {
-                        if !non_handled.contains(item) {
-                        ref_id.insert(*item);
+                        if !non_handled.contains(item) && !obj_map.contains_key(item) {
+                            non_handled.push(*item);
                         }
                     });
                 },

@@ -1,10 +1,12 @@
 #![cfg(feature = "parse")]
 
+use std::ops::Deref;
 use virtual_exec_core::{Machine, parse, compile};
 use virtual_exec_core::sequential::exec::State;
 use virtual_exec_type::error::ExecutionError;
 use virtual_exec_type::error::NonRecoverableError;
-use virtual_exec_type::mem::OwnedValue;
+use virtual_exec_type::ext::SafeReadArcExt;
+use virtual_exec_type::mem::{OwnedValue, OwnedValueInternal};
 
 #[test]
 fn test_simple_assignment() {
@@ -21,8 +23,14 @@ fn test_simple_assignment() {
             println!("Machine: {:?}, err: {:?}", machine, e);
         }
     }
-    assert_eq!(machine.get("a"), Some(OwnedValue::Int(1)));
-    assert_eq!(machine.get("d"), Some(OwnedValue::Int(4)));
+    let value = machine.get("a");
+    assert!(value.is_some(), "Variable `a` should exist");
+    let value = value.unwrap();
+    assert_eq!(value.read_arc_safe().deref(), &OwnedValueInternal::Int(1));
+    let value = machine.get("d");
+    assert!(value.is_some(), "Variable `d` should exist");
+    let value = value.unwrap();
+    assert_eq!(value.read_arc_safe().deref(), &OwnedValueInternal::Int(4));
 }
 
 
@@ -47,7 +55,10 @@ fn test_fn() {
             println!("Machine: {:?}, err: {:?}", machine, e);
         }
     }
-    assert_eq!(machine.get("a"), Some(OwnedValue::Int(0)));
+    let value = machine.get("a");
+    assert!(value.is_some(), "Variable `a` should exist");
+    let value = value.unwrap();
+    assert_eq!(value.read_arc_safe().deref(), &OwnedValueInternal::Int(42), "Value `a` should be 0")
 }
 
 
@@ -127,5 +138,8 @@ fn test_extern_timeout_replay() {
     let result = machine.sync_run_all();
     assert_eq!(result.is_ok(), true, "Execution should complete after granting more budget: {:?}", result);
     assert_eq!(calls.load(Ordering::SeqCst), 2, "Extern function should be replayed after resume");
-    assert_eq!(machine.get("a"), Some(OwnedValue::Int(42)));
+    let value = machine.get("a");
+    assert!(value.is_some(), "Variable `a` should exist");
+    let value = value.unwrap();
+    assert_eq!(value.read_arc_safe().deref(), &OwnedValueInternal::Int(42), "Value `a` should be 42")
 }

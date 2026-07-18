@@ -163,7 +163,7 @@ impl<'a> Machine<'a> {
     pub fn get(&self, name: &str) -> Option<OwnedValue> {
         for fn_frame in self.machine.fn_stack_frame.iter().rev() {
             if let Some(v) = fn_frame.mapping.read_arc_safe().get(name).cloned() {
-                return Some(self.alloc.lock_arc_safe().get_owned(&v));
+                return Some(self.alloc.lock_arc_safe().get_owned(&v).unwrap());
             }
         }
         None

@@ -86,11 +86,12 @@ impl PartialEq for OwnedValueInternal {
             (OwnedValueInternal::Bool(a), OwnedValueInternal::Bool(b)) => a == b,
             (OwnedValueInternal::None, OwnedValueInternal::None) => true,
             (OwnedValueInternal::String(a), OwnedValueInternal::String(b)) => a == b,
-            (OwnedValueInternal::Collection(a), OwnedValueInternal::Collection(b)) => a
+            (OwnedValueInternal::Collection(a), OwnedValueInternal::Collection(b)) => a.len() == b.len() && a
                 .iter().zip(b)
                 .all(|(a, b)| Arc::ptr_eq(a, b)),
-            (OwnedValueInternal::Object(a), OwnedValueInternal::Object(b))  => 
-                a.iter().zip(b).all(|(a, b)| {a.0 == b.0 && Arc::ptr_eq(a.1, b.1)}),
+            (OwnedValueInternal::Object(a), OwnedValueInternal::Object(b)) =>
+                a.len() == b.len()
+                    && a.iter().all(|(k, v)| b.get(k).is_some_and(|bv| Arc::ptr_eq(v, bv))),
             (OwnedValueInternal::Error(a), OwnedValueInternal::Error(b)) => a == b,
             (OwnedValueInternal::DPtr(a, c), OwnedValueInternal::DPtr(b, d)) => a == b && c == d,
             (OwnedValueInternal::FnPtrExternal(a, c), OwnedValueInternal::FnPtrExternal(b, d)) => a == b && c == d,

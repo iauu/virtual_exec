@@ -58,7 +58,7 @@ fn test_fn() {
     let value = machine.get("a");
     assert!(value.is_some(), "Variable `a` should exist");
     let value = value.unwrap();
-    assert_eq!(value.read_arc_safe().deref(), &OwnedValueInternal::Int(42), "Value `a` should be 0")
+    assert_eq!(value.read_arc_safe().deref(), &OwnedValueInternal::Int(0), "Value `a` should be 0")
 }
 
 

@@ -1,10 +1,12 @@
 mod test_sys;
 mod test_mem;
 
+use std::ops::Deref;
+use std::sync::Arc;
 use virtual_exec_core::{Machine, parse, compile};
 use virtual_exec_core::sequential::exec::State;
-use virtual_exec_type::error::ExecutionError;
-use virtual_exec_type::mem::OwnedValue;
+use virtual_exec_type::ext::SafeReadArcExt;
+use virtual_exec_type::mem::OwnedValueInternal;
 use virtual_exec_std::BASIC;
 
 #[test]
@@ -22,8 +24,11 @@ fn test_arr() {
             println!("Machine: {:?}, err: {:?}", machine, e);
         }
     }
-    assert_eq!(machine.get("value"), Some(OwnedValue::Int(100)));
-    assert_eq!(machine.get("value2"), Some(OwnedValue::Int(100)));
-    assert_eq!(machine.get("size"), Some(OwnedValue::Int(1)));
+    let value = machine.get("value").expect("Variable `value` should exist");
+    assert_eq!(value.read_arc_safe().deref(), &OwnedValueInternal::Int(100));
+    let value2 = machine.get("value2").expect("Variable `value2` should exist");
+    assert_eq!(value2.read_arc_safe().deref(), &OwnedValueInternal::Int(100));
+    let size = machine.get("size").expect("Variable `size` should exist");
+    assert_eq!(size.read_arc_safe().deref(), &OwnedValueInternal::Int(1));
 }
 

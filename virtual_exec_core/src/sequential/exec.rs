@@ -128,7 +128,7 @@ macro_rules! __unary_autogen {
 
 impl<'ctx> InstStateMachine<'ctx> {
     
-    const FN_FRAME_COST: usize = 16;
+    const FN_FRAME_COST: usize = 128;
     
     fn stack_push(&mut self, item: StackItem<'ctx>) -> Result<(), ExecutionError> {
         let acct = self.alloc(Value::MemoryChunk(item.get_size()))?;

@@ -238,6 +238,35 @@ fn to_owned_init_transform<'a>(ptr: &ValuePtr<'a>) -> OwnedValue {
     }))
 }
 
+pub fn get_all_owned_value(value: OwnedValue) -> Vec<OwnedValue> {
+    let mut pending = Vec::new();
+    let mut list_all = Vec::new();
+    pending.push(value.clone());
+    list_all.push(value.clone());
+    while let Some(value) = pending.pop() {
+        match value.read_arc_safe().deref() {
+            OwnedValueInternal::Collection(vec) => {
+                vec.iter().for_each(|item: &OwnedValue| {
+                    if !list_all.iter().any(|x| Arc::ptr_eq(&item, &x)) {
+                        pending.push(item.clone());
+                        list_all.push(item.clone());
+                    }
+                });
+            },
+            OwnedValueInternal::Object(map) => {
+                map.values().for_each(|item: &OwnedValue| {
+                    if !list_all.iter().any(|x| Arc::ptr_eq(&item, &x)) {
+                        pending.push(item.clone());
+                        list_all.push(item.clone());
+                    }
+                });
+            }
+            _ => {}
+        }
+    }
+    list_all
+}
+
 #[derive(Debug)]
 pub struct MemoryAllocation<'a> {
     curr: usize,

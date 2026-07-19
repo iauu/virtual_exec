@@ -61,7 +61,11 @@ pub enum ValueKind {
     Object,
     Error,
     DPtr,
-    FnPtrExternal
+    FnPtrExternal,
+    #[doc(hidden)]
+    _Scope,
+    #[doc(hidden)]
+    MemoryChunk
 }
 
 #[derive(Debug, Clone)]
@@ -141,8 +145,8 @@ impl<'a> Into<ValueKind> for &Value<'a> {
             Value::Error(_) => ValueKind::Error,
             Value::DPtr(_, _) => ValueKind::DPtr,
             Value::FnPtrExternal(_, _) => ValueKind::FnPtrExternal,
-            Value::_Scope(_) => ValueKind::None,
-            Value::MemoryChunk(_) => ValueKind::None
+            Value::_Scope(_) => ValueKind::_Scope,
+            Value::MemoryChunk(_) => ValueKind::MemoryChunk
         }
     }
 }
@@ -221,7 +225,7 @@ enum OwnedValueConstruction {
     None
 }
 
-fn to_owned_init_transform<'a>(ptr: &ValuePtr<'a>) -> OwnedValue {
+fn to_owned_init_transform(ptr: &ValuePtr) -> OwnedValue {
     Arc::new(RwLock::new(match &ptr.read_arc_safe().inner {
         Value::Int(x) => OwnedValueInternal::Int(*x),
         Value::Float(x) => OwnedValueInternal::Float(*x),

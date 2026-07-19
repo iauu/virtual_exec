@@ -100,6 +100,12 @@ impl PartialEq for OwnedValueInternal {
     }
 }
 
+impl OwnedValueInternal {
+    pub fn reset(&mut self) -> () {
+        *self = OwnedValueInternal::None;
+    }
+}
+
 
 /// Note: Restoring owned value pointer that also currently exist in the allocator doesn't re-merge them (just so I don't forget :p)
 pub type OwnedValue = Arc<RwLock<OwnedValueInternal>>;

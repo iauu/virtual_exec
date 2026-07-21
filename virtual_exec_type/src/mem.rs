@@ -485,6 +485,9 @@ impl<'a> MemoryAllocation<'a> {
                 OwnedValueConstruction::None => {}
             }
         }
+        for obj in vec_items.iter() {
+            let _ = new_alloc.change_alloc(obj);
+        }
         (new_alloc, vec_items)
     }
 }

@@ -9,6 +9,7 @@ use alloc::vec::Vec;
 use std::collections::HashSet;
 use std::ops::DerefMut;
 use async_lock::{Mutex, MutexGuardArc, RwLock, RwLockReadGuardArc, RwLockWriteGuardArc};
+use crate::base::TypeCast;
 use crate::error::{MemoryError, ExecutionError, MemoryOutOfBoundError};
 use crate::ext::*;
 
@@ -242,6 +243,23 @@ fn to_owned_init_transform(ptr: &ValuePtr) -> OwnedValue {
     }))
 }
 
+fn to_empty_collection<'a, 'b>(ptr: &ValuePtr<'a>) -> Value<'b> {
+    match &ptr.read_arc_safe().inner {
+        Value::Int(x) => Value::Int(*x),
+        Value::Float(x) => Value::Float(*x),
+        Value::Bool(x) => Value::Bool(*x),
+        Value::None => Value::None,
+        Value::String(x) => Value::String(x.clone()),
+        Value::Collection(_) => Value::Collection(Arc::new(RwLock::new(Vec::new()))),
+        Value::Object(_) => Value::Object(Arc::new(RwLock::new(HashMap::new()))),
+        Value::_Scope(x) => Value::_Scope(PhantomData),
+        Value::MemoryChunk(x) => Value::MemoryChunk(*x),
+        Value::Error(e) => Value::Error(e.clone()),
+        Value::DPtr(ptr, size) => Value::DPtr(*ptr, *size),
+        Value::FnPtrExternal(name, size) => Value::FnPtrExternal(name.clone(), *size),
+    }
+}
+
 pub fn get_all_owned_value(value: OwnedValue) -> Vec<OwnedValue> {
     let mut pending = Vec::new();
     let mut list_all = Vec::new();
@@ -324,6 +342,10 @@ impl<'a> MemoryAllocation<'a> {
             self.curr
         );
         self.curr = self.curr.saturating_sub(size);
+    }
+
+    pub(self) fn _get_obj_unchecked(&self, idx: usize) -> Weak<RwLock<ValueInnerPtr<'a>>> {
+        self._obj[idx].clone()
     }
 
     pub fn gc_weak(&mut self) -> () {
@@ -424,6 +446,47 @@ impl<'a> MemoryAllocation<'a> {
 
         Ok(Arc::clone(&obj_view_map[&idx_self]))
     }
+
+    pub fn fork<'b>(&mut self) -> (MemoryAllocator<'b>, Vec<ValuePtr<'b>>) {
+        self.gc_weak();
+        let mut vec_items: Vec<ValuePtr<'b>> = Vec::new();
+        let max: usize = self.max.clone();
+        let inner: MemoryAllocation<'b> = MemoryAllocation::new(max);
+        let new_alloc: MemoryAllocator<'b> = Arc::new(Mutex::new(inner));
+        for obj in self._obj.iter() {
+            let ptr = obj.upgrade().expect("Object should not be dropped inside this scope with gc_weak");
+            vec_items.push(new_alloc.alloc(to_empty_collection(&ptr)).expect("Allocation should be possible as have been previously allocated"));
+        }
+        for (idx, obj) in self._obj.iter().enumerate() {
+            match self.get_obj_construction(&obj.upgrade().expect("Object should not be dropped inside this scope with gc_weak"))
+                .expect("Memory allocation should be within the allocator") {
+                OwnedValueConstruction::List(vec) => {
+                    vec_items[idx]
+                        .as_collections().unwrap()
+                        .write_arc_blocking()
+                        .extend(
+                            vec.iter().map(
+                                |x| vec_items[*x].clone()
+                            )
+                        )
+                },
+                OwnedValueConstruction::Dict(map) => {
+                    vec_items[idx]
+                        .as_object().unwrap()
+                        .write_arc_blocking()
+                        .extend(
+                            map.iter().map(
+                                |(k, v)| (
+                                    k.clone(), vec_items[*v].clone()
+                                )
+                            )
+                        )
+                },
+                OwnedValueConstruction::None => {}
+            }
+        }
+        (new_alloc, vec_items)
+    }
 }
 
 impl<'a> Drop for MemoryAllocation<'a> {
@@ -511,6 +574,5 @@ impl<'a> Allocator for MemoryAllocator<'a> {
         }
         data.write_arc_safe().size = new_size;
         Ok(())
-
     }
 }

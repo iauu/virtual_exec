@@ -1,18 +1,17 @@
 use crate::app::{App, InteractArea};
 use ratatui::crossterm::style::Stylize;
 use ratatui::prelude::Modifier;
-use ratatui::widgets::Padding;
 use ratatui::{
     Frame,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout},
     style::{Color, Style},
-    text::{Line, Span, Text},
-    widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
+    text::{Line, Span},
+    widgets::{Block, Paragraph},
 };
 use ratatui_interact::components::{
     Button, ButtonVariant, ScrollableContent, TextArea, TextAreaStyle,
 };
-use ratatui_interact::prelude::{ButtonState, ScrollableContentStyle};
+use ratatui_interact::prelude::ScrollableContentStyle;
 use virtual_exec_core::parse;
 
 pub(crate) fn ui(f: &mut Frame, app: &mut App) {

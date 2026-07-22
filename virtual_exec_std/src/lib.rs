@@ -6,8 +6,7 @@ pub mod sys;
 use crate::func::*;
 #[cfg(feature = "sys")]
 use crate::sys::*;
-use std::collections::HashMap;
-use std::sync::{Arc, LazyLock};
+use std::sync::LazyLock;
 use virtual_exec_core::fn_extern::{FnExternConstruct, MethodResolver};
 
 use virtual_exec_extern::resolve;

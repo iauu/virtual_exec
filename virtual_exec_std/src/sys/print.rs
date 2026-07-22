@@ -4,7 +4,6 @@ use virtual_exec_extern::*;
 use virtual_exec_type::vm_type::*;
 use virtual_exec_type::base::{ToStringSafe, TypeCast};
 use virtual_exec_type::error::{ExecutionError, NonRecoverableError};
-use virtual_exec_type::ext::SafeReadArcExt;
 
 #[fn_extern_wrap]
 fn print<'a>(str: Any<'a>, Recurse(recurse): _) -> Result<None, Error> {

@@ -23,7 +23,7 @@ pub mod vm_type {
 
     use crate::error::ExecutionError;
     use crate::mem::ValuePtr;
-    use alloc::string::{String, ToString};
+    use alloc::string::String;
     use alloc::sync::Arc;
     use alloc::vec::Vec;
     use async_lock::RwLock;

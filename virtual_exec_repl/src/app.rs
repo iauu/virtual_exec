@@ -1,7 +1,6 @@
 use ratatui_interact::components::TextAreaState;
 use ratatui_interact::prelude::{ButtonState, ScrollableContentState};
 use ratatui_interact::traits::ClickRegionRegistry;
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use virtual_exec_core::Machine;
 use virtual_exec_core::fn_extern::MethodResolver;

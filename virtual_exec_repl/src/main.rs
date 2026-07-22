@@ -3,33 +3,22 @@ mod component;
 mod r#override;
 mod ui;
 
-use crate::app::{App, AppState, CodeEvalState, FocusArea, InteractArea};
+use crate::app::{AppState, CodeEvalState, FocusArea, InteractArea};
 use crate::r#override::{OVERRIDE, PRINT_BUFFER};
 use crate::ui::ui;
-use ratatui::crossterm::style::Stylize;
 use ratatui::crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{
-    Frame, Terminal,
+    Terminal,
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
 };
-use ratatui_interact::{
-    components::{TabConfig, TextArea, TextAreaState, TextAreaStyle},
-    events::{
-        get_char, get_scroll, has_ctrl, is_backspace, is_close_key, is_ctrl_a, is_ctrl_e,
-        is_ctrl_k, is_ctrl_u, is_ctrl_w, is_delete, is_end, is_enter, is_home, is_left_click,
+use ratatui_interact::events::{
+        get_char, get_scroll, has_ctrl, is_backspace, is_delete, is_enter, is_left_click,
         is_tab,
-    },
-    traits::ClickRegionRegistry,
-};
-use std::fmt::format;
+    };
 use std::io;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -37,7 +26,7 @@ use virtual_exec_core::sequential::compile::GetInstruction;
 use virtual_exec_core::sequential::exec::State;
 use virtual_exec_core::sequential::instructions::{InstForceOffset, Instruction};
 use virtual_exec_core::{compile, parse};
-use virtual_exec_macro::{compile, parse};
+use virtual_exec_macro::compile;
 use virtual_exec_std::{BASIC, SYS};
 
 /// Application state

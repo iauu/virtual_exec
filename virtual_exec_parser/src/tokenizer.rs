@@ -3,7 +3,6 @@ use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
 use syn::{Ident, Lit, Token, braced, parenthesized};
 use virtual_exec_type::ast::core as final_ast;
-use virtual_exec_type::ast::core::Literal;
 
 #[derive(Clone)]
 pub struct TopLevelBlock {

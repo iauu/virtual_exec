@@ -1,6 +1,5 @@
 use virtual_exec_extern::*;
 use virtual_exec_type::vm_type::*;
-use virtual_exec_core::Machine;
 use virtual_exec_type::error::{ExecutionError, NonRecoverableError};
 
 #[fn_extern_wrap]

@@ -8,7 +8,6 @@ use alloc::string::{String, ToString};
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use async_lock::RwLock;
-use core::fmt::Display;
 
 pub trait IsTruhy {
     fn is_truthy(&self) -> bool;

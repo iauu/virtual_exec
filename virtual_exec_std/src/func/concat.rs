@@ -1,7 +1,6 @@
 use virtual_exec_core::fn_extern::fn_args::FnExternArg::Alloc;
 use virtual_exec_extern::*;
 use virtual_exec_type::vm_type::*;
-use virtual_exec_type::error::{ExecutionError, NonRecoverableError};
 use virtual_exec_type::mem::MemoryAllocator;
 
 #[fn_extern_wrap]

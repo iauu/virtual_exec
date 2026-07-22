@@ -3,7 +3,6 @@ use virtual_exec_core::fn_extern::MethodResolver;
 use virtual_exec_core::fn_extern::fn_args::FnExternArg::Recurse;
 use virtual_exec_extern::*;
 use virtual_exec_type::base::{ToStringSafe, TypeCast};
-use virtual_exec_type::ext::*;
 use virtual_exec_type::vm_type::*;
 
 pub static PRINT_BUFFER: Mutex<String> = Mutex::new(String::new());

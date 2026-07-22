@@ -2,15 +2,13 @@ use crate::HashMap;
 use crate::base::TypeCast;
 use crate::error::{ExecutionError, MemoryError, MemoryOutOfBoundError};
 use crate::ext::*;
-use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
-use async_lock::{Mutex, MutexGuardArc, RwLock, RwLockReadGuardArc, RwLockWriteGuardArc};
+use async_lock::{Mutex, RwLock};
 use core::marker::PhantomData;
 use core::ops::Deref;
-use std::collections::HashSet;
 use std::ops::DerefMut;
 
 pub type MemoryAllocator<'a> = Arc<Mutex<MemoryAllocation<'a>>>;
@@ -257,7 +255,7 @@ fn to_empty_collection<'a, 'b>(ptr: &ValuePtr<'a>) -> Value<'b> {
         Value::String(x) => Value::String(x.clone()),
         Value::Collection(_) => Value::Collection(Arc::new(RwLock::new(Vec::new()))),
         Value::Object(_) => Value::Object(Arc::new(RwLock::new(HashMap::new()))),
-        Value::_Scope(x) => Value::_Scope(PhantomData),
+        Value::_Scope(_x) => Value::_Scope(PhantomData),
         Value::MemoryChunk(x) => Value::MemoryChunk(*x),
         Value::Error(e) => Value::Error(e.clone()),
         Value::DPtr(ptr, size) => Value::DPtr(*ptr, *size),

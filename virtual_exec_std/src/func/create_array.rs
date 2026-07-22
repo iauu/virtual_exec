@@ -2,7 +2,6 @@ use std::sync::{Arc};
 use async_lock::RwLock;
 use virtual_exec_extern::*;
 use virtual_exec_type::vm_type::*;
-use virtual_exec_core::Machine;
 
 #[fn_extern_wrap]
 fn create_array_sync<'a>() -> Result<Collection<'a>, Error> {

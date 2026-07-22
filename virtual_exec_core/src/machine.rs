@@ -186,4 +186,15 @@ impl<'a> Machine<'a> {
         }
         None
     }
+
+    /// Fork the machine to an independent memory space
+    pub fn fork<'b>(&self) -> Machine<'b> {
+        let forked_inst_state_machine = self.machine.fork();
+        let forked_alloc = forked_inst_state_machine.alloc.clone();
+        Machine {
+            alloc: forked_alloc,
+            machine: forked_inst_state_machine,
+            resolvers: self.resolvers.clone(),
+        }
+    }
 }

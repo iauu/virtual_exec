@@ -727,6 +727,23 @@ impl<'ctx> InstStateMachine<'ctx> {
             },
             Err(e) => Err(e.clone())
         };
-        todo!()
+        let new_stacks: Vec<StackEntry<'alt>> = self.stack.iter().map(
+            |x| StackEntry {
+                item: match &x.item {
+                    StackItem::AttrReference(attr_ref) => StackItem::AttrReference((attr_ref.0.as_ref().map(|x| vec_items[self.alloc.lock_arc_blocking().get_idx_ref(x).unwrap()].clone()), attr_ref.1.clone())),
+                    StackItem::IdxReference(idx_ref) => StackItem::IdxReference((vec_items[self.alloc.lock_arc_blocking().get_idx_ref(&idx_ref.0).unwrap()].clone(), idx_ref.1.clone())),
+                    StackItem::Value(value) => StackItem::Value(vec_items[self.alloc.lock_arc_blocking().get_idx_ref(value).unwrap()].clone())
+                },
+                _acct: vec_items[self.alloc.lock_arc_blocking().get_idx_ref(&x._acct).unwrap()].clone(),
+            }
+        ).collect();
+        InstStateMachine {
+            lim: self.lim,
+            fn_stack_frame: new_frames,
+            alloc: new_alloc,
+            instructions: self.instructions.clone(),
+            state: new_states,
+            stack: new_stacks,
+        }
     }
 }

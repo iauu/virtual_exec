@@ -1,8 +1,8 @@
 #![cfg(feature = "parse")]
 
 use std::ops::Deref;
-use virtual_exec_core::{Machine, parse, compile};
 use virtual_exec_core::sequential::exec::State;
+use virtual_exec_core::{Machine, compile, parse};
 use virtual_exec_type::error::ExecutionError;
 use virtual_exec_type::error::NonRecoverableError;
 use virtual_exec_type::ext::SafeReadArcExt;
@@ -15,10 +15,10 @@ fn test_simple_assignment() {
     println!("{:?}", compiled);
     let mut machine = Machine::new(compiled, 600, 100, vec![]).unwrap();
     match machine.sync_run_all() {
-        Ok(State::Ok) => {},
+        Ok(State::Ok) => {}
         Ok(reason) => {
             println!("Machine: {:?}, state: {:?}", machine, reason);
-        },
+        }
         Err(e) => {
             println!("Machine: {:?}, err: {:?}", machine, e);
         }
@@ -33,7 +33,6 @@ fn test_simple_assignment() {
     assert_eq!(value.read_arc_safe().deref(), &OwnedValueInternal::Int(4));
 }
 
-
 #[test]
 fn test_fn() {
     let code = "a = 10;
@@ -47,10 +46,10 @@ fn test_fn() {
     println!("{:?}", compiled);
     let mut machine = Machine::new(compiled, 600, 1000, vec![]).unwrap();
     match machine.sync_run_all() {
-        Ok(State::Ok) => {},
+        Ok(State::Ok) => {}
         Ok(reason) => {
             println!("Machine: {:?}, state: {:?}", machine, reason);
-        },
+        }
         Err(e) => {
             println!("Machine: {:?}, err: {:?}", machine, e);
         }
@@ -58,9 +57,12 @@ fn test_fn() {
     let value = machine.get("a");
     assert!(value.is_some(), "Variable `a` should exist");
     let value = value.unwrap();
-    assert_eq!(value.read_arc_safe().deref(), &OwnedValueInternal::Int(0), "Value `a` should be 0")
+    assert_eq!(
+        value.read_arc_safe().deref(),
+        &OwnedValueInternal::Int(0),
+        "Value `a` should be 0"
+    )
 }
-
 
 #[test]
 fn test_incorrect_argument_count() {
@@ -75,18 +77,27 @@ fn test_incorrect_argument_count() {
     println!("{:?}", compiled);
     let mut machine = Machine::new(compiled, 1000, 1000, vec![]).unwrap();
     match machine.sync_run_all() {
-        Ok(State::Ok) => {},
+        Ok(State::Ok) => {}
         Ok(reason) => {
             println!("Machine: {:?}, state: {:?}", machine, reason);
-        },
+        }
         Err(e) => {
             println!("Machine: {:?}, err: {:?}", machine, e);
         }
     }
-    assert_eq!(machine.machine.state.is_err(), true, "Should be error with incorrect argument count");
-    assert_eq!(machine.machine.state.err(), Some(ExecutionError::NonRecoverable(NonRecoverableError::IncorrectArgumentCountError)), "Should be incorrect amount of argument");
+    assert_eq!(
+        machine.machine.state.is_err(),
+        true,
+        "Should be error with incorrect argument count"
+    );
+    assert_eq!(
+        machine.machine.state.err(),
+        Some(ExecutionError::NonRecoverable(
+            NonRecoverableError::IncorrectArgumentCountError
+        )),
+        "Should be incorrect amount of argument"
+    );
 }
-
 
 #[test]
 fn test_extern_timeout_replay() {
@@ -106,10 +117,20 @@ fn test_extern_timeout_replay() {
     }
 
     impl FnExtern for CostlyFn {
-        fn fn_extern_sync<'a, 'b>(&self, machine: &'b mut virtual_exec_core::Machine<'a>, _values: Vec<ValuePtr<'a>>) -> Result<ValuePtr<'a>, ExecutionError> {
+        fn fn_extern_sync<'a, 'b>(
+            &self,
+            machine: &'b mut virtual_exec_core::Machine<'a>,
+            _values: Vec<ValuePtr<'a>>,
+        ) -> Result<ValuePtr<'a>, ExecutionError> {
             self.0.fetch_add(1, Ordering::SeqCst);
-            machine.machine.reduce_lim(50).map_err(ExecutionError::Recoverable)?;
-            machine.alloc.alloc(Value::Int(42)).map_err(ExecutionError::from)
+            machine
+                .machine
+                .reduce_lim(50)
+                .map_err(ExecutionError::Recoverable)?;
+            machine
+                .alloc
+                .alloc(Value::Int(42))
+                .map_err(ExecutionError::from)
         }
 
         fn get_size(&self) -> usize {
@@ -128,7 +149,12 @@ fn test_extern_timeout_replay() {
 
     let result = machine.sync_run_all();
     assert!(
-        matches!(result, Err(ExecutionError::Recoverable(RecoverableError::TimeoutError(50)))),
+        matches!(
+            result,
+            Err(ExecutionError::Recoverable(RecoverableError::TimeoutError(
+                50
+            )))
+        ),
         "Extern function requiring more budget than remaining should report a recoverable timeout: {:?}",
         result
     );
@@ -136,10 +162,23 @@ fn test_extern_timeout_replay() {
 
     machine.machine.grant_lim(100);
     let result = machine.sync_run_all();
-    assert_eq!(result.is_ok(), true, "Execution should complete after granting more budget: {:?}", result);
-    assert_eq!(calls.load(Ordering::SeqCst), 2, "Extern function should be replayed after resume");
+    assert_eq!(
+        result.is_ok(),
+        true,
+        "Execution should complete after granting more budget: {:?}",
+        result
+    );
+    assert_eq!(
+        calls.load(Ordering::SeqCst),
+        2,
+        "Extern function should be replayed after resume"
+    );
     let value = machine.get("a");
     assert!(value.is_some(), "Variable `a` should exist");
     let value = value.unwrap();
-    assert_eq!(value.read_arc_safe().deref(), &OwnedValueInternal::Int(42), "Value `a` should be 42")
+    assert_eq!(
+        value.read_arc_safe().deref(),
+        &OwnedValueInternal::Int(42),
+        "Value `a` should be 42"
+    )
 }

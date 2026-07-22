@@ -1,1 +1,1 @@
-pub use virtual_exec_core::{compile, parse, Machine};
+pub use virtual_exec_core::{Machine, compile, parse};

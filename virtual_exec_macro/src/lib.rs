@@ -1,19 +1,21 @@
-use proc_macro2::{Ident, TokenStream as TokenStream2};
 use proc_macro::TokenStream;
+use proc_macro2::{Ident, TokenStream as TokenStream2};
+use quote::{ToTokens, quote};
 use std::ops::Deref;
-use quote::{quote, ToTokens};
-use syn::{parse_macro_input, parse_quote, FnArg, ItemFn, Pat, Type};
 use syn::spanned::Spanned;
-use virtual_exec_parser::parser::convert_stmt;
+use syn::{FnArg, ItemFn, Pat, Type, parse_macro_input, parse_quote};
 use virtual_exec_core::sequential::instructions::{Instruction, SubscriptLoad};
-use virtual_exec_parser::tokenizer::{Stmt, Expr, Atom, TopLevelBlock, AssignExpr};
-use virtual_exec_type::ast::core::{BinaryOperator, UnaryOperator, Literal, Module};
+use virtual_exec_parser::parser::convert_stmt;
+use virtual_exec_parser::tokenizer::{AssignExpr, Atom, Expr, Stmt, TopLevelBlock};
+use virtual_exec_type::ast::core::{BinaryOperator, Literal, Module, UnaryOperator};
 
 fn literal_to_token(lit: Literal) -> impl ToTokens {
     match lit {
         Literal::Int(v) => quote! { ::virtual_exec_type::ast::core::Literal::Int(#v) },
         Literal::Float(v) => quote! { ::virtual_exec_type::ast::core::Literal::Float(#v) },
-        Literal::String(v) => quote! { ::virtual_exec_type::ast::core::Literal::String(#v.to_string()) },
+        Literal::String(v) => {
+            quote! { ::virtual_exec_type::ast::core::Literal::String(#v.to_string()) }
+        }
         Literal::Bool(v) => quote! { ::virtual_exec_type::ast::core::Literal::Bool(#v) },
         Literal::None => quote! { ::virtual_exec_type::ast::core::Literal::None },
     }
@@ -22,30 +24,46 @@ fn literal_to_token(lit: Literal) -> impl ToTokens {
 fn binary_op_to_token(op: BinaryOperator) -> impl ToTokens {
     match op {
         BinaryOperator::Add => quote! { ::virtual_exec_type::ast::core::BinaryOperator::Add },
-        BinaryOperator::Subtract => quote! { ::virtual_exec_type::ast::core::BinaryOperator::Subtract },
-        BinaryOperator::Multiply => quote! { ::virtual_exec_type::ast::core::BinaryOperator::Multiply },
+        BinaryOperator::Subtract => {
+            quote! { ::virtual_exec_type::ast::core::BinaryOperator::Subtract }
+        }
+        BinaryOperator::Multiply => {
+            quote! { ::virtual_exec_type::ast::core::BinaryOperator::Multiply }
+        }
         BinaryOperator::Divide => quote! { ::virtual_exec_type::ast::core::BinaryOperator::Divide },
         BinaryOperator::And => quote! { ::virtual_exec_type::ast::core::BinaryOperator::And },
         BinaryOperator::Or => quote! { ::virtual_exec_type::ast::core::BinaryOperator::Or },
         BinaryOperator::Xor => quote! { ::virtual_exec_type::ast::core::BinaryOperator::Xor },
         BinaryOperator::Modulo => quote! { ::virtual_exec_type::ast::core::BinaryOperator::Modulo },
-        BinaryOperator::BitwiseAnd => quote! { ::virtual_exec_type::ast::core::BinaryOperator::BitwiseAnd },
-        BinaryOperator::BitwiseOr => quote! { ::virtual_exec_type::ast::core::BinaryOperator::BitwiseOr },
+        BinaryOperator::BitwiseAnd => {
+            quote! { ::virtual_exec_type::ast::core::BinaryOperator::BitwiseAnd }
+        }
+        BinaryOperator::BitwiseOr => {
+            quote! { ::virtual_exec_type::ast::core::BinaryOperator::BitwiseOr }
+        }
         BinaryOperator::Eq => quote! { ::virtual_exec_type::ast::core::BinaryOperator::Eq },
         BinaryOperator::NotEq => quote! { ::virtual_exec_type::ast::core::BinaryOperator::NotEq },
         BinaryOperator::Lt => quote! { ::virtual_exec_type::ast::core::BinaryOperator::Lt },
         BinaryOperator::Lte => quote! { ::virtual_exec_type::ast::core::BinaryOperator::Lte },
         BinaryOperator::Gt => quote! { ::virtual_exec_type::ast::core::BinaryOperator::Gt },
         BinaryOperator::Gte => quote! { ::virtual_exec_type::ast::core::BinaryOperator::Gte },
-        BinaryOperator::LeftShift => quote! { ::virtual_exec_type::ast::core::BinaryOperator::LeftShift },
-        BinaryOperator::RightShift => quote! { ::virtual_exec_type::ast::core::BinaryOperator::RightShift },
+        BinaryOperator::LeftShift => {
+            quote! { ::virtual_exec_type::ast::core::BinaryOperator::LeftShift }
+        }
+        BinaryOperator::RightShift => {
+            quote! { ::virtual_exec_type::ast::core::BinaryOperator::RightShift }
+        }
     }
 }
 
 fn unary_op_to_token(op: UnaryOperator) -> impl ToTokens {
     match op {
-        UnaryOperator::Positive => quote! { ::virtual_exec_type::ast::core::UnaryOperator::Positive },
-        UnaryOperator::Negative => quote! { ::virtual_exec_type::ast::core::UnaryOperator::Negative },
+        UnaryOperator::Positive => {
+            quote! { ::virtual_exec_type::ast::core::UnaryOperator::Positive }
+        }
+        UnaryOperator::Negative => {
+            quote! { ::virtual_exec_type::ast::core::UnaryOperator::Negative }
+        }
         UnaryOperator::Not => quote! { ::virtual_exec_type::ast::core::UnaryOperator::Not },
     }
 }
@@ -94,10 +112,13 @@ fn expr_to_token(expr: Expr) -> impl ToTokens {
                     operand: Box::new(#operand_token),
                 }
             }
-        },
+        }
         Expr::Call(func, args) => {
             let func = expr_to_token(*func);
-            let args = args.iter().map(|x| expr_to_token(x.clone())).collect::<Vec<_>>();
+            let args = args
+                .iter()
+                .map(|x| expr_to_token(x.clone()))
+                .collect::<Vec<_>>();
             quote! {
                 ::virtual_exec_type::ast::core::Expr::Call {
                     function: Box::new(#func),
@@ -185,7 +206,11 @@ fn fn_stmt_to_token(stmt: virtual_exec_parser::tokenizer::FnStmt) -> impl ToToke
                 }
             }
         }
-        virtual_exec_parser::tokenizer::FnStmt::If { test, body, otherwise } => {
+        virtual_exec_parser::tokenizer::FnStmt::If {
+            test,
+            body,
+            otherwise,
+        } => {
             let test_token = expr_to_token(test);
             let body_token = fn_stmts_to_token(body.stmts);
             let otherwise_token = match otherwise {
@@ -206,7 +231,7 @@ fn fn_stmt_to_token(stmt: virtual_exec_parser::tokenizer::FnStmt) -> impl ToToke
                     span: None,
                 }
             }
-        },
+        }
         virtual_exec_parser::tokenizer::FnStmt::Scoped(block) => {
             let stmts = stmts_to_token(block.stmts);
             quote! {
@@ -215,7 +240,7 @@ fn fn_stmt_to_token(stmt: virtual_exec_parser::tokenizer::FnStmt) -> impl ToToke
                     span: None,
                 }
             }
-        },
+        }
         virtual_exec_parser::tokenizer::FnStmt::Loop { test, body } => {
             let test_token = expr_to_token(test);
             let body_token = fn_stmts_to_token(body.stmts);
@@ -228,14 +253,14 @@ fn fn_stmt_to_token(stmt: virtual_exec_parser::tokenizer::FnStmt) -> impl ToToke
                     span: None,
                 }
             }
-        },
+        }
         virtual_exec_parser::tokenizer::FnStmt::Return(expr) => {
             let expr_token = match expr {
                 Some(e) => {
                     let et = expr_to_token(e);
                     quote! { Some(#et) }
-                },
-                None => quote! { None }
+                }
+                None => quote! { None },
             };
             quote! {
                 ::virtual_exec_type::ast::core::Node {
@@ -243,7 +268,7 @@ fn fn_stmt_to_token(stmt: virtual_exec_parser::tokenizer::FnStmt) -> impl ToToke
                     span: None,
                 }
             }
-        },
+        }
         virtual_exec_parser::tokenizer::FnStmt::Fn { name, args, body } => {
             let body_token = fn_stmts_to_token(body.stmts);
 
@@ -257,7 +282,7 @@ fn fn_stmt_to_token(stmt: virtual_exec_parser::tokenizer::FnStmt) -> impl ToToke
                     span: None,
                 }
             }
-        },
+        }
     }
 }
 
@@ -285,7 +310,11 @@ fn stmt_to_token(stmt: Stmt) -> impl ToTokens {
                 }
             }
         }
-        Stmt::If { test, body, otherwise } => {
+        Stmt::If {
+            test,
+            body,
+            otherwise,
+        } => {
             let test_token = expr_to_token(test);
             let body_token = stmts_to_token(body.stmts);
             let otherwise_token = match otherwise {
@@ -306,7 +335,7 @@ fn stmt_to_token(stmt: Stmt) -> impl ToTokens {
                     span: None,
                 }
             }
-        },
+        }
         Stmt::Scoped(block) => {
             let stmts = stmts_to_token(block.stmts);
             quote! {
@@ -315,7 +344,7 @@ fn stmt_to_token(stmt: Stmt) -> impl ToTokens {
                     span: None,
                 }
             }
-        },
+        }
         Stmt::Loop { test, body } => {
             let test_token = expr_to_token(test);
             let body_token = stmts_to_token(body.stmts);
@@ -328,10 +357,10 @@ fn stmt_to_token(stmt: Stmt) -> impl ToTokens {
                     span: None,
                 }
             }
-        },
+        }
         Stmt::Fn { name, args, body } => {
             let body_token = fn_stmts_to_token(body.stmts);
-            
+
             quote! {
                 ::virtual_exec_type::ast::core::Node {
                     kind: ::virtual_exec_type::ast::core::Stmt::FunctionDef {
@@ -342,7 +371,7 @@ fn stmt_to_token(stmt: Stmt) -> impl ToTokens {
                     span: None,
                 }
             }
-        },
+        }
     }
 }
 
@@ -367,7 +396,7 @@ fn subscript_to_token(sub: &SubscriptLoad) -> impl ToTokens {
     match sub {
         SubscriptLoad::Idx(idx) => {
             quote! { ::virtual_exec_core::sequential::instruction::SubscriptLoad::Idx(#idx) }
-        },
+        }
         SubscriptLoad::String(s) => {
             quote! { ::virtual_exec_core::sequential::instruction::SubscriptLoad::String(::std::boxed::Box::from(#s))}
         }
@@ -376,50 +405,130 @@ fn subscript_to_token(sub: &SubscriptLoad) -> impl ToTokens {
 
 fn inst_to_token(inst: Instruction) -> impl ToTokens {
     match inst {
-        Instruction::Add => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Add },
-        Instruction::Sub => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Sub },
-        Instruction::Mul => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Mul },
-        Instruction::Div => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Div },
-        Instruction::Mod => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Mod },
-        Instruction::BitwiseAnd => quote! { ::virtual_exec_core::sequential::instructions::Instruction::BitwiseAnd },
-        Instruction::BitwiseOr => quote! { ::virtual_exec_core::sequential::instructions::Instruction::BitwiseOr },
-        Instruction::BitwiseXor => quote! { ::virtual_exec_core::sequential::instructions::Instruction::BitwiseXor },
-        Instruction::Shl => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Shl },
-        Instruction::Shr => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Shr },
-        Instruction::UnaryPlus => quote! { ::virtual_exec_core::sequential::instructions::Instruction::UnaryPlus },
-        Instruction::UnaryMinus => quote! { ::virtual_exec_core::sequential::instructions::Instruction::UnaryMinus },
-        Instruction::Not => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Not },
-        Instruction::BitwiseNot => quote! { ::virtual_exec_core::sequential::instructions::Instruction::BitwiseNot },
-        Instruction::Eq => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Eq },
-        Instruction::NotEq => quote! { ::virtual_exec_core::sequential::instructions::Instruction::NotEq },
-        Instruction::Lt => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Lt },
-        Instruction::Lte => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Lte },
-        Instruction::Gt => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Gt },
-        Instruction::Gte => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Gte },
-        Instruction::Assign => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Assign },
-        Instruction::JmpNz(loc) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::JmpNz(#loc) },
-        Instruction::JmpZ(loc) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::JmpZ(#loc) },
-        Instruction::Jmp(loc) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Jmp(#loc) },
-        Instruction::Call => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Call },
-        Instruction::Ret => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Ret },
-        Instruction::LoadNone => quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadNone },
-        Instruction::LoadLitFloat(val) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadLitFloat(#val) },
-        Instruction::LoadLitInt(val) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadLitInt(#val) },
-        Instruction::LoadLitString(val) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadLitString(::std::boxed::Box::from(#val)) },
-        Instruction::LoadLitBool(val) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadLitBool(#val) },
-        Instruction::ConstructArr(len) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::ConstructArr(#len) },
-        Instruction::ConstructObj(len2) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::ConstructObj(#len2) },
-        Instruction::LoadName(name) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadName(::std::boxed::Box::from(#name)) },
-        Instruction::LoadObjectAttr(attr) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadObjectAttr(::std::boxed::Box::from(#attr)) },
+        Instruction::Add => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Add }
+        }
+        Instruction::Sub => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Sub }
+        }
+        Instruction::Mul => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Mul }
+        }
+        Instruction::Div => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Div }
+        }
+        Instruction::Mod => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Mod }
+        }
+        Instruction::BitwiseAnd => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::BitwiseAnd }
+        }
+        Instruction::BitwiseOr => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::BitwiseOr }
+        }
+        Instruction::BitwiseXor => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::BitwiseXor }
+        }
+        Instruction::Shl => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Shl }
+        }
+        Instruction::Shr => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Shr }
+        }
+        Instruction::UnaryPlus => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::UnaryPlus }
+        }
+        Instruction::UnaryMinus => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::UnaryMinus }
+        }
+        Instruction::Not => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Not }
+        }
+        Instruction::BitwiseNot => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::BitwiseNot }
+        }
+        Instruction::Eq => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Eq }
+        }
+        Instruction::NotEq => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::NotEq }
+        }
+        Instruction::Lt => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Lt }
+        }
+        Instruction::Lte => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Lte }
+        }
+        Instruction::Gt => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Gt }
+        }
+        Instruction::Gte => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Gte }
+        }
+        Instruction::Assign => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Assign }
+        }
+        Instruction::JmpNz(loc) => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::JmpNz(#loc) }
+        }
+        Instruction::JmpZ(loc) => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::JmpZ(#loc) }
+        }
+        Instruction::Jmp(loc) => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Jmp(#loc) }
+        }
+        Instruction::Call => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Call }
+        }
+        Instruction::Ret => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Ret }
+        }
+        Instruction::LoadNone => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadNone }
+        }
+        Instruction::LoadLitFloat(val) => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadLitFloat(#val) }
+        }
+        Instruction::LoadLitInt(val) => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadLitInt(#val) }
+        }
+        Instruction::LoadLitString(val) => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadLitString(::std::boxed::Box::from(#val)) }
+        }
+        Instruction::LoadLitBool(val) => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadLitBool(#val) }
+        }
+        Instruction::ConstructArr(len) => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::ConstructArr(#len) }
+        }
+        Instruction::ConstructObj(len2) => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::ConstructObj(#len2) }
+        }
+        Instruction::LoadName(name) => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadName(::std::boxed::Box::from(#name)) }
+        }
+        Instruction::LoadObjectAttr(attr) => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadObjectAttr(::std::boxed::Box::from(#attr)) }
+        }
         Instruction::LoadObjectIndex(idx) => {
             let decoded = subscript_to_token(&idx);
             quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadObjectIndex(#decoded) }
-        },
-        Instruction::Terminate => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Terminate },
-        Instruction::Interrupt => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Interrupt },
-        Instruction::Pop => quote! { ::virtual_exec_core::sequential::instructions::Instruction::Pop },
-        Instruction::LoadDPtr(ptr, size) => quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadDPtr(#ptr, #size) },
-        Instruction::Swap => { quote! { ::virtual_exec_core::sequential::instructions::Instruction::Swap } }
+        }
+        Instruction::Terminate => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Terminate }
+        }
+        Instruction::Interrupt => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Interrupt }
+        }
+        Instruction::Pop => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Pop }
+        }
+        Instruction::LoadDPtr(ptr, size) => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadDPtr(#ptr, #size) }
+        }
+        Instruction::Swap => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::Swap }
+        }
     }
 }
 
@@ -439,14 +548,17 @@ fn insts_to_token(stmts: Vec<Instruction>) -> impl ToTokens {
 #[proc_macro]
 pub fn compile(input: TokenStream) -> TokenStream {
     let output = parse_macro_input!(input as TopLevelBlock);
-    let body = output.stmts.into_iter().map(convert_stmt).collect::<Result<_, _>>().unwrap();
+    let body = output
+        .stmts
+        .into_iter()
+        .map(convert_stmt)
+        .collect::<Result<_, _>>()
+        .unwrap();
     let module = Module { body, span: None };
     let compiled = virtual_exec_core::compile(&module);
     let token_content = insts_to_token(compiled);
     quote! { #token_content }.into()
 }
-
-
 
 macro_rules! gen_op {
     ($name:ident, $path:ident) => {
@@ -477,52 +589,88 @@ macro_rules! gen_branch {
 fn arg_to_token(arg: FnArg, idx: usize) -> (impl ToTokens, Option<syn::Type>) {
     let span = arg.span();
     if let FnArg::Typed(pat_type) = arg {
-
         if let Pat::TupleStruct(pat_tuple) = &*pat_type.pat {
-            if let Some(opt) = pat_tuple.path.get_ident().map(virtual_exec_core::fn_extern::fn_args::FnExternArgType::from_ident).flatten() {
+            if let Some(opt) = pat_tuple
+                .path
+                .get_ident()
+                .map(virtual_exec_core::fn_extern::fn_args::FnExternArgType::from_ident)
+                .flatten()
+            {
                 let path = pat_tuple.path.to_token_stream();
                 // match opt {
                 //     virtual_exec_core::fn_extern::fn_args::FnExternArgType::Alloc => (gen_op!(Alloc, path), Some(parse_quote!( ::virtual_exec_type::mem::MemoryAllocator ))),
                 //     virtual_exec_core::fn_extern::fn_args::FnExternArgType::Machine => (gen_op!(Machine, path), Some(parse_quote!( ::virtual_exec_type::__private::Arc<::async_lock::Mutex<&mut ::virtual_exec_core::machine::Machine>>) )),
                 // }
-                gen_branch!(opt, path,
+                gen_branch!(
+                    opt,
+                    path,
                     (Alloc, ::virtual_exec_type::mem::MemoryAllocator<'a>),
-                    (Machine, ::virtual_exec_type::__private::Arc<::async_lock::Mutex<&'__wrap_internal2 mut ::virtual_exec_core::machine::Machine<'a>>>),
-                    (Recurse, ::virtual_exec_type::config::recurse::RecurseRestricter<'a>)
+                    (
+                        Machine,
+                        ::virtual_exec_type::__private::Arc<
+                            ::async_lock::Mutex<
+                                &'__wrap_internal2 mut ::virtual_exec_core::machine::Machine<'a>,
+                            >,
+                        >
+                    ),
+                    (
+                        Recurse,
+                        ::virtual_exec_type::config::recurse::RecurseRestricter<'a>
+                    )
                 )
             } else {
-                (syn::Error::new(span, virtual_exec_core::fn_extern::fn_args::FnExternArgType::err_string()).to_compile_error(), None)
+                (
+                    syn::Error::new(
+                        span,
+                        virtual_exec_core::fn_extern::fn_args::FnExternArgType::err_string(),
+                    )
+                    .to_compile_error(),
+                    None,
+                )
             }
         } else {
-            (quote! {
-                ::virtual_exec_type::base::Downcast::from_value(values[#idx].clone()).ok_or(::virtual_exec_type::error::ExecutionError::NonRecoverable(::virtual_exec_type::error::NonRecoverableError::InvalidTypeError))?
-            }, None)
+            (
+                quote! {
+                    ::virtual_exec_type::base::Downcast::from_value(values[#idx].clone()).ok_or(::virtual_exec_type::error::ExecutionError::NonRecoverable(::virtual_exec_type::error::NonRecoverableError::InvalidTypeError))?
+                },
+                None,
+            )
         }
     } else {
-        (syn::Error::new(span, "Methods taking 'self' are not supported here.").to_compile_error(), None)
+        (
+            syn::Error::new(span, "Methods taking 'self' are not supported here.")
+                .to_compile_error(),
+            None,
+        )
     }
 }
-
 
 #[proc_macro_attribute]
 pub fn fn_extern_wrap(_: TokenStream, input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as ItemFn);
     let ident = input.sig.ident;
-    let tokens = input.sig.inputs.clone()
+    let tokens = input
+        .sig
+        .inputs
+        .clone()
         .into_iter()
-        .enumerate().map(|(idx, arg)| arg_to_token(arg, idx)).collect::<Vec<_>>();
+        .enumerate()
+        .map(|(idx, arg)| arg_to_token(arg, idx))
+        .collect::<Vec<_>>();
     input.sig.ident = Ident::new("__fn_wrap", ident.span());
     let expected_length = tokens.iter().filter(|x| x.1.is_none()).count();
     for (arg_token, replacement) in input.sig.inputs.iter_mut().zip(tokens.iter().as_ref()) {
         match (arg_token, &replacement.1) {
             (FnArg::Typed(t), Some(ty)) => {
-                if let Pat::TupleStruct(pat_tuple) = t.pat.deref() && pat_tuple.elems.len() == 1 {
+                if let Pat::TupleStruct(pat_tuple) = t.pat.deref()
+                    && pat_tuple.elems.len() == 1
+                {
                     if let Type::Infer(_) = t.ty.deref() {
                         t.ty = Box::new(ty.clone());
                     }
                     t.pat = Box::new(pat_tuple.elems[0].clone());
                 }
-            },
+            }
             _ => {}
         }
     }
@@ -553,21 +701,28 @@ pub fn fn_extern_wrap(_: TokenStream, input: TokenStream) -> TokenStream {
 pub fn fn_extern_wrap_async(_: TokenStream, input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as ItemFn);
     let ident = input.sig.ident;
-    let tokens = input.sig.inputs.clone()
+    let tokens = input
+        .sig
+        .inputs
+        .clone()
         .into_iter()
-        .enumerate().map(|(idx, arg)| arg_to_token(arg, idx)).collect::<Vec<_>>();
+        .enumerate()
+        .map(|(idx, arg)| arg_to_token(arg, idx))
+        .collect::<Vec<_>>();
     input.sig.ident = Ident::new("__fn_wrap", ident.span());
     let expected_length = tokens.iter().filter(|x| x.1.is_none()).count();
     for (arg_token, replacement) in input.sig.inputs.iter_mut().zip(tokens.iter().as_ref()) {
         match (arg_token, &replacement.1) {
             (FnArg::Typed(t), Some(ty)) => {
-                if let Pat::TupleStruct(pat_tuple) = t.pat.deref() && pat_tuple.elems.len() == 1 {
+                if let Pat::TupleStruct(pat_tuple) = t.pat.deref()
+                    && pat_tuple.elems.len() == 1
+                {
                     if let Type::Infer(_) = t.ty.deref() {
                         t.ty = Box::new(ty.clone());
                     }
                     t.pat = Box::new(pat_tuple.elems[0].clone());
                 }
-            },
+            }
             _ => {}
         }
     }

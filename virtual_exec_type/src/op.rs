@@ -1,11 +1,17 @@
-use crate::mem::ValuePtr;
 use crate::error::TypeConversionError;
 use crate::mem::MemoryAllocator;
+use crate::mem::ValuePtr;
 
-type BinaryOpFn =
-    for<'ctx> fn(lhs: &ValuePtr<'ctx>, rhs: &ValuePtr<'ctx>, arena: &MemoryAllocator<'ctx>) ->  Option<Result<ValuePtr<'ctx>, TypeConversionError>>;
+type BinaryOpFn = for<'ctx> fn(
+    lhs: &ValuePtr<'ctx>,
+    rhs: &ValuePtr<'ctx>,
+    arena: &MemoryAllocator<'ctx>,
+) -> Option<Result<ValuePtr<'ctx>, TypeConversionError>>;
 
-type UnaryOpFn = for<'ctx> fn(rhs: &ValuePtr<'ctx>, arena: &MemoryAllocator<'ctx>) ->  Option<Result<ValuePtr<'ctx>, TypeConversionError>>;
+type UnaryOpFn = for<'ctx> fn(
+    rhs: &ValuePtr<'ctx>,
+    arena: &MemoryAllocator<'ctx>,
+) -> Option<Result<ValuePtr<'ctx>, TypeConversionError>>;
 
 #[macro_export]
 macro_rules! __binary_op_register {
@@ -22,17 +28,25 @@ macro_rules! __binary_op_register {
                 lhs: &$crate::mem::ValuePtr<'ctx>,
                 rhs: &$crate::mem::ValuePtr<'ctx>,
                 arena: &$crate::mem::MemoryAllocator<'ctx>,
-            ) -> Option<Result<$crate::mem::ValuePtr<'ctx>, $crate::error::TypeConversionError>> {
+            ) -> Option<Result<$crate::mem::ValuePtr<'ctx>, $crate::error::TypeConversionError>>
+            {
                 let lhs_val = <$lhs_type as $crate::base::Downcast>::from_value(lhs.clone())?;
                 let rhs_val = <$rhs_type as $crate::base::Downcast>::from_value(rhs.clone())?;
                 fn checked<F>(f: F) -> F
                 where
-                    F: Fn($lhs_type, $rhs_type) -> ::core::result::Result<$ret, $crate::error::TypeConversionError> {
+                    F: Fn(
+                        $lhs_type,
+                        $rhs_type,
+                    )
+                        -> ::core::result::Result<$ret, $crate::error::TypeConversionError>,
+                {
                     f
                 }
                 let func = checked($func);
                 Some(match func(lhs_val, rhs_val) {
-                    Ok(result) => result.from_value(arena).map_err(|e: $crate::error::MemoryError| e.into()),
+                    Ok(result) => result
+                        .from_value(arena)
+                        .map_err(|e: $crate::error::MemoryError| e.into()),
                     Err(err) => Err(err),
                 })
             }
@@ -88,16 +102,23 @@ macro_rules! __unary_op_register {
             fn _op_impl<'ctx>(
                 rhs: &$crate::mem::ValuePtr<'ctx>,
                 arena: &$crate::mem::MemoryAllocator<'ctx>,
-            ) -> Option<Result<$crate::mem::ValuePtr<'ctx>, $crate::error::TypeConversionError>> {
+            ) -> Option<Result<$crate::mem::ValuePtr<'ctx>, $crate::error::TypeConversionError>>
+            {
                 let rhs_val = <$rhs_type as $crate::base::Downcast>::from_value(rhs.clone())?;
                 fn checked<F>(f: F) -> F
                 where
-                    F: Fn($rhs_type) -> ::core::result::Result<$ret, $crate::error::TypeConversionError> {
+                    F: Fn(
+                        $rhs_type,
+                    )
+                        -> ::core::result::Result<$ret, $crate::error::TypeConversionError>,
+                {
                     f
                 }
                 let func = checked($func);
                 Some(match func(rhs_val) {
-                    Ok(result) => result.from_value(arena).map_err(|e: $crate::error::MemoryError| e.into()),
+                    Ok(result) => result
+                        .from_value(arena)
+                        .map_err(|e: $crate::error::MemoryError| e.into()),
                     Err(err) => Err(err),
                 })
             }

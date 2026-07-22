@@ -13,7 +13,6 @@ pub trait SafeWriteArcExt<T> {
     fn write_arc_safe(&self) -> RwLockWriteGuardArc<T>;
 }
 
-
 impl<T> SafeReadArcExt<T> for Arc<RwLock<T>> {
     #[cfg(feature = "std")]
     #[inline]

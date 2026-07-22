@@ -1,14 +1,14 @@
-use alloc::format;
 use crate::HashMap;
-use alloc::sync::{Arc};
-use alloc::string::{String, ToString};
-use alloc::vec::Vec;
-use core::fmt::Display;
-use async_lock::{RwLock};
 use crate::config::recurse::{RecurseRestricter, RecursionError};
-use crate::mem::{Allocator, MemoryAllocator, Value, ValuePtr};
-use crate::error::{MemoryError, ExecutionError};
+use crate::error::{ExecutionError, MemoryError};
 use crate::ext::*;
+use crate::mem::{Allocator, MemoryAllocator, Value, ValuePtr};
+use alloc::format;
+use alloc::string::{String, ToString};
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+use async_lock::RwLock;
+use core::fmt::Display;
 
 pub trait IsTruhy {
     fn is_truthy(&self) -> bool;
@@ -39,9 +39,11 @@ impl IsTruhy for ValuePtr<'_> {
     }
 }
 
-
 pub trait ToStringSafe {
-    fn to_string_safe(&self, recurse_restricter: RecurseRestricter) -> Result<String, RecursionError>;
+    fn to_string_safe(
+        &self,
+        recurse_restricter: RecurseRestricter,
+    ) -> Result<String, RecursionError>;
 }
 
 macro_rules! consume_fmt {
@@ -55,7 +57,10 @@ macro_rules! consume_fmt {
 }
 
 impl ToStringSafe for Value<'_> {
-    fn to_string_safe(&self, recurse_restricter: RecurseRestricter) -> Result<String, RecursionError> {
+    fn to_string_safe(
+        &self,
+        recurse_restricter: RecurseRestricter,
+    ) -> Result<String, RecursionError> {
         recurse_restricter.consume_inst(1)?;
         Ok(match self {
             Value::Int(i) => consume_fmt!(recurse_restricter, "{}", i),
@@ -63,31 +68,61 @@ impl ToStringSafe for Value<'_> {
             Value::Bool(b) => consume_fmt!(recurse_restricter, "{}", b),
             Value::String(s) => consume_fmt!(recurse_restricter, "\"{}\"", s),
             Value::Collection(v) => {
-                recurse_restricter.consume_mem((v.read_arc_safe().len() + 1)*2)?;
-                format!("[{}]", v.read_arc_safe().iter().map(|v| Ok(
-                    v.to_string_safe(recurse_restricter.incr()?)?
-                )).collect::<Result<Vec<String>, RecursionError>>()?.join(", "))
-            },
+                recurse_restricter.consume_mem((v.read_arc_safe().len() + 1) * 2)?;
+                format!(
+                    "[{}]",
+                    v.read_arc_safe()
+                        .iter()
+                        .map(|v| Ok(v.to_string_safe(recurse_restricter.incr()?)?))
+                        .collect::<Result<Vec<String>, RecursionError>>()?
+                        .join(", ")
+                )
+            }
             Value::Object(v) => {
-                recurse_restricter.consume_mem((v.read_arc_safe().len() + 1)*4)?;
-                let key_lens: u64 = v.read_arc_safe().iter().map(|v| v.0.len()).sum::<usize>() as u64;
+                recurse_restricter.consume_mem((v.read_arc_safe().len() + 1) * 4)?;
+                let key_lens: u64 =
+                    v.read_arc_safe().iter().map(|v| v.0.len()).sum::<usize>() as u64;
                 recurse_restricter.consume_mem(key_lens as usize)?;
-                format!("{{{}}}", v.read_arc_safe().iter().map(|v| Ok(
-                    format!("\"{}\": {}", v.0, v.1.to_string_safe(recurse_restricter.incr()?)?)
-                )).collect::<Result<Vec<String>, RecursionError>>()?.join(", "))
+                format!(
+                    "{{{}}}",
+                    v.read_arc_safe()
+                        .iter()
+                        .map(|v| Ok(format!(
+                            "\"{}\": {}",
+                            v.0,
+                            v.1.to_string_safe(recurse_restricter.incr()?)?
+                        )))
+                        .collect::<Result<Vec<String>, RecursionError>>()?
+                        .join(", ")
+                )
             }
             Value::None => consume_fmt!(recurse_restricter, "None"),
             Value::_Scope(_) => consume_fmt!(recurse_restricter, "_Scoped"),
-            Value::MemoryChunk(size) => consume_fmt!(recurse_restricter, "_MemChunk(size: {})", size),
+            Value::MemoryChunk(size) => {
+                consume_fmt!(recurse_restricter, "_MemChunk(size: {})", size)
+            }
             Value::Error(e) => consume_fmt!(recurse_restricter, "_Error({:?})", e),
-            Value::DPtr(ptr, size) => consume_fmt!(recurse_restricter, "DynFuncPtr(loc: {}, arg_len: {})", ptr, size),
-            Value::FnPtrExternal(name, size) => consume_fmt!(recurse_restricter, "DynExternFuncPtr(loc: {}, arg_len: {})", name, size)
+            Value::DPtr(ptr, size) => consume_fmt!(
+                recurse_restricter,
+                "DynFuncPtr(loc: {}, arg_len: {})",
+                ptr,
+                size
+            ),
+            Value::FnPtrExternal(name, size) => consume_fmt!(
+                recurse_restricter,
+                "DynExternFuncPtr(loc: {}, arg_len: {})",
+                name,
+                size
+            ),
         })
     }
 }
 
 impl ToStringSafe for ValuePtr<'_> {
-    fn to_string_safe(&self, recurse_restricter: RecurseRestricter) -> Result<String, RecursionError> {
+    fn to_string_safe(
+        &self,
+        recurse_restricter: RecurseRestricter,
+    ) -> Result<String, RecursionError> {
         self.read_arc_safe().to_string_safe(recurse_restricter)
     }
 }
@@ -107,9 +142,9 @@ pub trait TypeCast<'a> {
     fn as_none(&self) -> Option<()>;
 
     fn as_error(&self) -> Option<ExecutionError>;
-    
+
     fn as_dptr(&self) -> Option<(u64, usize)>;
-    
+
     fn as_fn_ptr_extern(&self) -> Option<(String, usize)>;
 }
 
@@ -166,12 +201,11 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
         let item = &self.read_arc_safe().inner;
         if let Value::None = item {
             Some(())
-        } else if let Value::MemoryChunk(_) = item  {
+        } else if let Value::MemoryChunk(_) = item {
             Some(())
         } else if let Value::_Scope(_) = item {
             Some(())
-        }
-        else {
+        } else {
             None
         }
     }
@@ -191,7 +225,7 @@ impl<'a> TypeCast<'a> for ValuePtr<'a> {
             None
         }
     }
-    
+
     fn as_fn_ptr_extern(&self) -> Option<(String, usize)> {
         if let Value::FnPtrExternal(f, s) = &self.clone().read_arc_safe().inner {
             Some((f.to_string(), *s))

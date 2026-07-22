@@ -1,8 +1,10 @@
-use alloc::vec;
-use alloc::vec::Vec;
-use virtual_exec_type::ast::core::{Module, Expr, Literal, Stmt, AssignExpr, Node, BinaryOperator, UnaryOperator};
 use crate::sequential::instructions::Instruction;
 use crate::sequential::instructions::Instruction::{Jmp, JmpNz, JmpZ, LoadLitBool};
+use alloc::vec;
+use alloc::vec::Vec;
+use virtual_exec_type::ast::core::{
+    AssignExpr, BinaryOperator, Expr, Literal, Module, Node, Stmt, UnaryOperator,
+};
 
 pub fn compile(module: &Module) -> Vec<Instruction> {
     module.inst(0)
@@ -54,11 +56,11 @@ impl GetInstruction for &Vec<Node<Stmt>> {
 impl GetInstruction for Stmt {
     fn inst(&self, offset: u64) -> Vec<Instruction> {
         match self {
-            Stmt::Expression(expr) => { 
+            Stmt::Expression(expr) => {
                 let mut base = expr.kind.inst(offset);
                 base.push(Instruction::Pop); // The expr have to be discarded
                 base
-            },
+            }
             Stmt::Assign { target, value } => {
                 let target_inst = target.kind.inst(offset);
                 let value_inst = value.kind.inst(offset + target_inst.len() as u64);
@@ -67,7 +69,7 @@ impl GetInstruction for Stmt {
                 inst.extend(value_inst);
                 inst.push(Instruction::Assign);
                 inst
-            },
+            }
             Stmt::Scoped(stmts) => {
                 let mut inst = Vec::new();
                 let mut offset = offset;
@@ -77,7 +79,7 @@ impl GetInstruction for Stmt {
                     inst.extend(curr);
                 }
                 inst
-            },
+            }
             Stmt::If {
                 test,
                 body,
@@ -93,10 +95,10 @@ impl GetInstruction for Stmt {
                     None => {
                         let mut inst: Vec<Instruction> = Vec::new();
                         inst.extend(test_inst);
-                        inst.push(JmpZ(offset+1));
+                        inst.push(JmpZ(offset + 1));
                         inst.extend(body_inst);
                         inst
-                    },
+                    }
                     Some(otherwise) => {
                         // Jmp (+1 => 2 hidden)
                         let jzz_target = offset + 2;
@@ -106,13 +108,13 @@ impl GetInstruction for Stmt {
                         inst.extend(test_inst);
                         inst.push(JmpZ(jzz_target));
                         inst.extend(body_inst);
-                        inst.push(Jmp(offset+2));
+                        inst.push(Jmp(offset + 2));
                         inst.extend(otherwise_inst);
                         inst
                     }
                 }
-            },
-            Stmt::Loop { test, body} => {
+            }
+            Stmt::Loop { test, body } => {
                 let mut offset = offset;
                 let initial = offset;
                 let test_inst = test.kind.inst(offset);
@@ -129,7 +131,7 @@ impl GetInstruction for Stmt {
                 inst.extend(body_inst);
                 inst.push(Jmp(initial));
                 inst
-            },
+            }
             Stmt::FunctionDef { name, args, body } => {
                 let mut offset = offset;
                 let mut inst: Vec<Instruction> = Vec::new();
@@ -157,7 +159,7 @@ impl GetInstruction for Stmt {
                 inst.push(Instruction::Jmp(offset));
                 inst.extend(fn_inst);
                 inst
-            },
+            }
             Stmt::Return(expr) => {
                 if let Some(expr) = expr {
                     let mut inst = Vec::new();
@@ -192,27 +194,26 @@ impl GetInstruction for Expr {
                             // JmpZ (+1 => 1 hidden)
                             let right_inst = right.kind.inst(offset + 1);
                             offset += right_inst.len() as u64;
-                            inst.push(JmpZ(offset+1));
+                            inst.push(JmpZ(offset + 1));
                             inst.extend(right_inst);
                         } else if let BinaryOperator::Or = op {
                             // Doesn't actually need logical or since it is in the jmp behaviour
                             // JmpNz (+1 => 1 hidden)
                             let right_inst = right.kind.inst(offset + 1);
                             offset += right_inst.len() as u64;
-                            inst.push(JmpNz(offset+1));
+                            inst.push(JmpNz(offset + 1));
                             inst.extend(right_inst);
                         } else {
                             unreachable!()
                         }
-                    },
+                    }
                     op @ _ => {
-
                         let left_inst = left.kind.inst(offset);
                         let right_inst = right.kind.inst(offset + left_inst.len() as u64);
                         inst.extend(left_inst);
                         inst.extend(right_inst);
                         match op {
-                            BinaryOperator::And | BinaryOperator::Or  => unreachable!(),
+                            BinaryOperator::And | BinaryOperator::Or => unreachable!(),
                             BinaryOperator::Add => inst.push(Instruction::Add),
                             BinaryOperator::Subtract => inst.push(Instruction::Sub),
                             BinaryOperator::Multiply => inst.push(Instruction::Mul),
@@ -233,7 +234,7 @@ impl GetInstruction for Expr {
                     }
                 }
                 inst
-            },
+            }
             Expr::UnaryOp { op, operand } => {
                 let mut inst = Vec::new();
                 let operand_inst = operand.kind.inst(offset);
@@ -244,8 +245,8 @@ impl GetInstruction for Expr {
                     UnaryOperator::Not => inst.push(Instruction::Not),
                 }
                 inst
-            },
-            Expr::Call { function, args} => {
+            }
+            Expr::Call { function, args } => {
                 let mut inst = Vec::new();
                 let mut offset = offset;
                 for arg in args.iter().rev() {

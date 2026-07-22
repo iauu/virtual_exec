@@ -1,7 +1,7 @@
 use crate::token;
 use syn::parse::{Parse, ParseStream, Result};
-use syn::{braced, parenthesized, Ident, Lit, Token};
 use syn::punctuated::Punctuated;
+use syn::{Ident, Lit, Token, braced, parenthesized};
 use virtual_exec_type::ast::core as final_ast;
 use virtual_exec_type::ast::core::Literal;
 
@@ -81,13 +81,13 @@ pub enum Stmt {
     Scoped(Block),
     Loop {
         test: Expr,
-        body: Block
+        body: Block,
     },
     Fn {
         name: String,
         args: Vec<String>,
         body: FnBlock,
-    }
+    },
 }
 
 #[derive(Clone)]
@@ -105,14 +105,14 @@ pub enum FnStmt {
     Scoped(Block),
     Loop {
         test: Expr,
-        body: FnBlock
+        body: FnBlock,
     },
     Return(Option<Expr>),
     Fn {
         name: String,
         args: Vec<String>,
         body: FnBlock,
-    }
+    },
 }
 
 #[derive(Clone)]
@@ -120,7 +120,7 @@ pub enum Expr {
     Atom(Atom),
     Binary(Box<Expr>, final_ast::BinaryOperator, Box<Expr>),
     Unary(final_ast::UnaryOperator, Box<Expr>),
-    Call(Box<Expr>, Vec<Expr>)
+    Call(Box<Expr>, Vec<Expr>),
 }
 
 #[derive(Clone)]
@@ -160,8 +160,7 @@ impl Parse for Stmt {
     fn parse(input: ParseStream) -> Result<Self> {
         if input.peek(Token![if]) {
             return parse_if_statement(input);
-        }
-        else if input.peek(Token![while]) {
+        } else if input.peek(Token![while]) {
             return parse_while_statement(input);
         } else if input.peek(Token![fn]) {
             return parse_fn_statement(input);
@@ -171,11 +170,16 @@ impl Parse for Stmt {
         let _ = fork.parse::<Expr>()?;
 
         if fork.peek(Token![=])
-            || fork.peek(token::PlusAssign) || fork.peek(token::MinusAssign)
-            || fork.peek(token::StarAssign) || fork.peek(token::SlashAssign)
-            || fork.peek(token::PercentAssign) || fork.peek(token::BitAndAssign)
-            || fork.peek(token::BitOrAssign) || fork.peek(token::BitXorAssign)
-            || fork.peek(token::LeftShiftAssign) || fork.peek(token::RightShiftAssign)
+            || fork.peek(token::PlusAssign)
+            || fork.peek(token::MinusAssign)
+            || fork.peek(token::StarAssign)
+            || fork.peek(token::SlashAssign)
+            || fork.peek(token::PercentAssign)
+            || fork.peek(token::BitAndAssign)
+            || fork.peek(token::BitOrAssign)
+            || fork.peek(token::BitXorAssign)
+            || fork.peek(token::LeftShiftAssign)
+            || fork.peek(token::RightShiftAssign)
         {
             let target = input.parse::<AssignExpr>()?;
             let op: AssignOp = input.parse()?;
@@ -184,18 +188,20 @@ impl Parse for Stmt {
 
             let final_value = match map_assign_op_to_binary_op(op) {
                 None => value,
-                Some(binary_op) => Expr::Binary(Box::new(target.clone().into()), binary_op, Box::new(value))
+                Some(binary_op) => {
+                    Expr::Binary(Box::new(target.clone().into()), binary_op, Box::new(value))
+                }
             };
-            
-            Ok(Stmt::Assign { target, value: final_value })
 
-        }
-        else if input.peek(syn::token::Brace) {
+            Ok(Stmt::Assign {
+                target,
+                value: final_value,
+            })
+        } else if input.peek(syn::token::Brace) {
             let stmts = input.parse::<Block>()?;
             input.parse::<Token![;]>()?;
             Ok(Stmt::Scoped(stmts))
-        }
-        else {
+        } else {
             let expr = input.parse::<Expr>()?;
             input.parse::<Token![;]>()?;
             Ok(Stmt::Expr(expr))
@@ -207,11 +213,9 @@ impl Parse for FnStmt {
     fn parse(input: ParseStream) -> Result<Self> {
         if input.peek(Token![if]) {
             return parse_if_fn_statement(input);
-        }
-        else if input.peek(Token![while]) {
+        } else if input.peek(Token![while]) {
             return parse_while_fn_statement(input);
-        }
-        else if input.peek(Token![return]) {
+        } else if input.peek(Token![return]) {
             input.parse::<Token![return]>()?;
             if input.peek(Token![;]) {
                 input.parse::<Token![;]>()?;
@@ -228,11 +232,16 @@ impl Parse for FnStmt {
         let _ = fork.parse::<Expr>()?;
 
         if fork.peek(Token![=])
-            || fork.peek(token::PlusAssign) || fork.peek(token::MinusAssign)
-            || fork.peek(token::StarAssign) || fork.peek(token::SlashAssign)
-            || fork.peek(token::PercentAssign) || fork.peek(token::BitAndAssign)
-            || fork.peek(token::BitOrAssign) || fork.peek(token::BitXorAssign)
-            || fork.peek(token::LeftShiftAssign) || fork.peek(token::RightShiftAssign)
+            || fork.peek(token::PlusAssign)
+            || fork.peek(token::MinusAssign)
+            || fork.peek(token::StarAssign)
+            || fork.peek(token::SlashAssign)
+            || fork.peek(token::PercentAssign)
+            || fork.peek(token::BitAndAssign)
+            || fork.peek(token::BitOrAssign)
+            || fork.peek(token::BitXorAssign)
+            || fork.peek(token::LeftShiftAssign)
+            || fork.peek(token::RightShiftAssign)
         {
             let target = input.parse::<AssignExpr>()?;
             let op: AssignOp = input.parse()?;
@@ -241,18 +250,20 @@ impl Parse for FnStmt {
 
             let final_value = match map_assign_op_to_binary_op(op) {
                 None => value,
-                Some(binary_op) => Expr::Binary(Box::new(target.clone().into()), binary_op, Box::new(value))
+                Some(binary_op) => {
+                    Expr::Binary(Box::new(target.clone().into()), binary_op, Box::new(value))
+                }
             };
 
-            Ok(FnStmt::Assign { target, value: final_value })
-
-        }
-        else if input.peek(syn::token::Brace) {
+            Ok(FnStmt::Assign {
+                target,
+                value: final_value,
+            })
+        } else if input.peek(syn::token::Brace) {
             let stmts = input.parse::<Block>()?;
             input.parse::<Token![;]>()?;
             Ok(FnStmt::Scoped(stmts))
-        }
-        else {
+        } else {
             let expr = input.parse::<Expr>()?;
             input.parse::<Token![;]>()?;
             Ok(FnStmt::Expr(expr))
@@ -265,9 +276,20 @@ impl From<Stmt> for FnStmt {
         match value {
             Stmt::Expr(expr) => FnStmt::Expr(expr),
             Stmt::Assign { target, value } => FnStmt::Assign { target, value },
-            Stmt::If { test, body, otherwise } => FnStmt::If { test, body: body.into(), otherwise: otherwise.map(|x| x.into()) },
+            Stmt::If {
+                test,
+                body,
+                otherwise,
+            } => FnStmt::If {
+                test,
+                body: body.into(),
+                otherwise: otherwise.map(|x| x.into()),
+            },
             Stmt::Scoped(stmts) => FnStmt::Scoped(stmts),
-            Stmt::Loop { test, body } => FnStmt::Loop { test, body: body.into() },
+            Stmt::Loop { test, body } => FnStmt::Loop {
+                test,
+                body: body.into(),
+            },
             Stmt::Fn { name, args, body } => FnStmt::Fn { name, args, body },
         }
     }
@@ -276,7 +298,7 @@ impl From<Stmt> for FnStmt {
 impl From<Block> for FnBlock {
     fn from(value: Block) -> Self {
         FnBlock {
-            stmts: value.stmts.into_iter().map(|stmt| stmt.into()).collect()
+            stmts: value.stmts.into_iter().map(|stmt| stmt.into()).collect(),
         }
     }
 }
@@ -291,13 +313,19 @@ fn parse_if_statement(input: ParseStream) -> Result<Stmt> {
         input.parse::<Token![else]>()?;
         if input.peek(Token![if]) {
             let nested_if = parse_if_statement(input)?;
-            otherwise = Some(Block { stmts: vec![nested_if] });
+            otherwise = Some(Block {
+                stmts: vec![nested_if],
+            });
         } else {
             otherwise = Some(input.parse::<Block>()?);
         }
     }
 
-    Ok(Stmt::If { test, body, otherwise })
+    Ok(Stmt::If {
+        test,
+        body,
+        otherwise,
+    })
 }
 
 fn parse_if_fn_statement(input: ParseStream) -> Result<FnStmt> {
@@ -310,13 +338,19 @@ fn parse_if_fn_statement(input: ParseStream) -> Result<FnStmt> {
         input.parse::<Token![else]>()?;
         if input.peek(Token![if]) {
             let nested_if = parse_if_fn_statement(input)?;
-            otherwise = Some(FnBlock { stmts: vec![nested_if] });
+            otherwise = Some(FnBlock {
+                stmts: vec![nested_if],
+            });
         } else {
             otherwise = Some(input.parse::<FnBlock>()?);
         }
     }
 
-    Ok(FnStmt::If { test, body, otherwise })
+    Ok(FnStmt::If {
+        test,
+        body,
+        otherwise,
+    })
 }
 
 fn parse_while_statement(input: ParseStream) -> Result<Stmt> {
@@ -340,7 +374,11 @@ fn parse_fn_statement(input: ParseStream) -> Result<Stmt> {
     let _ = parenthesized!(content in input);
     let arr: Punctuated<Ident, Token![,]> = Punctuated::parse_terminated(&content)?;
     let args: Vec<String> = arr.iter().map(|i| i.to_string()).collect();
-    Ok(Stmt::Fn { name, args, body: input.parse()? })
+    Ok(Stmt::Fn {
+        name,
+        args,
+        body: input.parse()?,
+    })
 }
 
 impl Parse for Expr {
@@ -352,11 +390,17 @@ impl Parse for Expr {
 fn parse_expr_with_precedence(input: ParseStream, min_bp: u8) -> Result<Expr> {
     let mut lhs = if input.peek(Token![!]) {
         input.parse::<Token![!]>()?;
-        let rhs = parse_expr_with_precedence(input, prefix_binding_power(&final_ast::UnaryOperator::Not))?;
+        let rhs = parse_expr_with_precedence(
+            input,
+            prefix_binding_power(&final_ast::UnaryOperator::Not),
+        )?;
         Expr::Unary(final_ast::UnaryOperator::Not, Box::new(rhs))
     } else if input.peek(Token![-]) {
         input.parse::<Token![-]>()?;
-        let rhs = parse_expr_with_precedence(input, prefix_binding_power(&final_ast::UnaryOperator::Negative))?;
+        let rhs = parse_expr_with_precedence(
+            input,
+            prefix_binding_power(&final_ast::UnaryOperator::Negative),
+        )?;
         Expr::Unary(final_ast::UnaryOperator::Negative, Box::new(rhs))
     } else {
         Expr::Atom(input.parse()?)
@@ -387,8 +431,7 @@ impl Parse for Atom {
         if input.peek(token::None) {
             input.parse::<token::None>()?;
             return Ok(Atom::Literal(final_ast::Literal::None));
-        }
-        else if input.peek(Lit) {
+        } else if input.peek(Lit) {
             let lit: Lit = input.parse()?;
             let final_lit = match lit {
                 Lit::Int(i) => final_ast::Literal::Int(i.base10_parse()?),
@@ -411,26 +454,59 @@ impl Parse for Atom {
     }
 }
 
-
 #[derive(Clone, Copy)]
 pub enum AssignOp {
-    Assign, Add, Sub, Mul, Div, Mod, BitAnd, BitOr, BitXor, Shl, Shr,
+    Assign,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    BitAnd,
+    BitOr,
+    BitXor,
+    Shl,
+    Shr,
 }
 
 impl Parse for AssignOp {
     fn parse(input: ParseStream) -> Result<Self> {
-        if input.peek(Token![=]) { input.parse::<Token![=]>()?; Ok(AssignOp::Assign) }
-        else if input.peek(token::PlusAssign) { input.parse::<token::PlusAssign>()?; Ok(AssignOp::Add) }
-        else if input.peek(token::MinusAssign) { input.parse::<token::MinusAssign>()?; Ok(AssignOp::Sub) }
-        else if input.peek(token::StarAssign) { input.parse::<token::StarAssign>()?; Ok(AssignOp::Mul) }
-        else if input.peek(token::SlashAssign) { input.parse::<token::SlashAssign>()?; Ok(AssignOp::Div) }
-        else if input.peek(token::PercentAssign) { input.parse::<token::PercentAssign>()?; Ok(AssignOp::Mod) }
-        else if input.peek(token::BitAndAssign) { input.parse::<token::BitAndAssign>()?; Ok(AssignOp::BitAnd) }
-        else if input.peek(token::BitOrAssign) { input.parse::<token::BitOrAssign>()?; Ok(AssignOp::BitOr) }
-        else if input.peek(token::BitXorAssign) { input.parse::<token::BitXorAssign>()?; Ok(AssignOp::BitXor) }
-        else if input.peek(token::LeftShiftAssign) { input.parse::<token::LeftShiftAssign>()?; Ok(AssignOp::Shl) }
-        else if input.peek(token::RightShiftAssign) { input.parse::<token::RightShiftAssign>()?; Ok(AssignOp::Shr) }
-        else { Err(input.error("unsupported assignment operator")) }
+        if input.peek(Token![=]) {
+            input.parse::<Token![=]>()?;
+            Ok(AssignOp::Assign)
+        } else if input.peek(token::PlusAssign) {
+            input.parse::<token::PlusAssign>()?;
+            Ok(AssignOp::Add)
+        } else if input.peek(token::MinusAssign) {
+            input.parse::<token::MinusAssign>()?;
+            Ok(AssignOp::Sub)
+        } else if input.peek(token::StarAssign) {
+            input.parse::<token::StarAssign>()?;
+            Ok(AssignOp::Mul)
+        } else if input.peek(token::SlashAssign) {
+            input.parse::<token::SlashAssign>()?;
+            Ok(AssignOp::Div)
+        } else if input.peek(token::PercentAssign) {
+            input.parse::<token::PercentAssign>()?;
+            Ok(AssignOp::Mod)
+        } else if input.peek(token::BitAndAssign) {
+            input.parse::<token::BitAndAssign>()?;
+            Ok(AssignOp::BitAnd)
+        } else if input.peek(token::BitOrAssign) {
+            input.parse::<token::BitOrAssign>()?;
+            Ok(AssignOp::BitOr)
+        } else if input.peek(token::BitXorAssign) {
+            input.parse::<token::BitXorAssign>()?;
+            Ok(AssignOp::BitXor)
+        } else if input.peek(token::LeftShiftAssign) {
+            input.parse::<token::LeftShiftAssign>()?;
+            Ok(AssignOp::Shl)
+        } else if input.peek(token::RightShiftAssign) {
+            input.parse::<token::RightShiftAssign>()?;
+            Ok(AssignOp::Shr)
+        } else {
+            Err(input.error("unsupported assignment operator"))
+        }
     }
 }
 
@@ -462,46 +538,81 @@ fn infix_binding_power(op: &final_ast::BinaryOperator) -> (u8, u8) {
         final_ast::BinaryOperator::Or => (1, 2),
         final_ast::BinaryOperator::And => (3, 4),
         final_ast::BinaryOperator::Eq | final_ast::BinaryOperator::NotEq => (5, 6),
-        final_ast::BinaryOperator::Lt | final_ast::BinaryOperator::Lte | final_ast::BinaryOperator::Gt | final_ast::BinaryOperator::Gte => (7, 8),
+        final_ast::BinaryOperator::Lt
+        | final_ast::BinaryOperator::Lte
+        | final_ast::BinaryOperator::Gt
+        | final_ast::BinaryOperator::Gte => (7, 8),
         final_ast::BinaryOperator::BitwiseOr => (9, 10),
         final_ast::BinaryOperator::Xor => (11, 12),
         final_ast::BinaryOperator::BitwiseAnd => (13, 14),
         final_ast::BinaryOperator::LeftShift | final_ast::BinaryOperator::RightShift => (15, 16),
         final_ast::BinaryOperator::Add | final_ast::BinaryOperator::Subtract => (17, 18),
-        final_ast::BinaryOperator::Multiply | final_ast::BinaryOperator::Divide | final_ast::BinaryOperator::Modulo => (19, 20),
+        final_ast::BinaryOperator::Multiply
+        | final_ast::BinaryOperator::Divide
+        | final_ast::BinaryOperator::Modulo => (19, 20),
     }
 }
 
 fn peek_infix_op(input: ParseStream) -> Option<(final_ast::BinaryOperator, u8, u8)> {
-    let op = if input.peek(Token![&&]) { final_ast::BinaryOperator::And }
-    else if input.peek(Token![||]) { final_ast::BinaryOperator::Or }
-    else if input.peek(Token![==]) { final_ast::BinaryOperator::Eq }
-    else if input.peek(Token![!=]) { final_ast::BinaryOperator::NotEq }
-    else if input.peek(Token![<=]) { final_ast::BinaryOperator::Lte }
-    else if input.peek(Token![>=]) { final_ast::BinaryOperator::Gte }
-    else if input.peek(token::LeftShiftAssign) { return None }
-    else if input.peek(Token![<<]) { final_ast::BinaryOperator::LeftShift }
-    else if input.peek(token::RightShiftAssign) { return None }
-    else if input.peek(Token![>>]) { final_ast::BinaryOperator::RightShift }
-    else if input.peek(Token![<]) { final_ast::BinaryOperator::Lt }
-    else if input.peek(Token![>]) { final_ast::BinaryOperator::Gt }
-    else if input.peek(token::PlusAssign) { return None }
-    else if input.peek(Token![+]) { final_ast::BinaryOperator::Add }
-    else if input.peek(token::MinusAssign) { return None }
-    else if input.peek(Token![-]) { final_ast::BinaryOperator::Subtract }
-    else if input.peek(token::StarAssign) { return None }
-    else if input.peek(Token![*]) { final_ast::BinaryOperator::Multiply }
-    else if input.peek(token::SlashAssign) { return None }
-    else if input.peek(Token![/]) { final_ast::BinaryOperator::Divide }
-    else if input.peek(token::PercentAssign) { return None }
-    else if input.peek(Token![%]) { final_ast::BinaryOperator::Modulo }
-    else if input.peek(token::BitAndAssign) { return None }
-    else if input.peek(Token![&]) { final_ast::BinaryOperator::BitwiseAnd }
-    else if input.peek(token::BitOrAssign) { return None }
-    else if input.peek(Token![|]) { final_ast::BinaryOperator::BitwiseOr }
-    else if input.peek(token::BitXorAssign) { return None }
-    else if input.peek(Token![^]) { final_ast::BinaryOperator::Xor }
-    else { return None; };
+    let op = if input.peek(Token![&&]) {
+        final_ast::BinaryOperator::And
+    } else if input.peek(Token![||]) {
+        final_ast::BinaryOperator::Or
+    } else if input.peek(Token![==]) {
+        final_ast::BinaryOperator::Eq
+    } else if input.peek(Token![!=]) {
+        final_ast::BinaryOperator::NotEq
+    } else if input.peek(Token![<=]) {
+        final_ast::BinaryOperator::Lte
+    } else if input.peek(Token![>=]) {
+        final_ast::BinaryOperator::Gte
+    } else if input.peek(token::LeftShiftAssign) {
+        return None;
+    } else if input.peek(Token![<<]) {
+        final_ast::BinaryOperator::LeftShift
+    } else if input.peek(token::RightShiftAssign) {
+        return None;
+    } else if input.peek(Token![>>]) {
+        final_ast::BinaryOperator::RightShift
+    } else if input.peek(Token![<]) {
+        final_ast::BinaryOperator::Lt
+    } else if input.peek(Token![>]) {
+        final_ast::BinaryOperator::Gt
+    } else if input.peek(token::PlusAssign) {
+        return None;
+    } else if input.peek(Token![+]) {
+        final_ast::BinaryOperator::Add
+    } else if input.peek(token::MinusAssign) {
+        return None;
+    } else if input.peek(Token![-]) {
+        final_ast::BinaryOperator::Subtract
+    } else if input.peek(token::StarAssign) {
+        return None;
+    } else if input.peek(Token![*]) {
+        final_ast::BinaryOperator::Multiply
+    } else if input.peek(token::SlashAssign) {
+        return None;
+    } else if input.peek(Token![/]) {
+        final_ast::BinaryOperator::Divide
+    } else if input.peek(token::PercentAssign) {
+        return None;
+    } else if input.peek(Token![%]) {
+        final_ast::BinaryOperator::Modulo
+    } else if input.peek(token::BitAndAssign) {
+        return None;
+    } else if input.peek(Token![&]) {
+        final_ast::BinaryOperator::BitwiseAnd
+    } else if input.peek(token::BitOrAssign) {
+        return None;
+    } else if input.peek(Token![|]) {
+        final_ast::BinaryOperator::BitwiseOr
+    } else if input.peek(token::BitXorAssign) {
+        return None;
+    } else if input.peek(Token![^]) {
+        final_ast::BinaryOperator::Xor
+    } else {
+        return None;
+    };
     let (l_bp, r_bp) = infix_binding_power(&op);
     Some((op, l_bp, r_bp))
 }
@@ -525,6 +636,6 @@ fn consume_op(input: ParseStream, op: &final_ast::BinaryOperator) -> Result<()> 
         final_ast::BinaryOperator::BitwiseAnd => input.parse::<Token![&]>().map(|_| ()),
         final_ast::BinaryOperator::BitwiseOr => input.parse::<Token![|]>().map(|_| ()),
         final_ast::BinaryOperator::LeftShift => input.parse::<Token![<<]>().map(|_| ()),
-        final_ast::BinaryOperator::RightShift => input.parse::<Token![>>]>().map(|_| ())
+        final_ast::BinaryOperator::RightShift => input.parse::<Token![>>]>().map(|_| ()),
     }
 }

@@ -1,13 +1,13 @@
-mod test_sys;
 mod test_mem;
+mod test_sys;
 
 use std::ops::Deref;
 use std::sync::Arc;
-use virtual_exec_core::{Machine, parse, compile};
 use virtual_exec_core::sequential::exec::State;
+use virtual_exec_core::{Machine, compile, parse};
+use virtual_exec_std::BASIC;
 use virtual_exec_type::ext::SafeReadArcExt;
 use virtual_exec_type::mem::OwnedValueInternal;
-use virtual_exec_std::BASIC;
 
 #[test]
 fn test_arr() {
@@ -16,19 +16,23 @@ fn test_arr() {
     println!("{:?}", compiled);
     let mut machine = Machine::new(compiled, 2000, 200, vec![BASIC.clone()]).unwrap();
     match machine.sync_run_all() {
-        Ok(State::Ok) => {},
+        Ok(State::Ok) => {}
         Ok(reason) => {
             println!("Machine: {:?}, state: {:?}", machine, reason);
-        },
+        }
         Err(e) => {
             println!("Machine: {:?}, err: {:?}", machine, e);
         }
     }
     let value = machine.get("value").expect("Variable `value` should exist");
     assert_eq!(value.read_arc_safe().deref(), &OwnedValueInternal::Int(100));
-    let value2 = machine.get("value2").expect("Variable `value2` should exist");
-    assert_eq!(value2.read_arc_safe().deref(), &OwnedValueInternal::Int(100));
+    let value2 = machine
+        .get("value2")
+        .expect("Variable `value2` should exist");
+    assert_eq!(
+        value2.read_arc_safe().deref(),
+        &OwnedValueInternal::Int(100)
+    );
     let size = machine.get("size").expect("Variable `size` should exist");
     assert_eq!(size.read_arc_safe().deref(), &OwnedValueInternal::Int(1));
 }
-

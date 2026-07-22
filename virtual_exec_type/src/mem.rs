@@ -1,17 +1,17 @@
+use crate::HashMap;
+use crate::base::TypeCast;
+use crate::error::{ExecutionError, MemoryError, MemoryOutOfBoundError};
+use crate::ext::*;
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::string::String;
-use crate::HashMap;
-use core::marker::PhantomData;
-use core::ops::Deref;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
+use async_lock::{Mutex, MutexGuardArc, RwLock, RwLockReadGuardArc, RwLockWriteGuardArc};
+use core::marker::PhantomData;
+use core::ops::Deref;
 use std::collections::HashSet;
 use std::ops::DerefMut;
-use async_lock::{Mutex, MutexGuardArc, RwLock, RwLockReadGuardArc, RwLockWriteGuardArc};
-use crate::base::TypeCast;
-use crate::error::{MemoryError, ExecutionError, MemoryOutOfBoundError};
-use crate::ext::*;
 
 pub type MemoryAllocator<'a> = Arc<Mutex<MemoryAllocation<'a>>>;
 
@@ -30,7 +30,7 @@ pub enum Value<'a> {
     MemoryChunk(usize),
     Error(ExecutionError),
     DPtr(u64, usize),
-    FnPtrExternal(Box<str>, usize)
+    FnPtrExternal(Box<str>, usize),
 }
 
 impl PartialEq for Value<'_> {
@@ -46,7 +46,7 @@ impl PartialEq for Value<'_> {
             (Value::MemoryChunk(a), Value::MemoryChunk(b)) => a == b,
             (Value::Error(a), Value::Error(b)) => a == b,
             (Value::DPtr(a, c), Value::DPtr(b, d)) => a == b && c == d,
-            _ => false
+            _ => false,
         }
     }
 }
@@ -66,7 +66,7 @@ pub enum ValueKind {
     #[doc(hidden)]
     _Scope,
     #[doc(hidden)]
-    MemoryChunk
+    MemoryChunk,
 }
 
 #[derive(Debug, Clone)]
@@ -80,7 +80,7 @@ pub enum OwnedValueInternal {
     Object(HashMap<String, OwnedValue>),
     Error(ExecutionError),
     DPtr(u64, usize),
-    FnPtrExternal(Box<str>, usize)
+    FnPtrExternal(Box<str>, usize),
 }
 
 impl PartialEq for OwnedValueInternal {
@@ -91,16 +91,20 @@ impl PartialEq for OwnedValueInternal {
             (OwnedValueInternal::Bool(a), OwnedValueInternal::Bool(b)) => a == b,
             (OwnedValueInternal::None, OwnedValueInternal::None) => true,
             (OwnedValueInternal::String(a), OwnedValueInternal::String(b)) => a == b,
-            (OwnedValueInternal::Collection(a), OwnedValueInternal::Collection(b)) => a.len() == b.len() && a
-                .iter().zip(b)
-                .all(|(a, b)| Arc::ptr_eq(a, b)),
-            (OwnedValueInternal::Object(a), OwnedValueInternal::Object(b)) =>
+            (OwnedValueInternal::Collection(a), OwnedValueInternal::Collection(b)) => {
+                a.len() == b.len() && a.iter().zip(b).all(|(a, b)| Arc::ptr_eq(a, b))
+            }
+            (OwnedValueInternal::Object(a), OwnedValueInternal::Object(b)) => {
                 a.len() == b.len()
-                    && a.iter().all(|(k, v)| b.get(k).is_some_and(|bv| Arc::ptr_eq(v, bv))),
+                    && a.iter()
+                        .all(|(k, v)| b.get(k).is_some_and(|bv| Arc::ptr_eq(v, bv)))
+            }
             (OwnedValueInternal::Error(a), OwnedValueInternal::Error(b)) => a == b,
             (OwnedValueInternal::DPtr(a, c), OwnedValueInternal::DPtr(b, d)) => a == b && c == d,
-            (OwnedValueInternal::FnPtrExternal(a, c), OwnedValueInternal::FnPtrExternal(b, d)) => a == b && c == d,
-            _ => false
+            (OwnedValueInternal::FnPtrExternal(a, c), OwnedValueInternal::FnPtrExternal(b, d)) => {
+                a == b && c == d
+            }
+            _ => false,
         }
     }
 }
@@ -111,10 +115,8 @@ impl OwnedValueInternal {
     }
 }
 
-
 /// Note: Restoring owned value pointer that also currently exist in the allocator doesn't re-merge them (just so I don't forget :p)
 pub type OwnedValue = Arc<RwLock<OwnedValueInternal>>;
-
 
 impl Into<ValueKind> for OwnedValue {
     fn into(self) -> ValueKind {
@@ -128,7 +130,7 @@ impl Into<ValueKind> for OwnedValue {
             OwnedValueInternal::Object(_) => ValueKind::Object,
             OwnedValueInternal::Error(_) => ValueKind::Error,
             OwnedValueInternal::DPtr(_, _) => ValueKind::DPtr,
-            OwnedValueInternal::FnPtrExternal(_, _) => ValueKind::FnPtrExternal
+            OwnedValueInternal::FnPtrExternal(_, _) => ValueKind::FnPtrExternal,
         }
     }
 }
@@ -147,7 +149,7 @@ impl<'a> Into<ValueKind> for &Value<'a> {
             Value::DPtr(_, _) => ValueKind::DPtr,
             Value::FnPtrExternal(_, _) => ValueKind::FnPtrExternal,
             Value::_Scope(_) => ValueKind::_Scope,
-            Value::MemoryChunk(_) => ValueKind::MemoryChunk
+            Value::MemoryChunk(_) => ValueKind::MemoryChunk,
         }
     }
 }
@@ -156,7 +158,7 @@ impl<'a> Into<ValueKind> for &Value<'a> {
 pub struct ValueInnerPtr<'a> {
     pub inner: Value<'a>,
     size: usize,
-    pub(self) alloc: Weak<Mutex<MemoryAllocation<'a>>>
+    pub(self) alloc: Weak<Mutex<MemoryAllocation<'a>>>,
 }
 
 impl<'a> Deref for ValueInnerPtr<'a> {
@@ -176,7 +178,9 @@ impl<'a> Into<ValueKind> for ValuePtr<'a> {
 impl<'a> ValueInnerPtr<'a> {
     pub fn new(inner: Value<'a>, size: usize, alloc: &MemoryAllocator<'a>) -> Self {
         Self {
-            inner, size, alloc: Arc::downgrade(alloc)
+            inner,
+            size,
+            alloc: Arc::downgrade(alloc),
         }
     }
 
@@ -185,14 +189,15 @@ impl<'a> ValueInnerPtr<'a> {
     }
 }
 
-
 fn drop_value_iter(root: Value) {
     let mut work = Vec::new();
     work.push(root);
     while let Some(value) = work.pop() {
         let children: Option<Vec<ValuePtr>> = match value {
             Value::Collection(arc) => Arc::try_unwrap(arc).ok().map(|lock| lock.into_inner()),
-            Value::Object(arc) => Arc::try_unwrap(arc).ok().map(|lock| lock.into_inner().into_values().collect()),
+            Value::Object(arc) => Arc::try_unwrap(arc)
+                .ok()
+                .map(|lock| lock.into_inner().into_values().collect()),
             _ => None,
         };
         if let Some(children) = children {
@@ -223,7 +228,7 @@ pub type ValuePtr<'a> = Arc<RwLock<ValueInnerPtr<'a>>>;
 enum OwnedValueConstruction {
     List(Vec<usize>),
     Dict(HashMap<String, usize>),
-    None
+    None,
 }
 
 fn to_owned_init_transform(ptr: &ValuePtr) -> OwnedValue {
@@ -274,7 +279,7 @@ pub fn get_all_owned_value(value: OwnedValue) -> Vec<OwnedValue> {
                         list_all.push(item.clone());
                     }
                 });
-            },
+            }
             OwnedValueInternal::Object(map) => {
                 map.values().for_each(|item: &OwnedValue| {
                     if !list_all.iter().any(|x| Arc::ptr_eq(&item, &x)) {
@@ -295,21 +300,24 @@ pub struct MemoryAllocation<'a> {
     pub max: usize,
     _phantom: PhantomData<&'a ()>,
     _obj: Vec<Weak<RwLock<ValueInnerPtr<'a>>>>,
-    _obj_watermark: usize
+    _obj_watermark: usize,
 }
 
 impl<'a> MemoryAllocation<'a> {
     pub fn new(max: usize) -> MemoryAllocation<'a> {
         Self {
-            curr: 0, max,
+            curr: 0,
+            max,
             _phantom: Default::default(),
             _obj: Vec::new(),
-            _obj_watermark: 16
+            _obj_watermark: 16,
         }
     }
 
     pub fn check_alloc(&self, size: usize) -> bool {
-        if size > self.max  { return false };
+        if size > self.max {
+            return false;
+        };
         let req_curr = self.max - size;
         req_curr >= self.curr
     }
@@ -369,27 +377,37 @@ impl<'a> MemoryAllocation<'a> {
     }
 
     pub fn get_idx_ref(&self, value: &ValuePtr<'a>) -> Result<usize, MemoryOutOfBoundError> {
-        self._obj.iter().position(|obj| if let Some(ptr) = obj.upgrade() {Arc::ptr_eq(&ptr, value)} else {false})
+        self._obj
+            .iter()
+            .position(|obj| {
+                if let Some(ptr) = obj.upgrade() {
+                    Arc::ptr_eq(&ptr, value)
+                } else {
+                    false
+                }
+            })
             .ok_or(MemoryOutOfBoundError)
     }
 
-    fn get_obj_construction(&self, value: &ValuePtr<'a>) -> Result<OwnedValueConstruction, MemoryOutOfBoundError> {
+    fn get_obj_construction(
+        &self,
+        value: &ValuePtr<'a>,
+    ) -> Result<OwnedValueConstruction, MemoryOutOfBoundError> {
         Ok(match value.read_arc_safe().clone() {
             Value::Collection(collect) => OwnedValueConstruction::List(
-                collect.read_arc_safe()
+                collect
+                    .read_arc_safe()
                     .iter()
-                    .map(
-                        |item|
-                            self.get_idx_ref(item)
-                    ).collect::<Result<_, MemoryOutOfBoundError>>()?),
+                    .map(|item| self.get_idx_ref(item))
+                    .collect::<Result<_, MemoryOutOfBoundError>>()?,
+            ),
             Value::Object(obj) => OwnedValueConstruction::Dict(
                 obj.read_arc_safe()
                     .iter()
-                    .map(
-                        |(k, v)|
-                            Ok((k.clone(), self.get_idx_ref(v)?))
-                    ).collect::<Result<_, MemoryOutOfBoundError>>()?),
-            _ => OwnedValueConstruction::None
+                    .map(|(k, v)| Ok((k.clone(), self.get_idx_ref(v)?)))
+                    .collect::<Result<_, MemoryOutOfBoundError>>()?,
+            ),
+            _ => OwnedValueConstruction::None,
         })
     }
 
@@ -409,20 +427,23 @@ impl<'a> MemoryAllocation<'a> {
                             non_handled.push(*item);
                         }
                     });
-                },
+                }
                 OwnedValueConstruction::Dict(map) => {
                     map.values().for_each(|item| {
                         if !non_handled.contains(item) && !obj_map.contains_key(item) {
                             non_handled.push(*item);
                         }
                     });
-                },
+                }
                 OwnedValueConstruction::None => {}
             };
             obj_map.insert(idx_ref, (to_owned_init_transform(&value_idx), construction));
         }
 
-        let obj_view_map: HashMap<usize, OwnedValue> = obj_map.iter().map(|(k, v)| (*k, Arc::clone(&v.0))).collect();
+        let obj_view_map: HashMap<usize, OwnedValue> = obj_map
+            .iter()
+            .map(|(k, v)| (*k, Arc::clone(&v.0)))
+            .collect();
 
         for (_, (ptr, construction)) in obj_map.iter_mut() {
             match construction {
@@ -432,14 +453,14 @@ impl<'a> MemoryAllocation<'a> {
                             vec.push(obj_view_map[item].clone());
                         })
                     }
-                },
+                }
                 OwnedValueConstruction::Dict(map) => {
                     if let OwnedValueInternal::Object(obj) = ptr.write_arc_safe().deref_mut() {
                         map.iter_mut().for_each(|(k, v)| {
                             obj.insert(k.clone(), obj_view_map[v].clone());
                         })
                     }
-                },
+                }
                 _ => {}
             }
         }
@@ -454,34 +475,33 @@ impl<'a> MemoryAllocation<'a> {
         let inner: MemoryAllocation<'b> = MemoryAllocation::new(max);
         let new_alloc: MemoryAllocator<'b> = Arc::new(Mutex::new(inner));
         for obj in self._obj.iter() {
-            let ptr = obj.upgrade().expect("Object should not be dropped inside this scope with gc_weak");
-            vec_items.push(new_alloc.alloc(to_empty_collection(&ptr)).expect("Allocation should be possible as have been previously allocated"));
+            let ptr = obj
+                .upgrade()
+                .expect("Object should not be dropped inside this scope with gc_weak");
+            vec_items.push(
+                new_alloc
+                    .alloc(to_empty_collection(&ptr))
+                    .expect("Allocation should be possible as have been previously allocated"),
+            );
         }
         for (idx, obj) in self._obj.iter().enumerate() {
-            match self.get_obj_construction(&obj.upgrade().expect("Object should not be dropped inside this scope with gc_weak"))
-                .expect("Memory allocation should be within the allocator") {
-                OwnedValueConstruction::List(vec) => {
-                    vec_items[idx]
-                        .as_collections().unwrap()
-                        .write_arc_blocking()
-                        .extend(
-                            vec.iter().map(
-                                |x| vec_items[*x].clone()
-                            )
-                        )
-                },
-                OwnedValueConstruction::Dict(map) => {
-                    vec_items[idx]
-                        .as_object().unwrap()
-                        .write_arc_blocking()
-                        .extend(
-                            map.iter().map(
-                                |(k, v)| (
-                                    k.clone(), vec_items[*v].clone()
-                                )
-                            )
-                        )
-                },
+            match self
+                .get_obj_construction(
+                    &obj.upgrade()
+                        .expect("Object should not be dropped inside this scope with gc_weak"),
+                )
+                .expect("Memory allocation should be within the allocator")
+            {
+                OwnedValueConstruction::List(vec) => vec_items[idx]
+                    .as_collections()
+                    .unwrap()
+                    .write_arc_blocking()
+                    .extend(vec.iter().map(|x| vec_items[*x].clone())),
+                OwnedValueConstruction::Dict(map) => vec_items[idx]
+                    .as_object()
+                    .unwrap()
+                    .write_arc_blocking()
+                    .extend(map.iter().map(|(k, v)| (k.clone(), vec_items[*v].clone()))),
                 OwnedValueConstruction::None => {}
             }
         }
@@ -510,12 +530,12 @@ pub trait GetSize {
 }
 
 pub trait Allocator {
-    type Input : GetSize;
+    type Input: GetSize;
     type Output;
 
     fn alloc(&self, input: Self::Input) -> Result<Self::Output, MemoryError>;
 
-    fn change_alloc(&self, data: & Self::Output) -> Result<(), MemoryError>;
+    fn change_alloc(&self, data: &Self::Output) -> Result<(), MemoryError>;
 }
 
 const NODE_OVERHEAD: usize = 32;
@@ -527,11 +547,17 @@ impl<'a> GetSize for Value<'a> {
             Value::Int(_i) => 8 + NODE_OVERHEAD,
             Value::Float(_f) => 8 + NODE_OVERHEAD,
             Value::Bool(_b) => 1 + NODE_OVERHEAD,
-            Value::Collection(c) => c.read_arc_safe().len() * 8 + 16 + NODE_OVERHEAD + CONTAINER_OVERHEAD,
+            Value::Collection(c) => {
+                c.read_arc_safe().len() * 8 + 16 + NODE_OVERHEAD + CONTAINER_OVERHEAD
+            }
             Value::Object(d) => {
                 let map = d.read_arc_safe();
-                map.len() * 8 + map.keys().map(|k| k.len()).sum::<usize>() + 16 + NODE_OVERHEAD + CONTAINER_OVERHEAD
-            },
+                map.len() * 8
+                    + map.keys().map(|k| k.len()).sum::<usize>()
+                    + 16
+                    + NODE_OVERHEAD
+                    + CONTAINER_OVERHEAD
+            }
             Value::String(s) => s.len() + NODE_OVERHEAD,
             Value::None => 1 + NODE_OVERHEAD,
             Value::_Scope(_) => 1 + NODE_OVERHEAD,
@@ -571,9 +597,11 @@ impl<'a> Allocator for MemoryAllocator<'a> {
             return Ok(());
         }
         if marked_size < new_size {
-            self.lock_arc_safe()._internal_alloc(new_size - marked_size)?;
+            self.lock_arc_safe()
+                ._internal_alloc(new_size - marked_size)?;
         } else if marked_size > new_size {
-            self.lock_arc_safe()._internal_dealloc(marked_size - new_size);
+            self.lock_arc_safe()
+                ._internal_dealloc(marked_size - new_size);
         }
         data.write_arc_safe().size = new_size;
         Ok(())

@@ -1,11 +1,10 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use ratatui_interact::components::TextAreaState;
 use ratatui_interact::prelude::{ButtonState, ScrollableContentState};
 use ratatui_interact::traits::ClickRegionRegistry;
-use virtual_exec_core::fn_extern::MethodResolver;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use virtual_exec_core::Machine;
-
+use virtual_exec_core::fn_extern::MethodResolver;
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum InteractArea {
@@ -16,24 +15,24 @@ pub enum InteractArea {
     DebugInst,
     DebugStack,
     ToggleVars,
-    ToggleDebugs
+    ToggleDebugs,
 }
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum FocusArea {
-    TextArea
+    TextArea,
 }
 
 impl Into<InteractArea> for FocusArea {
     fn into(self) -> InteractArea {
         match self {
-            FocusArea::TextArea => InteractArea::Textarea
+            FocusArea::TextArea => InteractArea::Textarea,
         }
     }
 }
 
 #[derive(Clone)]
-pub struct  CodeEvalState {
+pub struct CodeEvalState {
     pub code: String,
     pub inst_count: usize,
     pub buffer: String,

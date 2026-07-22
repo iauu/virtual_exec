@@ -1,13 +1,13 @@
-use alloc::string::String;
 use crate::HashMap;
-use core::fmt::{Debug, Formatter};
-use alloc::sync::{Arc};
+use crate::fn_extern::FnExtern;
+use alloc::string::String;
+use alloc::sync::Arc;
 use alloc::vec::Vec;
-use crate::fn_extern::{FnExtern};
+use core::fmt::{Debug, Formatter};
 
 #[derive(Clone)]
 pub struct MethodResolver {
-    funcs: HashMap<String, Arc<dyn FnExtern + Send + Sync>>
+    funcs: HashMap<String, Arc<dyn FnExtern + Send + Sync>>,
 }
 
 impl<'a> MethodResolver {
@@ -16,13 +16,14 @@ impl<'a> MethodResolver {
     }
 
     pub fn new(funcs: HashMap<String, Arc<dyn FnExtern + Send + Sync>>) -> MethodResolver {
-        Self {
-            funcs
-        }
+        Self { funcs }
     }
-    
+
     pub fn get_pair(&self) -> Vec<(String, usize)> {
-        self.funcs.iter().map(|(a,b)| (a.clone(), b.get_size())).collect()
+        self.funcs
+            .iter()
+            .map(|(a, b)| (a.clone(), b.get_size()))
+            .collect()
     }
 }
 

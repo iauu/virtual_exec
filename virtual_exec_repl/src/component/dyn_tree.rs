@@ -32,7 +32,6 @@ impl<'b> TreeNode<'b> {
         }
     }
 
-
     /// Check if this node has children
     pub fn has_children(&self) -> bool {
         if let Some(obj) = self.data.as_object() {
@@ -47,12 +46,24 @@ impl<'b> TreeNode<'b> {
     pub fn get_children(&self) -> Vec<TreeNode<'b>> {
         if let Some(obj) = self.data.as_object() {
             let pre_id = format!("{}.", self.id);
-            obj.read_arc_blocking().iter().map(|x| TreeNode::new(pre_id.clone() + x.0, x.0.clone(), x.1.clone())).collect()
+            obj.read_arc_blocking()
+                .iter()
+                .map(|x| TreeNode::new(pre_id.clone() + x.0, x.0.clone(), x.1.clone()))
+                .collect()
         } else if let Some(arr) = self.data.as_collections() {
             let pre_id = format!("{}.", self.id);
-            arr.read_arc_blocking().iter().enumerate().map(|(i, x)| TreeNode::new(pre_id.clone() + &i.to_string(), format!("[{}]", &i), x.clone())).collect()
-        }
-        else {
+            arr.read_arc_blocking()
+                .iter()
+                .enumerate()
+                .map(|(i, x)| {
+                    TreeNode::new(
+                        pre_id.clone() + &i.to_string(),
+                        format!("[{}]", &i),
+                        x.clone(),
+                    )
+                })
+                .collect()
+        } else {
             vec![]
         }
     }
@@ -230,8 +241,7 @@ where
 
 impl<'a, 'b> TreeView<'a, 'b, fn(&TreeNode<'b>, bool) -> String> {
     /// Create a new tree view with default rendering
-    pub fn new(nodes: Vec<TreeNode<'b>>, state: &'a TreeViewState) -> Self
-    {
+    pub fn new(nodes: Vec<TreeNode<'b>>, state: &'a TreeViewState) -> Self {
         Self {
             nodes,
             state,
@@ -405,10 +415,7 @@ where
 }
 
 /// Get the selected node ID from a tree view state and nodes
-pub fn get_selected_id(
-    nodes: Vec<TreeNode>,
-    state: &TreeViewState,
-) -> Option<String> {
+pub fn get_selected_id(nodes: Vec<TreeNode>, state: &TreeViewState) -> Option<String> {
     let tree = TreeView::new(nodes, state);
     let visible = tree.flatten_visible();
     visible.get(state.selected_index).map(|f| f.node.id.clone())

@@ -1,4 +1,3 @@
-
 macro_rules! func {
     ($name: ident) => {
         pub mod $name;

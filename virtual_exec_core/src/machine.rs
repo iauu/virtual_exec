@@ -1,15 +1,16 @@
-
 use crate::HashMap;
-use alloc::sync::{Arc};
+use crate::fn_extern::{FnExtern, MethodResolver};
+use crate::sequential::exec::{FnStackFrame, InstStateMachine, State};
+use crate::sequential::instructions::Instruction;
+use alloc::sync::Arc;
 use alloc::vec;
 use alloc::vec::Vec;
 use async_lock::RwLock;
-use crate::sequential::exec::{FnStackFrame, InstStateMachine, State};
-use crate::sequential::instructions::Instruction;
 use virtual_exec_type::error::{CriticalError, ExecutionError, MemoryError};
-use virtual_exec_type::mem::{Allocator, MemoryAllocator, MemoryAllocatorConstructor, OwnedValue, Value, ValuePtr};
-use crate::fn_extern::{FnExtern, MethodResolver};
 use virtual_exec_type::ext::*;
+use virtual_exec_type::mem::{
+    Allocator, MemoryAllocator, MemoryAllocatorConstructor, OwnedValue, Value, ValuePtr,
+};
 
 /// The execution instance including the memory allocator and the instruction state machine
 #[derive(Debug, Clone)]
@@ -31,7 +32,12 @@ impl<'a> Machine<'a> {
     ///
     /// # Returns
     /// `Result<Machine, MemoryError>`
-    pub fn new(instructions: Vec<Instruction>, memory_lim: usize, inst_limit: u64, resolvers: Vec<MethodResolver>) -> Result<Self, MemoryError> {
+    pub fn new(
+        instructions: Vec<Instruction>,
+        memory_lim: usize,
+        inst_limit: u64,
+        resolvers: Vec<MethodResolver>,
+    ) -> Result<Self, MemoryError> {
         let alloc = MemoryAllocator::construct(memory_lim);
         let mut map = HashMap::new();
         for resolver in resolvers.iter().rev() {
@@ -56,35 +62,47 @@ impl<'a> Machine<'a> {
         Ok(Self {
             alloc,
             machine,
-            resolvers
+            resolvers,
         })
     }
 
     #[cfg(feature = "std")]
-    fn dispatch_extern_sync(&mut self, f: &Arc<dyn FnExtern + Send + Sync>, values: Vec<ValuePtr<'a>>) -> Result<ValuePtr<'a>, ExecutionError> {
-        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f.fn_extern_sync(self, values))) {
+    fn dispatch_extern_sync(
+        &mut self,
+        f: &Arc<dyn FnExtern + Send + Sync>,
+        values: Vec<ValuePtr<'a>>,
+    ) -> Result<ValuePtr<'a>, ExecutionError> {
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            f.fn_extern_sync(self, values)
+        })) {
             Ok(result) => result,
-            Err(_) => Err(ExecutionError::Critical(CriticalError::GenericPanicRewindError)),
+            Err(_) => Err(ExecutionError::Critical(
+                CriticalError::GenericPanicRewindError,
+            )),
         }
     }
 
     #[cfg(not(feature = "std"))]
-    fn dispatch_extern_sync(&mut self, f: &Arc<dyn FnExtern + Send + Sync>, values: Vec<ValuePtr<'a>>) -> Result<ValuePtr<'a>, ExecutionError> {
+    fn dispatch_extern_sync(
+        &mut self,
+        f: &Arc<dyn FnExtern + Send + Sync>,
+        values: Vec<ValuePtr<'a>>,
+    ) -> Result<ValuePtr<'a>, ExecutionError> {
         f.fn_extern_sync(self, values)
     }
 
     pub fn sync_run_once(&mut self) -> Result<(State<'a>, bool), ExecutionError> {
         if let Ok(State::Ok) = self.machine.state {
             self.machine.run_once().map(|x| (x, true))
-        }
-        else {
+        } else {
             if let Ok(State::FnExternInput(func, _)) = &self.machine.state {
-                let fns: Vec<Arc<dyn FnExtern + Send + Sync>> = self.resolvers.iter().filter_map(|x| x.get(func)).collect();
+                let fns: Vec<Arc<dyn FnExtern + Send + Sync>> =
+                    self.resolvers.iter().filter_map(|x| x.get(func)).collect();
                 if fns.len() > 0 {
                     let inputs = self.machine.retrieve_fn_input()?.unwrap();
                     let result = self.dispatch_extern_sync(&fns[0], inputs.1);
                     self.machine.push_fn_output(result);
-                    return self.machine.state.clone().map(|x| (x, true))
+                    return self.machine.state.clone().map(|x| (x, true));
                 }
             }
             self.machine.state.clone().map(|x| (x, false))
@@ -96,7 +114,7 @@ impl<'a> Machine<'a> {
             if let Ok(State::Ok) | Ok(State::FnExternInput(_, _)) = self.machine.state {
                 let result = self.sync_run_once()?;
                 if !result.1 {
-                    return Ok(result.0)
+                    return Ok(result.0);
                 }
             }
         }
@@ -107,7 +125,7 @@ impl<'a> Machine<'a> {
         while let Ok(State::Ok) | Ok(State::FnExternInput(_, _)) = self.machine.state {
             let result = self.sync_run_once()?;
             if !result.1 {
-                return Ok(result.0)
+                return Ok(result.0);
             }
         }
         self.machine.state.clone()
@@ -117,10 +135,10 @@ impl<'a> Machine<'a> {
     pub async fn async_run_once(&mut self) -> Result<(State<'a>, bool), ExecutionError> {
         if let Ok(State::Ok) = self.machine.state {
             self.machine.run_once().map(|x| (x, true))
-        }
-        else {
+        } else {
             if let Ok(State::FnExternInput(func, _)) = &self.machine.state {
-                let fns: Vec<Arc<dyn FnExtern + Send + Sync>> = self.resolvers.iter().filter_map(|x| x.get(func)).collect();
+                let fns: Vec<Arc<dyn FnExtern + Send + Sync>> =
+                    self.resolvers.iter().filter_map(|x| x.get(func)).collect();
                 if fns.len() > 0 {
                     let inputs = self.machine.retrieve_fn_input()?.unwrap();
                     let result;
@@ -129,7 +147,7 @@ impl<'a> Machine<'a> {
                         result = fns[0].fn_extern_async(x, inputs.1).await;
                     }
                     self.machine.push_fn_output(result);
-                    return self.machine.state.clone().map(|x| (x, true))
+                    return self.machine.state.clone().map(|x| (x, true));
                 }
             }
             self.machine.state.clone().map(|x| (x, false))
@@ -142,7 +160,7 @@ impl<'a> Machine<'a> {
             if let Ok(State::Ok) | Ok(State::FnExternInput(_, _)) = self.machine.state {
                 let result = self.async_run_once().await?;
                 if !result.1 {
-                    return Ok(result.0)
+                    return Ok(result.0);
                 }
             }
         }
@@ -154,7 +172,7 @@ impl<'a> Machine<'a> {
         while let Ok(State::Ok) | Ok(State::FnExternInput(_, _)) = self.machine.state {
             let result = self.async_run_once().await?;
             if !result.1 {
-                return Ok(result.0)
+                return Ok(result.0);
             }
         }
         self.machine.state.clone()

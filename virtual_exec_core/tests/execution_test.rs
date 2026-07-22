@@ -1,24 +1,23 @@
 #![cfg(feature = "parse")]
 
-use virtual_exec_parser::parser::parse;
+use async_lock::RwLock;
+use std::sync::Arc;
 use virtual_exec_core::sequential::compile::compile;
+use virtual_exec_core::sequential::exec::{FnStackFrame, InstStateMachine, State};
+use virtual_exec_parser::parser::parse;
 use virtual_exec_type::HashMap;
-use std::sync::{Arc};
-use async_lock::{RwLock};
-use virtual_exec_core::sequential::exec::{InstStateMachine, FnStackFrame, State};
 use virtual_exec_type::mem::{MemoryAllocator, MemoryAllocatorConstructor, Value, ValuePtr};
 
 #[test]
 fn test_execution_compiled_code() {
-
-
     let code = "a = 1; b = 2; c = 3; if a != b {d = 2;} d = d + d; d;";
     let parsed = parse(code).unwrap();
     let compiled = compile(&parsed);
 
     let alloc = MemoryAllocator::construct(600);
 
-    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> =
+        Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 1000,
@@ -44,7 +43,13 @@ fn test_execution_compiled_code() {
         let _ = state_machine.run_once();
     }
 
-    let d_value = global_mapping.read_arc_blocking().get("d").unwrap().read_arc_blocking().inner.clone();
+    let d_value = global_mapping
+        .read_arc_blocking()
+        .get("d")
+        .unwrap()
+        .read_arc_blocking()
+        .inner
+        .clone();
 
     match d_value {
         Value::Int(i) => assert_eq!(i, 4),
@@ -60,7 +65,8 @@ fn test_execution_compiled_code_if_false() {
 
     let alloc = MemoryAllocator::construct(600);
 
-    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> =
+        Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 1000,
@@ -86,7 +92,13 @@ fn test_execution_compiled_code_if_false() {
         let _ = state_machine.run_once();
     }
 
-    let d_value = global_mapping.read_arc_blocking().get("d").unwrap().read_arc_blocking().inner.clone();
+    let d_value = global_mapping
+        .read_arc_blocking()
+        .get("d")
+        .unwrap()
+        .read_arc_blocking()
+        .inner
+        .clone();
 
     match d_value {
         Value::Int(i) => assert_eq!(i, 10),
@@ -102,7 +114,8 @@ fn test_execution_compiled_code_math_operations() {
 
     let alloc = MemoryAllocator::construct(600);
 
-    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> =
+        Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 1000,
@@ -128,25 +141,49 @@ fn test_execution_compiled_code_math_operations() {
         let _ = state_machine.run_once();
     }
 
-    let c_value = global_mapping.read_arc_blocking().get("c").unwrap().read_arc_blocking().inner.clone();
+    let c_value = global_mapping
+        .read_arc_blocking()
+        .get("c")
+        .unwrap()
+        .read_arc_blocking()
+        .inner
+        .clone();
     match c_value {
         Value::Int(i) => assert_eq!(i, 7),
         _ => panic!("Expected c to be Int(7) but got {:?}", c_value),
     }
 
-    let d_value = global_mapping.read_arc_blocking().get("d").unwrap().read_arc_blocking().inner.clone();
+    let d_value = global_mapping
+        .read_arc_blocking()
+        .get("d")
+        .unwrap()
+        .read_arc_blocking()
+        .inner
+        .clone();
     match d_value {
         Value::Int(i) => assert_eq!(i, 30),
         _ => panic!("Expected d to be Int(30) but got {:?}", d_value),
     }
 
-    let e_value = global_mapping.read_arc_blocking().get("e").unwrap().read_arc_blocking().inner.clone();
+    let e_value = global_mapping
+        .read_arc_blocking()
+        .get("e")
+        .unwrap()
+        .read_arc_blocking()
+        .inner
+        .clone();
     match e_value {
         Value::Float(f) => assert_eq!(f, 10.0 / 3.0),
         _ => panic!("Expected e to be Float but got {:?}", e_value),
     }
 
-    let f_value = global_mapping.read_arc_blocking().get("f").unwrap().read_arc_blocking().inner.clone();
+    let f_value = global_mapping
+        .read_arc_blocking()
+        .get("f")
+        .unwrap()
+        .read_arc_blocking()
+        .inner
+        .clone();
     match f_value {
         Value::Int(i) => assert_eq!(i, 1),
         _ => panic!("Expected f to be Int(1) but got {:?}", f_value),
@@ -161,7 +198,8 @@ fn test_execution_compiled_code_bitwise_operations() {
 
     let alloc = MemoryAllocator::construct(600);
 
-    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> =
+        Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 1000,
@@ -187,24 +225,48 @@ fn test_execution_compiled_code_bitwise_operations() {
         let _ = state_machine.run_once();
     }
 
-    let c_value = global_mapping.read_arc_blocking().get("c").unwrap().read_arc_blocking().inner.clone();
+    let c_value = global_mapping
+        .read_arc_blocking()
+        .get("c")
+        .unwrap()
+        .read_arc_blocking()
+        .inner
+        .clone();
     match c_value {
         Value::Int(i) => assert_eq!(i, 5 & 3),
         _ => panic!("Expected c to be Int(1) but got {:?}", c_value),
     }
 
-    let d_value = global_mapping.read_arc_blocking().get("d").unwrap().read_arc_blocking().inner.clone();
+    let d_value = global_mapping
+        .read_arc_blocking()
+        .get("d")
+        .unwrap()
+        .read_arc_blocking()
+        .inner
+        .clone();
     match d_value {
         Value::Int(i) => assert_eq!(i, 5 | 3),
         _ => panic!("Expected d to be Int(7) but got {:?}", d_value),
     }
-    let f_value = global_mapping.read_arc_blocking().get("f").unwrap().read_arc_blocking().inner.clone();
+    let f_value = global_mapping
+        .read_arc_blocking()
+        .get("f")
+        .unwrap()
+        .read_arc_blocking()
+        .inner
+        .clone();
     match f_value {
         Value::Int(i) => assert_eq!(i, 5 << 1),
         _ => panic!("Expected f to be Int(10) but got {:?}", f_value),
     }
 
-    let g_value = global_mapping.read_arc_blocking().get("g").unwrap().read_arc_blocking().inner.clone();
+    let g_value = global_mapping
+        .read_arc_blocking()
+        .get("g")
+        .unwrap()
+        .read_arc_blocking()
+        .inner
+        .clone();
     match g_value {
         Value::Int(i) => assert_eq!(i, 5 >> 1),
         _ => panic!("Expected g to be Int(2) but got {:?}", g_value),

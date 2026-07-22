@@ -2,13 +2,12 @@
 
 extern crate alloc;
 
-pub mod sequential;
-pub mod machine;
 pub mod fn_extern;
+pub mod machine;
+pub mod sequential;
+pub use crate::machine::Machine;
+pub use crate::sequential::compile::compile;
 #[cfg(feature = "parse")]
 pub use virtual_exec_parser::parser::parse;
-pub use crate::sequential::compile::compile;
-pub use crate::machine::Machine;
-
 
 pub(crate) use virtual_exec_type::HashMap;

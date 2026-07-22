@@ -1,7 +1,7 @@
-use std::sync::{Arc};
 use async_lock::Mutex;
-use virtual_exec_type::mem::{Value, MemoryAllocation, Allocator};
+use std::sync::Arc;
 use virtual_exec_type::base::TypeCast;
+use virtual_exec_type::mem::{Allocator, MemoryAllocation, Value};
 
 #[test]
 fn test_value_creation_and_downcast() {
@@ -11,8 +11,5 @@ fn test_value_creation_and_downcast() {
     let int = alloc.alloc(int_v).unwrap();
     let extracted_int = int.as_int().expect("Downcast to Int failed");
     assert_eq!(extracted_int, 42);
-    println!(
-        "Successfully created and downcasted value: {:?}",
-        int
-    );
+    println!("Successfully created and downcasted value: {:?}", int);
 }

@@ -8,7 +8,7 @@ pub enum TypeConversionError {
     DivideByZeroError,
     UndefinedOperatorMethodError,
     InvalidTypeError,
-    MemoryError
+    MemoryError,
 }
 
 #[derive(Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
@@ -37,7 +37,7 @@ pub enum NonRecoverableError {
     IncorrectArgumentCountError,
     GenericError,
     RecursionError,
-    NonRecoveredRecoverableError(RecoverableError)
+    NonRecoveredRecoverableError(RecoverableError),
 }
 
 #[derive(Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
@@ -52,7 +52,7 @@ pub enum CriticalError {
 pub enum ExecutionError {
     Recoverable(RecoverableError),
     NonRecoverable(NonRecoverableError),
-    Critical(CriticalError)
+    Critical(CriticalError),
 }
 
 impl From<RecoverableError> for ExecutionError {
@@ -88,14 +88,21 @@ impl From<MemoryError> for TypeConversionError {
 impl From<TypeConversionError> for ExecutionError {
     fn from(err: TypeConversionError) -> Self {
         match err {
-            TypeConversionError::DivideByZeroError => ExecutionError::NonRecoverable(NonRecoverableError::DivideByZeroError),
-            TypeConversionError::UndefinedOperatorMethodError => ExecutionError::NonRecoverable(NonRecoverableError::UndefinedOperatorMethodError),
-            TypeConversionError::InvalidTypeError => ExecutionError::NonRecoverable(NonRecoverableError::InvalidTypeError),
-            TypeConversionError::MemoryError => ExecutionError::NonRecoverable(NonRecoverableError::MemoryError)
+            TypeConversionError::DivideByZeroError => {
+                ExecutionError::NonRecoverable(NonRecoverableError::DivideByZeroError)
+            }
+            TypeConversionError::UndefinedOperatorMethodError => {
+                ExecutionError::NonRecoverable(NonRecoverableError::UndefinedOperatorMethodError)
+            }
+            TypeConversionError::InvalidTypeError => {
+                ExecutionError::NonRecoverable(NonRecoverableError::InvalidTypeError)
+            }
+            TypeConversionError::MemoryError => {
+                ExecutionError::NonRecoverable(NonRecoverableError::MemoryError)
+            }
         }
     }
 }
-
 
 /// Memory that doesn't exist in the current allocator (It might exist in a different allocator, which cross allocator transfer is not supported)
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]

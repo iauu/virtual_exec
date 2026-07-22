@@ -8,11 +8,11 @@ pub mod op;
 
 pub mod ast;
 pub mod base;
-pub mod error;
-mod op_impl;
-pub mod mem;
-pub mod ext;
 pub mod config;
+pub mod error;
+pub mod ext;
+pub mod mem;
+mod op_impl;
 
 pub mod vm_type {
     #[cfg(feature = "std")]
@@ -21,12 +21,12 @@ pub mod vm_type {
     #[cfg(not(feature = "std"))]
     pub(crate) type HashMap<K, V> = alloc::collections::BTreeMap<K, V>;
 
-    use alloc::sync::{Arc};
-    use alloc::string::{String, ToString};
-    use alloc::vec::Vec;
-    use async_lock::RwLock;
     use crate::error::ExecutionError;
     use crate::mem::ValuePtr;
+    use alloc::string::{String, ToString};
+    use alloc::sync::Arc;
+    use alloc::vec::Vec;
+    use async_lock::RwLock;
 
     pub type Integer = i64;
     pub type Float = f64;
@@ -47,6 +47,6 @@ pub type HashMap<K, V> = std::collections::HashMap<K, V>;
 pub type HashMap<K, V> = alloc::collections::BTreeMap<K, V>;
 
 pub mod __private {
-    pub use alloc::sync::Arc;
     pub use alloc::string::String;
+    pub use alloc::sync::Arc;
 }

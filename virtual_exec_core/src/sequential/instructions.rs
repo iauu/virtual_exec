@@ -1,8 +1,8 @@
 use alloc::boxed::Box;
 use alloc::format;
-use serde::{Deserialize, Serialize};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
+use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "std")]
 use std::fmt::Display;
@@ -10,7 +10,6 @@ use std::fmt::Display;
 #[derive(Clone, Debug, Serialize, Deserialize, PartialOrd, PartialEq)]
 pub enum Instruction {
     // Binary Operations
-
     /// Take item from at the top of stack as `b`, then take item from top of stack as `a`
     /// Perform `a + b`
     Add,
@@ -59,7 +58,6 @@ pub enum Instruction {
     // Assignment Operations
     Assign,
 
-
     // Control Flow
     /// Take item from at the top of stack as `a`
     /// If `a` is not false and not 0, it jumps to the specify location and run as the next instruction
@@ -94,7 +92,7 @@ pub enum Instruction {
 
     // Stack
     Pop,
-    Swap
+    Swap,
 }
 
 #[cfg(feature = "std")]
@@ -152,7 +150,6 @@ impl DisplayInst for Instruction {
             Instruction::Pop => "pop".to_string(),
             Instruction::LoadDPtr(x, l) => format!("lit_load ptr={x}, len={l}"),
             Instruction::Swap => "swp".to_string(),
-
         }
     }
 }
@@ -160,7 +157,7 @@ impl DisplayInst for Instruction {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub enum SubscriptLoad {
     String(Box<str>),
-    Idx(i64)
+    Idx(i64),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -176,7 +173,6 @@ pub enum InstructionBuilder {
     BitwiseXor,
     Shl,
     Shr,
-
 
     // Unary Operations
     UnaryPlus,
@@ -195,10 +191,9 @@ pub enum InstructionBuilder {
     // Assignment Operations
     Assign,
 
-
     // Control Flow
     JmpNz(u64), // Jump when not zero
-    JmpZ(u64), // Jump when zero
+    JmpZ(u64),  // Jump when zero
     Jmp(u64),
     JmpNzR(u64), // Releative jmp
     JmpZR(u64),
@@ -225,7 +220,7 @@ pub enum InstructionBuilder {
 
     // Stack
     Pop,
-    Swap
+    Swap,
 }
 
 pub trait ConvertInstruction {
@@ -245,7 +240,7 @@ impl InstForceOffset for Instruction {
             Instruction::Jmp(x) => Instruction::Jmp(x + offset),
             Instruction::JmpNz(x) => Instruction::JmpNz(x + offset),
             Instruction::JmpZ(x) => Instruction::JmpZ(x + offset),
-            _ => self.clone()
+            _ => self.clone(),
         }
     }
 
@@ -255,7 +250,7 @@ impl InstForceOffset for Instruction {
             Instruction::JmpNz(x) => Instruction::JmpNz(x + offset),
             Instruction::JmpZ(x) => Instruction::JmpZ(x + offset),
             Instruction::LoadDPtr(x, s) => Instruction::LoadDPtr(x + offset, *s),
-            _ => self.clone()
+            _ => self.clone(),
         }
     }
 }
@@ -269,7 +264,7 @@ impl InstForceOffset for InstructionBuilder {
             InstructionBuilder::JmpR(x) => InstructionBuilder::JmpR(x + offset),
             InstructionBuilder::JmpZR(x) => InstructionBuilder::JmpZR(x + offset),
             InstructionBuilder::JmpNzR(x) => InstructionBuilder::JmpNzR(x + offset),
-            _ => self.clone()
+            _ => self.clone(),
         }
     }
 
@@ -282,7 +277,7 @@ impl InstForceOffset for InstructionBuilder {
             InstructionBuilder::JmpZR(x) => InstructionBuilder::JmpZR(x + offset),
             InstructionBuilder::JmpNzR(x) => InstructionBuilder::JmpNzR(x + offset),
             InstructionBuilder::LoadDPtr(x, l) => InstructionBuilder::LoadDPtr(x + offset, *l),
-            _ => self.clone()
+            _ => self.clone(),
         }
     }
 }
@@ -306,7 +301,6 @@ impl InstForceOffset for Vec<InstructionBuilder> {
         self.iter().map(|i| i.offset_with_dptr(offset)).collect()
     }
 }
-
 
 impl ConvertInstruction for InstructionBuilder {
     type Output = Instruction;
@@ -355,7 +349,9 @@ impl ConvertInstruction for InstructionBuilder {
             InstructionBuilder::Terminate => Instruction::Terminate,
             InstructionBuilder::Interrupt => Instruction::Interrupt,
             InstructionBuilder::Pop => Instruction::Pop,
-            InstructionBuilder::LoadDPtr(offset, arg_count) => Instruction::LoadDPtr(offset, arg_count),
+            InstructionBuilder::LoadDPtr(offset, arg_count) => {
+                Instruction::LoadDPtr(offset, arg_count)
+            }
             InstructionBuilder::Swap => Instruction::Swap,
         }
     }
@@ -403,7 +399,9 @@ impl Into<InstructionBuilder> for Instruction {
             Instruction::Terminate => InstructionBuilder::Terminate,
             Instruction::Interrupt => InstructionBuilder::Interrupt,
             Instruction::Pop => InstructionBuilder::Pop,
-            Instruction::LoadDPtr(offset, arg_count) => InstructionBuilder::LoadDPtr(offset, arg_count),
+            Instruction::LoadDPtr(offset, arg_count) => {
+                InstructionBuilder::LoadDPtr(offset, arg_count)
+            }
             Instruction::Swap => InstructionBuilder::Swap,
         }
     }

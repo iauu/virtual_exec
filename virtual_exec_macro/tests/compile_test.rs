@@ -1,8 +1,8 @@
-use virtual_exec_type::HashMap;
-use std::sync::{Arc};
 use async_lock::RwLock;
-use virtual_exec_macro::compile;
+use std::sync::Arc;
 use virtual_exec_core::sequential::exec::{FnStackFrame, InstStateMachine, State};
+use virtual_exec_macro::compile;
+use virtual_exec_type::HashMap;
 use virtual_exec_type::ext::SafeReadArcExt;
 use virtual_exec_type::mem::{MemoryAllocator, MemoryAllocatorConstructor, Value, ValuePtr};
 
@@ -15,7 +15,8 @@ fn test_simple_assignment_and_expr() {
     };
     let alloc = MemoryAllocator::construct(600);
 
-    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> =
+        Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 1000,
@@ -27,7 +28,7 @@ fn test_simple_assignment_and_expr() {
         alloc,
         instructions: insts,
         state: Ok(State::Ok),
-        stack: vec![]
+        stack: vec![],
     };
 
     while let Ok(State::Ok) = state_machine.state {
@@ -40,11 +41,20 @@ fn test_simple_assignment_and_expr() {
         }
         let _ = state_machine.run_once();
     }
-    
-    assert!(state_machine.state.is_ok(), "Evaluation failed: {:?}", state_machine.state.err());
 
+    assert!(
+        state_machine.state.is_ok(),
+        "Evaluation failed: {:?}",
+        state_machine.state.err()
+    );
 
-    let value = global_mapping.read_arc_blocking().get("a").unwrap().read_arc_safe().inner.clone();
+    let value = global_mapping
+        .read_arc_blocking()
+        .get("a")
+        .unwrap()
+        .read_arc_safe()
+        .inner
+        .clone();
 
     match value {
         Value::Int(i) => assert_eq!(i, 15),
@@ -64,7 +74,8 @@ fn test_more() {
     };
     let alloc = MemoryAllocator::construct(600);
 
-    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> =
+        Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 1000,
@@ -76,7 +87,7 @@ fn test_more() {
         alloc,
         instructions: insts,
         state: Ok(State::Ok),
-        stack: vec![]
+        stack: vec![],
     };
 
     while let Ok(State::Ok) = state_machine.state {
@@ -90,9 +101,19 @@ fn test_more() {
         let _ = state_machine.run_once();
     }
 
-    assert!(state_machine.state.is_ok(), "Evaluation failed: {:?}", state_machine.state.err());
+    assert!(
+        state_machine.state.is_ok(),
+        "Evaluation failed: {:?}",
+        state_machine.state.err()
+    );
 
-    let value = global_mapping.read_arc_blocking().get("a").unwrap().read_arc_blocking().inner.clone();
+    let value = global_mapping
+        .read_arc_blocking()
+        .get("a")
+        .unwrap()
+        .read_arc_blocking()
+        .inner
+        .clone();
 
     match value {
         Value::Int(i) => assert_eq!(i, 2),
@@ -112,7 +133,8 @@ fn test_timeout() {
     };
     let alloc = MemoryAllocator::construct(600);
 
-    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> =
+        Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 15,
@@ -124,7 +146,7 @@ fn test_timeout() {
         alloc,
         instructions: insts,
         state: Ok(State::Ok),
-        stack: vec![]
+        stack: vec![],
     };
 
     while let Ok(State::Ok) = state_machine.state {
@@ -138,10 +160,14 @@ fn test_timeout() {
         let _ = state_machine.run_once();
     }
 
-    assert!(match &state_machine.state {
-        Ok(State::Timeout(_)) => true,
-        _ => false
-    }, "Expected TimeoutError, but got {:?}", state_machine.state);
+    assert!(
+        match &state_machine.state {
+            Ok(State::Timeout(_)) => true,
+            _ => false,
+        },
+        "Expected TimeoutError, but got {:?}",
+        state_machine.state
+    );
 }
 
 #[test]
@@ -156,8 +182,8 @@ fn test_if_fail_path() {
     };
     let alloc = MemoryAllocator::construct(600);
 
-    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
-
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> =
+        Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 1000,
@@ -183,16 +209,25 @@ fn test_if_fail_path() {
         let _ = state_machine.run_once();
     }
 
-    assert!(state_machine.state.is_ok(), "Evaluation failed: {:?}", state_machine.state.err());
+    assert!(
+        state_machine.state.is_ok(),
+        "Evaluation failed: {:?}",
+        state_machine.state.err()
+    );
 
-    let value = global_mapping.read_arc_blocking().get("a").unwrap().read_arc_safe().inner.clone();
+    let value = global_mapping
+        .read_arc_blocking()
+        .get("a")
+        .unwrap()
+        .read_arc_safe()
+        .inner
+        .clone();
 
     match value {
         Value::Int(i) => assert_eq!(i, 15),
         _ => panic!("Expected an integer result, but got {:?}", value),
     }
 }
-
 
 #[test]
 fn test_while_loop() {
@@ -204,8 +239,8 @@ fn test_while_loop() {
     };
     let alloc = MemoryAllocator::construct(600);
 
-    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
-
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> =
+        Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 1000,
@@ -231,16 +266,25 @@ fn test_while_loop() {
         let _ = state_machine.run_once();
     }
 
-    assert!(state_machine.state.is_ok(), "Evaluation failed: {:?}", state_machine.state.err());
+    assert!(
+        state_machine.state.is_ok(),
+        "Evaluation failed: {:?}",
+        state_machine.state.err()
+    );
 
-    let value = global_mapping.read_arc_blocking().get("a").unwrap().read_arc_safe().inner.clone();
+    let value = global_mapping
+        .read_arc_blocking()
+        .get("a")
+        .unwrap()
+        .read_arc_safe()
+        .inner
+        .clone();
 
     match value {
         Value::Int(i) => assert_eq!(i, 0),
         _ => panic!("Expected an integer result, but got {:?}", value),
     }
 }
-
 
 #[test]
 fn test_function() {
@@ -255,8 +299,8 @@ fn test_function() {
     };
     let alloc = MemoryAllocator::construct(600);
 
-    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> = Arc::new(RwLock::new(HashMap::new()));
-
+    let global_mapping: Arc<RwLock<HashMap<String, ValuePtr<'_>>>> =
+        Arc::new(RwLock::new(HashMap::new()));
 
     let mut state_machine = InstStateMachine {
         lim: 1000,
@@ -279,13 +323,26 @@ fn test_function() {
         } else {
             break;
         }
-        println!("{:?}", state_machine.instructions[state_machine.fn_stack_frame.last().unwrap().ptr as usize]);
+        println!(
+            "{:?}",
+            state_machine.instructions[state_machine.fn_stack_frame.last().unwrap().ptr as usize]
+        );
         let _ = state_machine.run_once();
     }
 
-    assert!(state_machine.state.is_ok(), "Evaluation failed: {:?}", state_machine.state.err());
+    assert!(
+        state_machine.state.is_ok(),
+        "Evaluation failed: {:?}",
+        state_machine.state.err()
+    );
 
-    let value = global_mapping.read_arc_blocking().get("a").unwrap().read_arc_safe().inner.clone();
+    let value = global_mapping
+        .read_arc_blocking()
+        .get("a")
+        .unwrap()
+        .read_arc_safe()
+        .inner
+        .clone();
 
     println!("{:?}", state_machine);
 

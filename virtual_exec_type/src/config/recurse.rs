@@ -1,13 +1,13 @@
-use alloc::sync::Arc;
-use async_lock::Mutex;
 use crate::error::{ExecutionError, NonRecoverableError};
 use crate::mem::MemoryAllocator;
+use alloc::sync::Arc;
+use async_lock::Mutex;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RecurseConfig {
     pub recurse_depth: Option<u32>,
     pub inst_limit: Option<u64>,
-    pub mem_limit: Option<usize>
+    pub mem_limit: Option<usize>,
 }
 
 #[derive(Clone)]
@@ -16,7 +16,7 @@ pub struct RecurseRestricter<'a> {
     pub curr_depth: u32,
     pub curr_inst: Arc<Mutex<u64>>,
     pub curr_mem: Arc<Mutex<usize>>,
-    pub alloc: MemoryAllocator<'a>
+    pub alloc: MemoryAllocator<'a>,
 }
 
 impl Default for RecurseConfig {
@@ -24,7 +24,7 @@ impl Default for RecurseConfig {
         Self {
             recurse_depth: Some(256),
             inst_limit: Some(1048576),
-            mem_limit: Some(1048576)
+            mem_limit: Some(1048576),
         }
     }
 }
@@ -52,17 +52,18 @@ impl RecurseConfig {
             curr_depth: 0,
             curr_inst: Arc::new(Mutex::new(0)),
             curr_mem: Arc::new(Mutex::new(0)),
-            alloc
+            alloc,
         }
     }
 }
-
 
 impl<'a> RecurseRestricter<'a> {
     pub fn incr(&self) -> Result<Self, RecursionError> {
         let mut other = self.clone();
         other.curr_depth += 1;
-        if let Some(depth_lim) = other.config.recurse_depth && depth_lim < other.curr_depth {
+        if let Some(depth_lim) = other.config.recurse_depth
+            && depth_lim < other.curr_depth
+        {
             return Err(RecursionError);
         }
         Ok(other)
@@ -72,7 +73,9 @@ impl<'a> RecurseRestricter<'a> {
         let mut v = self.curr_inst.lock_arc_blocking();
         let value = v.checked_add(amount).ok_or(RecursionError)?;
         *v = value;
-        if let Some(inst_lim) = self.config.inst_limit && *v > inst_lim {
+        if let Some(inst_lim) = self.config.inst_limit
+            && *v > inst_lim
+        {
             return Err(RecursionError);
         }
         Ok(())
@@ -84,11 +87,16 @@ impl<'a> RecurseRestricter<'a> {
             let mut v = self.curr_mem.lock_arc_blocking();
             value = v.checked_add(amount).ok_or(RecursionError)?;
             *v = value;
-            if let Some(mem_lim) = self.config.mem_limit && *v > mem_lim {
+            if let Some(mem_lim) = self.config.mem_limit
+                && *v > mem_lim
+            {
                 return Err(RecursionError);
             }
         };
-        self.alloc.lock_arc_blocking().check_alloc_err(value).map_err(|_|RecursionError)?;
+        self.alloc
+            .lock_arc_blocking()
+            .check_alloc_err(value)
+            .map_err(|_| RecursionError)?;
         Ok(())
     }
 }

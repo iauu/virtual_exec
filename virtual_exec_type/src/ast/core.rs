@@ -1,7 +1,7 @@
+use crate::mem::ValuePtr;
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::mem::ValuePtr;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Span {
@@ -78,7 +78,6 @@ impl ASTNode for Expr {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub enum AssignExpr {
     Variable(String),
@@ -117,7 +116,6 @@ pub enum Literal {
 impl ASTNode for Literal {
     type Output<'ctx> = ValuePtr<'ctx>;
 
-
     fn get_callsite(&self) -> Option<Span> {
         todo!()
     }
@@ -142,7 +140,7 @@ pub enum BinaryOperator {
     Gt,
     Gte,
     LeftShift,
-    RightShift
+    RightShift,
 }
 
 #[derive(Debug, Clone, Copy)]

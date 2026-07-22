@@ -261,6 +261,14 @@ impl GetInstruction for Expr {
                 inst.push(Instruction::Call);
                 // [value1] [value0] ([arg_size] [func] [call]) |inst boundary| [var0] [var1]
                 inst
+            },
+            Expr::Subscript { value, slice } => {
+                let mut insts = value.kind.inst(offset);
+                let idx_inst = slice.kind.inst(offset + insts.len() as u64);
+                insts.extend(idx_inst);
+                insts.push(Instruction::ResolveObject);
+                insts
+                
             }
         }
     }

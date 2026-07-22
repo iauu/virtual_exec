@@ -59,10 +59,10 @@ pub enum Expr {
     //     value: Box<Node<Expr>>,
     //     attr: String,
     // },
-    // Subscript {
-    //     value: Box<Node<Expr>>,
-    //     slice: Box<Node<Expr>>,
-    // },
+    Subscript {
+        value: Box<Node<Expr>>,
+        slice: Box<Node<Expr>>,
+    },
     // Range {
     //     lower: Option<i64>,
     //     upper: Option<i64>,

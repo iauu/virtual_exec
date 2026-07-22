@@ -83,7 +83,7 @@ pub enum Instruction {
     ConstructObj(u64),
     LoadName(Box<str>),
     LoadObjectAttr(Box<str>),
-    LoadObjectIndex(SubscriptLoad),
+    ResolveObject,
     LoadDPtr(u64, usize),
 
     // External
@@ -144,7 +144,7 @@ impl DisplayInst for Instruction {
             Instruction::ConstructObj(x) => format!("construct_obj len={}", x),
             Instruction::LoadName(x) => format!("name_load {}", x),
             Instruction::LoadObjectAttr(x) => format!("attr_load {}", x),
-            Instruction::LoadObjectIndex(x) => format!("index_load {:?}", x),
+            Instruction::ResolveObject => "res".to_string(),
             Instruction::Terminate => "term".to_string(),
             Instruction::Interrupt => "int".to_string(),
             Instruction::Pop => "pop".to_string(),
@@ -211,7 +211,7 @@ pub enum InstructionBuilder {
     ConstructObj(u64),
     LoadName(Box<str>),
     LoadObjectAttr(Box<str>),
-    LoadObjectIndex(SubscriptLoad),
+    ResolveObject,
     LoadDPtr(u64, usize),
 
     // External
@@ -345,7 +345,7 @@ impl ConvertInstruction for InstructionBuilder {
             InstructionBuilder::ConstructObj(length) => Instruction::ConstructObj(length),
             InstructionBuilder::LoadName(name) => Instruction::LoadName(name),
             InstructionBuilder::LoadObjectAttr(name) => Instruction::LoadObjectAttr(name),
-            InstructionBuilder::LoadObjectIndex(index) => Instruction::LoadObjectIndex(index),
+            InstructionBuilder::ResolveObject => Instruction::ResolveObject,
             InstructionBuilder::Terminate => Instruction::Terminate,
             InstructionBuilder::Interrupt => Instruction::Interrupt,
             InstructionBuilder::Pop => Instruction::Pop,
@@ -395,7 +395,7 @@ impl Into<InstructionBuilder> for Instruction {
             Instruction::ConstructObj(length) => InstructionBuilder::ConstructObj(length),
             Instruction::LoadName(name) => InstructionBuilder::LoadName(name),
             Instruction::LoadObjectAttr(name) => InstructionBuilder::LoadObjectAttr(name),
-            Instruction::LoadObjectIndex(index) => InstructionBuilder::LoadObjectIndex(index),
+            Instruction::ResolveObject => InstructionBuilder::ResolveObject,
             Instruction::Terminate => InstructionBuilder::Terminate,
             Instruction::Interrupt => InstructionBuilder::Interrupt,
             Instruction::Pop => InstructionBuilder::Pop,

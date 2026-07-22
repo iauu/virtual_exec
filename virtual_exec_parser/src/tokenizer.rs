@@ -1,7 +1,7 @@
 use crate::token;
 use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
-use syn::{Ident, Lit, Token, braced, parenthesized};
+use syn::{Ident, Lit, Token, braced, parenthesized, bracketed};
 use virtual_exec_type::ast::core as final_ast;
 
 #[derive(Clone)]
@@ -120,6 +120,7 @@ pub enum Expr {
     Binary(Box<Expr>, final_ast::BinaryOperator, Box<Expr>),
     Unary(final_ast::UnaryOperator, Box<Expr>),
     Call(Box<Expr>, Vec<Expr>),
+    Subscript(Box<Expr>, Box<Expr>),
 }
 
 #[derive(Clone)]
@@ -411,6 +412,13 @@ fn parse_expr_with_precedence(input: ParseStream, min_bp: u8) -> Result<Expr> {
             parenthesized!(content in input);
             let arr: Punctuated<Expr, Token![,]> = Punctuated::parse_terminated(&content)?;
             lhs = Expr::Call(Box::from(lhs), arr.into_iter().collect());
+            continue;
+        }
+
+        if input.peek(syn::token::Bracket) {
+            let content;
+            bracketed!(content in input);
+            lhs = Expr::Subscript(Box::from(lhs), Box::new(content.parse()?));
             continue;
         }
 

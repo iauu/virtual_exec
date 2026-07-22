@@ -155,6 +155,10 @@ fn convert_expr(expr: tokenizer::Expr) -> final_ast::Node<final_ast::Expr> {
             function: Box::new(convert_expr(*func)),
             args: args.into_iter().map(convert_expr).collect(),
         },
+        tokenizer::Expr::Subscript(outer, inner) => final_ast::Expr::Subscript {
+            value: Box::new(convert_expr(*outer)),
+            slice: Box::new(convert_expr(*inner)),
+        }
     };
     final_ast::Node { kind, span: None }
 }

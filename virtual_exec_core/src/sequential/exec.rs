@@ -560,15 +560,16 @@ impl<'ctx> InstStateMachine<'ctx> {
                     return self.state.clone();
                 }
             }
-            Instruction::LoadObjectIndex(idx) => {
+            Instruction::ResolveObject => {
+                let idx = self.pop_get()?;
                 let value = self.pop_get()?;
                 if let Some(_) = value.as_collections() {
-                    if let SubscriptLoad::Idx(idx) = idx {
+                    if let Some(idx) = idx.as_int() {
                         self.push_idx_ref((value, idx))?;
                     }
                 } else if let Some(_) = value.as_object() {
-                    if let SubscriptLoad::String(s) = idx {
-                        self.push_ref((Some(value), s.into_string()))?;
+                    if let Some(s) = idx.as_string() {
+                        self.push_ref((Some(value), s))?;
                     }
                 } else {
                     self.state = Err(ExecutionError::NonRecoverable(

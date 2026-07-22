@@ -125,6 +125,16 @@ fn expr_to_token(expr: Expr) -> impl ToTokens {
                     args: vec![ #(#args),* ],
                 }
             }
+        },
+        Expr::Subscript(value, slice) => {
+            let value = expr_to_token(*value);
+            let slice = expr_to_token(*slice);
+            quote! {
+                ::virtual_exec_type::ast::core::Expr::Subscript {
+                    value: Box::new(#value),
+                    slice: Box::new(#slice),
+                }
+            }
         }
     };
     quote! {
@@ -510,9 +520,8 @@ fn inst_to_token(inst: Instruction) -> impl ToTokens {
         Instruction::LoadObjectAttr(attr) => {
             quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadObjectAttr(::std::boxed::Box::from(#attr)) }
         }
-        Instruction::LoadObjectIndex(idx) => {
-            let decoded = subscript_to_token(&idx);
-            quote! { ::virtual_exec_core::sequential::instructions::Instruction::LoadObjectIndex(#decoded) }
+        Instruction::ResolveObject => {
+            quote! { ::virtual_exec_core::sequential::instructions::Instruction::ResolveObject }
         }
         Instruction::Terminate => {
             quote! { ::virtual_exec_core::sequential::instructions::Instruction::Terminate }

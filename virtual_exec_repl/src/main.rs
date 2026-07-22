@@ -28,6 +28,7 @@ use virtual_exec_core::sequential::instructions::{InstForceOffset, Instruction};
 use virtual_exec_core::{compile, parse};
 use virtual_exec_macro::compile;
 use virtual_exec_std::{BASIC, SYS};
+use virtual_exec_type::error::{CriticalError, ExecutionError};
 
 /// Application state
 
@@ -51,7 +52,7 @@ fn main() -> io::Result<()> {
         OVERRIDE.clone(),
         SYS.clone(),
     ])));
-    app.lock().unwrap().machine.machine.state = Ok(State::Terminated);
+    app.lock().unwrap().current_machine.machine.state = Ok(State::Terminated);
     app.lock().unwrap().rollback.machine.state = Ok(State::Terminated);
 
     // Main loop
@@ -63,19 +64,24 @@ fn main() -> io::Result<()> {
 
         let mut curr_exec = false;
 
-        if let Ok(State::Ok) = app_obj.machine.machine.state {
-            curr_exec = true;
-            app_obj.machine.machine.lim = u64::MAX;
-            let _ = app_obj.machine.sync_run_for(100);
-            app_obj
-                .eval_state
-                .as_mut()
-                .unwrap()
-                .buffer
-                .push_str(PRINT_BUFFER.lock().unwrap().as_str());
-            PRINT_BUFFER.lock().unwrap().clear();
-            if let Ok(State::Terminated) = app_obj.machine.machine.state {
-                app_obj.rollback.machine = app_obj.machine.machine.clone();
+        if let Ok(State::Ok) = app_obj.current_machine.machine.state {
+            if !app_obj.first_ctrl_c {
+                curr_exec = true;
+                app_obj.current_machine.machine.lim = u64::MAX;
+                let _ = app_obj.current_machine.sync_run_for(100);
+                app_obj
+                    .eval_state
+                    .as_mut()
+                    .unwrap()
+                    .buffer
+                    .push_str(PRINT_BUFFER.lock().unwrap().as_str());
+                PRINT_BUFFER.lock().unwrap().clear();
+            } else {
+                app_obj.current_machine.machine.state = Err(ExecutionError::Critical(CriticalError::GenericPanicRewindError));
+                app_obj.first_ctrl_c = false;
+            }
+            if let Ok(State::Terminated) = app_obj.current_machine.machine.state {
+                app_obj.rollback = app_obj.current_machine.fork();
                 let code = app_obj.eval_state.as_ref().unwrap().code.clone();
                 app_obj
                     .eval_state
@@ -90,8 +96,8 @@ fn main() -> io::Result<()> {
                 app_obj.idx = app_obj.repl_buffer.len();
             }
         }
-        if let Err(e) = app_obj.machine.machine.state.clone() {
-            app_obj.machine.machine = app_obj.rollback.machine.clone();
+        if let Err(e) = app_obj.current_machine.machine.state.clone() {
+            app_obj.current_machine = app_obj.rollback.fork();
             let code = app_obj.eval_state.as_ref().unwrap().code.clone();
             app_obj
                 .eval_state
@@ -148,9 +154,11 @@ fn main() -> io::Result<()> {
                     if app_obj.repl_input.is_empty() {
                         app_obj.first_ctrl_c = true;
                         ctrl_c = true;
-                        is_exec = ExecState::RstInput(Some(
-                            "Press Ctrl+C again, or press Ctrl+D to exit".to_string(),
-                        ));
+                        if let Ok(State::Ok) = app_obj.current_machine.machine.state {} else {
+                            is_exec = ExecState::RstInput(Some(
+                                "Press Ctrl+C again, or press Ctrl+D to exit".to_string(),
+                            ));
+                        }
                     } else {
                         is_exec = ExecState::RstInput(None);
                     }
@@ -268,7 +276,7 @@ fn main() -> io::Result<()> {
             let code = app_obj.repl_input.text();
             app_obj.repl_input.set_text("");
             let inst = match parse(&code) {
-                Ok(module) => module.inst(app_obj.machine.machine.instructions.len() as u64),
+                Ok(module) => module.inst(app_obj.current_machine.machine.instructions.len() as u64),
                 Err(_) => {
                     let parsed = parse(&(code.clone() + ";")).unwrap();
                     let mut pre_inst = compile(&parsed);
@@ -279,7 +287,7 @@ fn main() -> io::Result<()> {
                             pre_inst.push(Instruction::Swap);
                             pre_inst.push(Instruction::Assign);
                             let offset =
-                                app_obj.machine.machine.instructions.len() + pre_inst.len();
+                                app_obj.current_machine.machine.instructions.len() + pre_inst.len();
                             let print_inst =
                                 compile! {if _r != None {print(_r);}}.offset(offset as u64);
                             pre_inst.extend(print_inst);
@@ -295,24 +303,24 @@ fn main() -> io::Result<()> {
                 }
             };
             let len = inst.len();
-            app_obj.machine.machine.instructions.extend(inst);
+            app_obj.current_machine.machine.instructions.extend(inst);
             app_obj.eval_state = Some(CodeEvalState {
                 code,
                 inst_count: 0,
                 buffer: String::new(),
             });
-            if let Ok(State::Terminated) = app_obj.machine.machine.state
+            if let Ok(State::Terminated) = app_obj.current_machine.machine.state
                 && len > 0
             {
-                app_obj.machine.machine.state = Ok(State::Ok);
-            } else if let Ok(State::Terminated) = app_obj.machine.machine.state
+                app_obj.current_machine.machine.state = Ok(State::Ok);
+            } else if let Ok(State::Terminated) = app_obj.current_machine.machine.state
                 && len == 0
             {
                 let code = app_obj.eval_state.as_ref().unwrap().code.clone();
                 app_obj.repl_buffer.push((code, "".to_string()));
                 app_obj.eval_state = None;
             }
-            app_obj.machine.machine.lim = u64::MAX;
+            app_obj.current_machine.machine.lim = u64::MAX;
         } else if let ExecState::RstInput(opt) = is_exec {
             let txt = app_obj.repl_input.text();
             app_obj.repl_input.set_text("");

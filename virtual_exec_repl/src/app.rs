@@ -38,7 +38,7 @@ pub struct CodeEvalState {
 }
 
 pub struct AppState {
-    pub machine: Machine<'static>,
+    pub current_machine: Machine<'static>,
     pub rollback: Machine<'static>,
     pub repl_buffer: Vec<(String, String)>,
     pub repl_input: TextAreaState,
@@ -60,7 +60,7 @@ impl AppState {
         let machine = Machine::new(vec![], 2 << 32, u64::MAX, resolvers).unwrap();
         let rollback = machine.clone();
         Self {
-            machine,
+            current_machine: machine,
             rollback,
             repl_buffer: vec![],
             repl_input: TextAreaState::new(""),

@@ -678,4 +678,55 @@ impl<'ctx> InstStateMachine<'ctx> {
         self.lim -= size;
         Ok(())
     }
+
+    pub fn fork<'alt>(&self) -> InstStateMachine<'alt> {
+        self.alloc.lock_blocking().gc_weak();
+        let vals = self.alloc.lock_arc_blocking().fork();
+        let new_alloc: MemoryAllocator<'alt> = vals.0;
+        let vec_items: Vec<ValuePtr<'alt>> = vals.1;
+        let new_frames: Vec<FnStackFrame<'alt>> = self.fn_stack_frame.iter().map(
+            |frame| FnStackFrame {
+                ptr: frame.ptr,
+                mapping: Arc::new(RwLock::new(
+                    frame.mapping.read_arc_safe().iter().map(
+                        |entry| {
+                            let idx: usize = self.alloc.lock_arc_blocking()
+                                .get_idx_ref(entry.1).unwrap();
+                            (
+                                entry.0.clone(), vec_items[idx].clone()
+                            )
+
+                        }
+                    ).collect::<HashMap<String, ValuePtr<'alt>>>()
+                )),
+                _acct: match &frame._acct {
+                    Some(e) => Some(
+                        vec_items[self.alloc.lock_arc_blocking().get_idx_ref(&e).unwrap()].clone()
+                    ),
+                    None => None
+                },
+            }
+        ).collect();
+        let new_states: Result<State<'alt>, ExecutionError> = match &self.state {
+            Ok(s) => {
+                Ok(match s {
+                    State::FnExternOutput(s, a) => State::FnExternOutput(
+                        s.clone(),
+                        a.iter()
+                            .map(
+                                |a| vec_items[self.alloc.lock_arc_blocking().get_idx_ref(a).unwrap()].clone()
+                            )
+                            .collect()
+                    ),
+                    State::FnExternInput(s, size) => State::FnExternInput(s.clone(), *size),
+                    State::Ok => State::Ok,
+                    State::Terminated => State::Terminated,
+                    State::Interrupt => State::Interrupt,
+                    State::Timeout(inst) => State::Timeout(*inst)
+                })
+            },
+            Err(e) => Err(e.clone())
+        };
+        todo!()
+    }
 }

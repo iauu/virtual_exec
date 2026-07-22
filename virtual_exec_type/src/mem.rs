@@ -368,7 +368,7 @@ impl<'a> MemoryAllocation<'a> {
         self.curr
     }
 
-    fn get_idx_ref(&self, value: &ValuePtr<'a>) -> Result<usize, MemoryOutOfBoundError> {
+    pub fn get_idx_ref(&self, value: &ValuePtr<'a>) -> Result<usize, MemoryOutOfBoundError> {
         self._obj.iter().position(|obj| if let Some(ptr) = obj.upgrade() {Arc::ptr_eq(&ptr, value)} else {false})
             .ok_or(MemoryOutOfBoundError)
     }

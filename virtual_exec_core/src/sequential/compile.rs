@@ -296,6 +296,18 @@ impl GetInstruction for AssignExpr {
         match self {
             AssignExpr::Variable(v) => vec![Instruction::LoadName(v.clone().into_boxed_str())],
             AssignExpr::Wrapped(expr) => expr.kind.inst(offset),
+            AssignExpr::Attribute { value, attr } => {
+                let mut insts = value.kind.inst(offset);
+                insts.push(Instruction::LoadObjectAttr(attr.clone().into_boxed_str()));
+                insts
+            },
+            AssignExpr::Subscript { value, slice } => {
+                let mut insts = value.kind.inst(offset);
+                let idx_inst = slice.kind.inst(offset + insts.len() as u64);
+                insts.extend(idx_inst);
+                insts.push(Instruction::ResolveObject);
+                insts
+            }
         }
     }
 }

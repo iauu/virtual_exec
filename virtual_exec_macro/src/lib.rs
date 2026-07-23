@@ -167,6 +167,25 @@ fn assign_expr_to_token(expr: AssignExpr) -> impl ToTokens {
                 )
             }
         }
+        AssignExpr::Subscript(value, slice) => {
+            let value = expr_to_token(*value);
+            let slice = expr_to_token(*slice);
+            quote! {
+                ::virtual_exec_type::ast::core::AssignExpr::Subscript {
+                    value: Box::new(#value),
+                    slice: Box::new(#slice),
+                }
+            }
+        }
+        AssignExpr::Attr(value, name) => {
+            let value = expr_to_token(*value);
+            quote! {
+                ::virtual_exec_type::ast::core::AssignExpr::Attr {
+                    value: Box::new(value),
+                    name: (#name).to_string()
+                }
+            }
+        }
     };
     quote! {
         ::virtual_exec_type::ast::core::Node {

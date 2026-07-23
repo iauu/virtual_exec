@@ -175,6 +175,12 @@ fn convert_assign_expr(expr: tokenizer::AssignExpr) -> final_ast::Node<final_ast
                 kind: final_ast::AssignExpr::Wrapped(Box::new(convert_assign_expr(*expr_in_paren))),
                 span: None,
             };
+        },
+        tokenizer::AssignExpr::Subscript(value, slice) => final_ast::AssignExpr::Subscript {
+            value: Box::new(convert_expr(*value)), slice: Box::new(convert_expr(*slice))
+        },
+        tokenizer::AssignExpr::Attr(value, name) => final_ast::AssignExpr::Attribute {
+            value: Box::new(convert_expr(*value)), attr: name
         }
     };
     final_ast::Node { kind, span: None }

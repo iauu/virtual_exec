@@ -33,6 +33,8 @@ pub struct FnBlock {
 pub enum AssignExpr {
     Variable(String),
     Paren(Box<AssignExpr>),
+    Subscript(Box<Expr>, Box<Expr>),
+    Attr(Box<Expr>, String)
 }
 
 impl TryFrom<Expr> for AssignExpr {
@@ -43,7 +45,11 @@ impl TryFrom<Expr> for AssignExpr {
             Expr::Atom(Atom::Paren(inner)) => {
                 let inner_assign = AssignExpr::try_from(*inner)?;
                 Ok(AssignExpr::Paren(Box::new(inner_assign)))
-            }
+            },
+            Expr::Subscript(expr, slice) => {
+                Ok(AssignExpr::Subscript(expr, slice))
+            },
+            Expr::Attr(expr, name) => Ok(AssignExpr::Attr(expr, name)),
             _ => Err(()),
         }
     }
@@ -61,6 +67,8 @@ impl Into<Expr> for AssignExpr {
         match self {
             AssignExpr::Variable(v) => Expr::Atom(Atom::Variable(v)),
             AssignExpr::Paren(inner) => Expr::Atom(Atom::Paren(Box::new((*inner).into()))),
+            AssignExpr::Subscript(value, slice) => Expr::Subscript(value, slice),
+            AssignExpr::Attr(value, name) => Expr::Attr(value, name),
         }
     }
 }

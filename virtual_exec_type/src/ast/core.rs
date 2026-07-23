@@ -82,14 +82,14 @@ impl ASTNode for Expr {
 pub enum AssignExpr {
     Variable(String),
     Wrapped(Box<Node<AssignExpr>>),
-    // Attribute {
-    //     value: Box<Node<Expr>>,
-    //     attr: String,
-    // },
-    // Subscript {
-    //     value: Box<Node<Expr>>,
-    //     slice: Box<Node<Expr>>,
-    // },
+    Attribute {
+        value: Box<Node<Expr>>,
+        attr: String,
+    },
+    Subscript {
+        value: Box<Node<Expr>>,
+        slice: Box<Node<Expr>>,
+    },
     // Range {
     //     lower: Option<i64>,
     //     upper: Option<i64>,

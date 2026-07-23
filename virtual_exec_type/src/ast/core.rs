@@ -55,10 +55,10 @@ pub enum Expr {
         function: Box<Node<Expr>>,
         args: Vec<Node<Expr>>,
     },
-    // Attribute {
-    //     value: Box<Node<Expr>>,
-    //     attr: String,
-    // },
+    Attribute {
+        value: Box<Node<Expr>>,
+        attr: String,
+    },
     Subscript {
         value: Box<Node<Expr>>,
         slice: Box<Node<Expr>>,
@@ -173,11 +173,6 @@ pub enum Stmt {
         body: Vec<Node<Stmt>>,
     },
     Return(Option<Node<Expr>>),
-    // FunctionDef {
-    //     name: String,
-    //     args: Vec<String>,
-    //     body: Vec<Node<Stmt>>,
-    // },
     // ClassDef {
     //     name: String,
     //     bases: Vec<Node<Expr>>,

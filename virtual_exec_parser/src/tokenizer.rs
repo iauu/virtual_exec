@@ -121,6 +121,7 @@ pub enum Expr {
     Unary(final_ast::UnaryOperator, Box<Expr>),
     Call(Box<Expr>, Vec<Expr>),
     Subscript(Box<Expr>, Box<Expr>),
+    Attr(Box<Expr>, String)
 }
 
 #[derive(Clone)]
@@ -419,6 +420,13 @@ fn parse_expr_with_precedence(input: ParseStream, min_bp: u8) -> Result<Expr> {
             let content;
             bracketed!(content in input);
             lhs = Expr::Subscript(Box::from(lhs), Box::new(content.parse()?));
+            continue;
+        }
+        
+        if input.peek(syn::token::Dot) {
+            input.parse::<syn::token::Dot>()?;
+            let attr_name = input.parse::<Ident>()?.to_string();
+            lhs = Expr::Attr(Box::from(lhs), attr_name);
             continue;
         }
 

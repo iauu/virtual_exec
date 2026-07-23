@@ -269,6 +269,11 @@ impl GetInstruction for Expr {
                 insts.push(Instruction::ResolveObject);
                 insts
                 
+            },
+            Expr::Attribute {value, attr} => {
+                let mut insts = value.kind.inst(offset);
+                insts.push(Instruction::LoadObjectAttr(attr.clone().into_boxed_str()));
+                insts
             }
         }
     }

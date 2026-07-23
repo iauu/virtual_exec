@@ -140,7 +140,7 @@ fn convert_expr(expr: tokenizer::Expr) -> final_ast::Node<final_ast::Expr> {
             tokenizer::Atom::Variable(v) => final_ast::Expr::Variable(v),
             tokenizer::Atom::Paren(expr_in_paren) => {
                 final_ast::Expr::Wrapped(Box::new(convert_expr(*expr_in_paren)))
-            }
+            },
         },
         tokenizer::Expr::Binary(left, op, right) => final_ast::Expr::BinaryOp {
             left: Box::new(convert_expr(*left)),
@@ -158,6 +158,10 @@ fn convert_expr(expr: tokenizer::Expr) -> final_ast::Node<final_ast::Expr> {
         tokenizer::Expr::Subscript(outer, inner) => final_ast::Expr::Subscript {
             value: Box::new(convert_expr(*outer)),
             slice: Box::new(convert_expr(*inner)),
+        },
+        tokenizer::Expr::Attr(expr, attr) => final_ast::Expr::Attribute {
+            value: Box::new(convert_expr(*expr)),
+            attr,
         }
     };
     final_ast::Node { kind, span: None }

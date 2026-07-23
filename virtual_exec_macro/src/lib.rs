@@ -135,6 +135,15 @@ fn expr_to_token(expr: Expr) -> impl ToTokens {
                     slice: Box::new(#slice),
                 }
             }
+        },
+        Expr::Attr(value, attr) => {
+            let value = expr_to_token(*value);
+            quote! {
+                ::virtual_exec_type::ast::core::Expr::Attr {
+                    value: Box::new(#value),
+                    #attr
+                }
+            }
         }
     };
     quote! {

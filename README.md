@@ -102,7 +102,7 @@ WIP Feature list:
 - [ ] Subscript assignment (i.e. `x[a]`)
 - [x] Expression evaluation
 - [x] A parser and type system
-- [ ] Attribute system
+- [x] Attribute system
 - [x] Function call
 - [x] `while` loop
 - [ ] `for` loop
@@ -115,6 +115,7 @@ WIP Feature list:
 - [x] Linear instruction system (this allows `await` system later)
 - [ ] `try` `catch` with stack unwinding and memory allocation recalculation
 - [ ] literal Collections and object creation
+- [ ] Support for any object
 
 ### Sub-crate List:
 - [virtual_exec_type](https://crates.io/crates/virtual_exec_type)

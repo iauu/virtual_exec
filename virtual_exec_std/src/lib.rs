@@ -18,7 +18,8 @@ pub static BASIC: LazyLock<MethodResolver> = LazyLock::new(|| {
         ("arr_get_from_idx", ArrGetFromIdx),
         ("create_array", CreateArray),
         ("arr_get_len", ArrGetLen),
-        ("concat", Concat)
+        ("concat", Concat),
+        ("create_obj", CreateArray)
     )
 });
 

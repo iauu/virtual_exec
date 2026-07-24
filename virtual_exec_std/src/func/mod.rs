@@ -12,3 +12,5 @@ func!(arr_get_from_idx);
 func!(create_array);
 func!(arr_get_len);
 func!(concat);
+func!(create_obj);
+func!(dir);

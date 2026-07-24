@@ -8,6 +8,7 @@ use alloc::string::{String, ToString};
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use async_lock::RwLock;
+use crate::vm_type::Object;
 
 pub trait IsTruhy {
     fn is_truthy(&self) -> bool;
@@ -335,5 +336,17 @@ impl<'ctx> Downcast<'ctx> for ValuePtr<'ctx> {
 impl<'ctx> Upcast<'ctx> for ValuePtr<'ctx> {
     fn from_value(&self, _alloc: &MemoryAllocator<'ctx>) -> Result<ValuePtr<'ctx>, MemoryError> {
         Ok(self.clone())
+    }
+}
+
+impl<'ctx> Downcast<'ctx> for Object<'ctx> {
+    fn from_value(value: ValuePtr<'ctx>) -> Option<Self> {
+        value.as_object()
+    }
+}
+
+impl<'ctx> Upcast<'ctx> for Object<'ctx> {
+    fn from_value(&self, alloc: &MemoryAllocator<'ctx>) -> Result<ValuePtr<'ctx>, MemoryError> {
+        alloc.alloc(Value::Object(self.clone()))
     }
 }
